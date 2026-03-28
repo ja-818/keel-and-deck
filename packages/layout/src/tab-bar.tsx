@@ -1,18 +1,11 @@
 import type { ReactNode } from "react";
 import { cn } from "@deck-ui/core";
 
-export interface Tab {
-  id: string;
-  label: string;
-  icon?: ReactNode;
-  badge?: number;
-}
-
 export interface TabBarProps {
   title?: string;
-  tabs: Tab[];
+  tabs: { id: string; label: string; badge?: number }[];
   activeTab: string;
-  onTabChange: (tabId: string) => void;
+  onTabChange: (id: string) => void;
   actions?: ReactNode;
   menu?: ReactNode;
 }
@@ -52,10 +45,9 @@ export function TabBar({
                 "relative flex items-center gap-1.5 pb-2.5 text-sm transition-colors duration-200",
                 isActive
                   ? "text-[#0d0d0d] font-medium"
-                  : "text-[#8e8e8e] hover:text-[#0d0d0d]"
+                  : "text-[#8e8e8e] hover:text-[#0d0d0d]",
               )}
             >
-              {tab.icon}
               {tab.label}
               {tab.badge != null && tab.badge > 0 && (
                 <span
@@ -63,7 +55,7 @@ export function TabBar({
                     "inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-xs font-medium",
                     isActive
                       ? "bg-[#0d0d0d] text-white"
-                      : "bg-[#e3e3e3] text-[#424242]"
+                      : "bg-[#e3e3e3] text-[#424242]",
                   )}
                 >
                   {tab.badge}

@@ -1,6 +1,6 @@
 import type React from "react"
 
-export interface BoardItem {
+export interface KanbanItem {
   id: string
   title: string
   subtitle?: string
@@ -10,8 +10,12 @@ export interface BoardItem {
   metadata?: Record<string, unknown>
 }
 
-export interface BoardColumn {
+export interface KanbanColumn {
   id: string
   label: string
   statuses: string[]
 }
+
+// Legacy aliases
+export type BoardItem = KanbanItem
+export type BoardColumn = KanbanColumn
