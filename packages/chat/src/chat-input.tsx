@@ -53,7 +53,7 @@ export function ChatInput({
           <div className="flex items-center [grid-area:leading]">
             <button
               type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-black/5 transition-colors"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
               aria-label="Add files"
             >
               <PlusIcon className="size-5" />
@@ -70,7 +70,7 @@ export function ChatInput({
             {status === "ready" && (
               <button
                 type="button"
-                className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-black/5 transition-colors"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
                 aria-label="Dictate"
               >
                 <MicIcon className="size-5" />
@@ -79,7 +79,7 @@ export function ChatInput({
             {!text.trim() && status === "ready" ? (
               <button
                 type="button"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background transition-colors"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors"
                 aria-label="Voice mode"
               >
                 <AudioLinesIcon className="size-5" />

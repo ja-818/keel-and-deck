@@ -72,7 +72,7 @@ export function EventFeed({
   )
 
   return (
-    <div className="flex flex-col" style={{ maxHeight }}>
+    <div className="flex flex-col flex-1" style={{ maxHeight }}>
       {/* Filter bar */}
       {onFilterChange && (
         <div className="shrink-0 border-b border-border">
@@ -85,7 +85,7 @@ export function EventFeed({
       )}
 
       {/* Event list */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0">
+      <div ref={scrollRef} className="flex-1 flex flex-col overflow-y-auto min-h-0">
         {filteredEvents.length === 0 && !loading ? (
           <EventEmpty message={emptyMessage} />
         ) : (

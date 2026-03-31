@@ -9,10 +9,10 @@ export interface RoutineCardProps {
 }
 
 const STATUS_DOT: Record<string, string> = {
-  active: "bg-green-500",
+  active: "bg-success",
   paused: "bg-muted-foreground",
   needs_setup: "bg-yellow-500",
-  error: "bg-red-500",
+  error: "bg-destructive",
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -39,7 +39,7 @@ export function RoutineCard({ routine, onClick }: RoutineCardProps) {
       onClick={onClick}
       className={cn(
         "w-full text-left rounded-2xl border border-border p-5",
-        "bg-white hover:border-border/80 transition-all duration-150",
+        "bg-background hover:border-border/80 transition-all duration-150",
         "hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)]",
         "flex flex-col gap-3",
       )}

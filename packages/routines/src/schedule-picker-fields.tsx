@@ -4,7 +4,7 @@
 import { cn } from "@deck-ui/core"
 
 const inputClass = cn(
-  "px-3 py-2 rounded-xl border border-border bg-white",
+  "px-3 py-2 rounded-xl border border-border bg-background",
   "text-sm text-foreground",
   "focus:outline-none focus:border-border/80 transition-colors",
 )

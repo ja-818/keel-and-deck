@@ -31,7 +31,7 @@ export function LearningRow({
         </p>
         <button
           onClick={onDelete}
-          className="shrink-0 size-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-colors"
+          className="shrink-0 size-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
           aria-label="Delete learning"
         >
           <Trash2 className="size-3.5" />

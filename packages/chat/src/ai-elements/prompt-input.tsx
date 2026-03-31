@@ -916,7 +916,7 @@ export const PromptInput = ({
       >
         <div
           data-composer-surface="true"
-          className="group/composer cursor-text overflow-clip rounded-[28px] border border-border/50 bg-white p-2.5 shadow-[0_1px_6px_rgba(0,0,0,0.06)] focus-within:shadow-[0_1px_10px_rgba(0,0,0,0.1)] dark:bg-[#303030] grid grid-cols-[auto_1fr_auto] [grid-template-areas:'header_header_header'_'leading_primary_trailing'_'._footer_.'] data-[expanded]:[grid-template-areas:'header_header_header'_'primary_primary_primary'_'leading_footer_trailing']"
+          className="group/composer cursor-text overflow-clip rounded-[28px] border border-border/50 bg-background p-2.5 shadow-[0_1px_6px_rgba(0,0,0,0.06)] focus-within:shadow-[0_1px_10px_rgba(0,0,0,0.1)] dark:bg-muted grid grid-cols-[auto_1fr_auto] [grid-template-areas:'header_header_header'_'leading_primary_trailing'_'._footer_.'] data-[expanded]:[grid-template-areas:'header_header_header'_'primary_primary_primary'_'leading_footer_trailing']"
           onClick={(e) => {
             if (!(e.target as HTMLElement).closest("button")) {
               formRef.current?.querySelector("textarea")?.focus();
@@ -1296,7 +1296,7 @@ export const PromptInputSubmit = ({
     <button
       aria-label={isGenerating ? "Stop" : "Submit"}
       className={cn(
-        "flex size-9 items-center justify-center rounded-full bg-foreground text-background hover:bg-foreground/90 disabled:opacity-30 transition-colors",
+        "flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 transition-colors",
         className,
       )}
       onClick={handleClick}

@@ -3,9 +3,12 @@
 //! Provides generic AppState, event types, and a session supervisor
 //! for Tauri 2 desktop apps built with the Keel framework.
 
+pub mod chat_session;
 pub mod events;
+pub mod paths;
 pub mod state;
 pub mod supervisor;
+pub mod workspace;
 
 // Re-export sub-crates for convenience.
 pub use keel_db;

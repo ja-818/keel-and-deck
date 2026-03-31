@@ -64,7 +64,7 @@ function RunRow({ run, onClick }: { run: RoutineRun; onClick: () => void }) {
         return <Check className="size-3.5 text-emerald-500" />
       case "error":
       case "failed":
-        return <AlertCircle className="size-3.5 text-red-500" />
+        return <AlertCircle className="size-3.5 text-destructive" />
       default:
         return <Clock className="size-3.5 text-muted-foreground" />
     }

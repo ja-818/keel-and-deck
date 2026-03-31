@@ -33,7 +33,7 @@ export function CommunitySkillRow({
   return (
     <div
       className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border
-                 bg-white hover:border-border/80 transition-all"
+                 bg-background hover:border-border/80 transition-all"
     >
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-foreground truncate">

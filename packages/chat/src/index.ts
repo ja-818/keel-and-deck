@@ -167,3 +167,4 @@ export type { ToolActivityProps, ToolsAndCardsProps } from "./chat-helpers";
 
 // === Utilities ===
 export { Typewriter } from "./typewriter";
+export { mergeFeedItem } from "./feed-merge";

@@ -31,7 +31,7 @@ export function MemoryCategoryFilter({
         className={cn(
           "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors",
           value === null
-            ? "bg-foreground text-background"
+            ? "bg-primary text-primary-foreground"
             : "bg-secondary text-muted-foreground hover:bg-accent",
         )}
       >
@@ -50,7 +50,7 @@ export function MemoryCategoryFilter({
           className={cn(
             "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors",
             value === cat
-              ? "bg-foreground text-background"
+              ? "bg-primary text-primary-foreground"
               : "bg-secondary text-muted-foreground hover:bg-accent",
           )}
         >

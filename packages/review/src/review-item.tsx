@@ -12,7 +12,7 @@ function statusIndicator(status: RunStatus) {
     case "needs_you":
       return (
         <span className="relative flex size-3 shrink-0">
-          <span className="absolute inline-flex size-full rounded-full bg-foreground" />
+          <span className="absolute inline-flex size-full rounded-full bg-primary" />
         </span>
       );
     case "running":
@@ -27,7 +27,7 @@ function statusIndicator(status: RunStatus) {
     case "error":
     case "failed":
       return (
-        <span className="flex size-2.5 shrink-0 text-red-600 font-bold text-xs leading-none">
+        <span className="flex size-2.5 shrink-0 text-destructive font-bold text-xs leading-none">
           &times;
         </span>
       );
@@ -97,7 +97,7 @@ export function ReviewItem({ item, onClick }: ReviewItemProps) {
             isUnreviewed
               ? "font-semibold text-foreground"
               : "font-normal text-foreground/70",
-            isFailed && "text-red-600",
+            isFailed && "text-destructive",
           )}
         >
           {item.title}

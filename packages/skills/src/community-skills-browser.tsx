@@ -91,7 +91,7 @@ export function CommunitySkillsSection({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={'Search by what you want to achieve, like "sdr" or "writing"'}
-          className="w-full h-9 pl-9 pr-3 rounded-full border border-border bg-white text-sm
+          className="w-full h-9 pl-9 pr-3 rounded-full border border-border bg-background text-sm
                      placeholder:text-muted-foreground/60 focus:outline-none focus:border-border/80 transition-colors"
         />
       </div>

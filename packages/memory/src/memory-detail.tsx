@@ -122,7 +122,7 @@ export function MemoryDetail({
             value={content}
             onChange={(e) => setContent(e.target.value)}
             rows={8}
-            className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-border/80 resize-y"
+            className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-border/80 resize-y"
           />
         ) : (
           <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
@@ -140,7 +140,7 @@ export function MemoryDetail({
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
               placeholder="Comma-separated tags"
-              className="w-full rounded-lg border border-border bg-white px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-border/80"
+              className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-border/80"
             />
           ) : (
             <div className="flex items-center gap-1.5 flex-wrap">

@@ -79,7 +79,7 @@ export function SkillDetailPage({
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
               rows={12}
-              className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-border/80 resize-y font-mono"
+              className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-border/80 resize-y font-mono"
               placeholder="Instructions for this skill..."
             />
             <div className="flex items-center gap-3 mt-3">

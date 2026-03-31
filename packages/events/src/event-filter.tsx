@@ -25,7 +25,7 @@ export function EventFilter({ value, onChange, counts }: EventFilterProps) {
         className={cn(
           "shrink-0 px-2.5 py-1 rounded-full text-xs font-medium transition-colors duration-150",
           value === null
-            ? "bg-foreground text-background"
+            ? "bg-primary text-primary-foreground"
             : "bg-secondary text-muted-foreground hover:bg-accent",
         )}
       >
@@ -43,7 +43,7 @@ export function EventFilter({ value, onChange, counts }: EventFilterProps) {
             className={cn(
               "shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors duration-150",
               isActive
-                ? "bg-foreground text-background"
+                ? "bg-primary text-primary-foreground"
                 : "bg-secondary text-muted-foreground hover:bg-accent",
             )}
           >

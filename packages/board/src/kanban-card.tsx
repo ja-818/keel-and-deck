@@ -43,7 +43,7 @@ export function KanbanCard({
       <div
         onClick={onSelect}
         className={cn(
-          "group/card relative rounded-lg bg-white px-3 py-2.5 cursor-pointer transition-all duration-200",
+          "group/card relative rounded-lg bg-background px-3 py-2.5 cursor-pointer transition-all duration-200",
           isRunning
             ? "card-running-glow shadow-[0_2px_12px_rgba(59,130,246,0.12)]"
             : "shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:shadow-[0_2px_6px_rgba(0,0,0,0.08)]",
@@ -89,7 +89,7 @@ export function KanbanCard({
                   e.stopPropagation()
                   onApprove()
                 }}
-                className="flex items-center gap-0.5 h-5 pl-1 pr-2 rounded-full bg-foreground text-background text-[10px] font-medium hover:bg-foreground/85 transition-colors duration-200"
+                className="flex items-center gap-0.5 h-5 pl-1 pr-2 rounded-full bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/85 transition-colors duration-200"
               >
                 <CheckCircle className="size-2.5" />
                 Approve

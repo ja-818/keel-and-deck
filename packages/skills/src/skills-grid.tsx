@@ -3,6 +3,9 @@
  * Fully props-driven: host app provides data and callbacks.
  */
 import { useMemo } from "react"
+import {
+  Empty, EmptyHeader, EmptyTitle, EmptyDescription,
+} from "@deck-ui/core"
 import type { Skill, CommunitySkill } from "./types"
 import { SkillRow } from "./skill-row"
 import { CommunitySkillsSection } from "./community-skills-browser"
@@ -41,6 +44,19 @@ export function SkillsGrid({
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="max-w-3xl mx-auto px-6 py-6 space-y-8">
+        {/* Empty state */}
+        {sorted.length === 0 && !community && (
+          <Empty className="border-0">
+            <EmptyHeader>
+              <EmptyTitle>No skills yet</EmptyTitle>
+              <EmptyDescription>
+                Skills teach your agent how to perform specific tasks. They are
+                learned from feedback and experience.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        )}
+
         {/* Installed section */}
         {sorted.length > 0 && (
           <section className="space-y-3">

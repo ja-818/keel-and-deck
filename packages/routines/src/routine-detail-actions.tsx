@@ -75,10 +75,10 @@ export function RoutineDetailActions({
 
       {confirmDelete ? (
         <div className="flex items-center gap-2">
-          <span className="text-xs text-red-600">Delete?</span>
+          <span className="text-xs text-destructive">Delete?</span>
           <button
             onClick={handleDelete}
-            className="h-9 px-3 text-sm font-medium rounded-full bg-red-600 text-white hover:bg-red-700 transition-colors"
+            className="h-9 px-3 text-sm font-medium rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors"
           >
             Confirm
           </button>
@@ -92,7 +92,7 @@ export function RoutineDetailActions({
       ) : (
         <button
           onClick={handleDelete}
-          className={cn(pillBtn, "text-muted-foreground hover:text-red-600 hover:border-red-200")}
+          className={cn(pillBtn, "text-muted-foreground hover:text-destructive hover:border-destructive/20")}
         >
           <span className="flex items-center gap-1.5">
             <Trash2 className="size-3.5" /> Delete

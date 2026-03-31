@@ -29,13 +29,13 @@ function statusIndicator(status: EventEntry["status"]) {
     case "pending":
       return <span className="flex size-2 shrink-0 rounded-full bg-muted-foreground/40" />
     case "processing":
-      return <span className="flex size-2 shrink-0 rounded-full bg-blue-500 tool-active-dot" />
+      return <span className="flex size-2 shrink-0 rounded-full bg-primary tool-active-dot" />
     case "completed":
       return <Check className="size-3 shrink-0 text-green-600" />
     case "suppressed":
       return <span className="flex size-2 shrink-0 rounded-full bg-muted-foreground/30" />
     case "error":
-      return <span className="flex size-2 shrink-0 rounded-full bg-red-500" />
+      return <span className="flex size-2 shrink-0 rounded-full bg-destructive" />
     default:
       return <span className="flex size-2 shrink-0 rounded-full bg-muted-foreground/30" />
   }

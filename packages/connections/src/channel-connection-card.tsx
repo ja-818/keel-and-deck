@@ -12,8 +12,8 @@ export interface ChannelConnectionCardProps {
 }
 
 const STATUS_DOT: Record<string, string> = {
-  connected: "bg-green-500",
-  error: "bg-red-500",
+  connected: "bg-success",
+  error: "bg-destructive",
   connecting: "bg-yellow-500",
   disconnected: "bg-muted-foreground/40",
 }
@@ -61,7 +61,7 @@ export function ChannelConnectionCard({
     <div
       className={cn(
         "flex items-center gap-3.5 rounded-xl border border-border p-4",
-        "bg-white transition-colors",
+        "bg-background transition-colors",
       )}
     >
       {/* Icon */}
@@ -106,7 +106,7 @@ export function ChannelConnectionCard({
           )}
         </div>
         {connection.status === "error" && connection.error && (
-          <p className="text-[11px] text-red-600 mt-1 truncate">
+          <p className="text-[11px] text-destructive mt-1 truncate">
             {connection.error}
           </p>
         )}
@@ -141,7 +141,7 @@ export function ChannelConnectionCard({
         </button>
         <button
           onClick={() => onDelete?.(connection)}
-          className={cn(btnClass, "hover:text-red-600")}
+          className={cn(btnClass, "hover:text-destructive")}
           title="Delete"
         >
           <Trash2 className="size-3.5" />

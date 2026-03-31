@@ -1,6 +1,6 @@
 [package]
 name = "keel-tauri"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = "Tauri plugin wrapping keel-sessions and keel-db for AI agent desktop apps"
 license = "MIT"

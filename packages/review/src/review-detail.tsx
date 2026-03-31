@@ -125,11 +125,11 @@ export function ReviewDetail({
             onKeyDown={handleKeyDown}
             placeholder="Type feedback..."
             disabled={isRevising}
-            className="flex-1 h-10 rounded-full pl-4 border-black/10"
+            className="flex-1 h-10 rounded-full pl-4 border-border"
           />
           <Button
             onClick={handleApprove}
-            className="h-10 px-5 rounded-full bg-foreground text-background hover:bg-foreground/90"
+            className="h-10 px-5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
           >
             Approve
           </Button>

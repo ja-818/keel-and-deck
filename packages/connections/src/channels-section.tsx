@@ -55,7 +55,7 @@ export function ChannelsSection({
               <div
                 className={cn(
                   "absolute right-0 top-full mt-1 z-10",
-                  "bg-white border border-border rounded-xl shadow-md",
+                  "bg-background border border-border rounded-xl shadow-md",
                   "py-1 min-w-[140px]",
                 )}
               >

@@ -1,4 +1,7 @@
 import { ExternalLink, Loader2, RefreshCw } from "lucide-react";
+import {
+  Empty, EmptyHeader, EmptyTitle, EmptyDescription,
+} from "@deck-ui/core";
 import { ConnectionRow } from "./connection-row";
 import { ChannelsSection } from "./channels-section";
 import type { Connection, ConnectionsResult, ChannelConnection, ChannelType } from "./types";
@@ -33,7 +36,7 @@ export function ConnectionsView({
 
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-auto">
-      <div className="max-w-3xl mx-auto w-full px-6 py-8">
+      <div className="flex-1 flex flex-col max-w-3xl mx-auto w-full px-6 py-8">
         {/* Header -- only when there are connections */}
         {!loading && items.length > 0 && (
           <div className="flex items-start justify-between mb-6">
@@ -42,7 +45,7 @@ export function ConnectionsView({
                 Connected apps
               </h1>
               <p className="text-[13px] text-muted-foreground mt-1">
-                Services Houston can use across all your projects
+                Services your agent can use across all your projects
               </p>
             </div>
             <button
@@ -67,16 +70,15 @@ export function ConnectionsView({
 
         {/* Not configured */}
         {!loading && result?.status === "not_configured" && (
-          <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <div className="space-y-2 text-center max-w-md">
-              <h1 className="text-2xl font-semibold text-foreground tracking-tight">
-                Connect your apps
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Set up Composio so Houston can use Gmail, Slack, Google Drive,
-                and 100+ other services on your behalf.
-              </p>
-            </div>
+          <Empty className="border-0">
+            <EmptyHeader>
+
+              <EmptyTitle>Connect your apps</EmptyTitle>
+              <EmptyDescription>
+                Set up integrations so your agent can use Gmail, Slack, Google
+                Drive, and 100+ other services on your behalf.
+              </EmptyDescription>
+            </EmptyHeader>
             <button
               onClick={onManage}
               className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors duration-200"
@@ -84,7 +86,7 @@ export function ConnectionsView({
               Set up connections
               <ExternalLink className="size-3.5" />
             </button>
-          </div>
+          </Empty>
         )}
 
         {/* Needs auth */}
@@ -138,7 +140,7 @@ export function ConnectionsView({
               </button>
               <button
                 onClick={onManage}
-                className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full border border-border bg-white text-foreground text-sm font-medium hover:bg-secondary transition-colors duration-200"
+                className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full border border-border bg-background text-foreground text-sm font-medium hover:bg-secondary transition-colors duration-200"
               >
                 Reconnect
                 <ExternalLink className="size-3.5" />
@@ -149,16 +151,15 @@ export function ConnectionsView({
 
         {/* Empty -- configured, no active connections */}
         {!loading && result?.status === "ok" && items.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <div className="space-y-2 text-center max-w-md">
-              <h1 className="text-2xl font-semibold text-foreground tracking-tight">
-                No apps connected yet
-              </h1>
-              <p className="text-sm text-muted-foreground">
+          <Empty className="border-0">
+            <EmptyHeader>
+
+              <EmptyTitle>No apps connected yet</EmptyTitle>
+              <EmptyDescription>
                 Connect Gmail, Slack, Google Drive, and 100+ other services so
-                Houston can use them across all your projects.
-              </p>
-            </div>
+                your agent can use them on your behalf.
+              </EmptyDescription>
+            </EmptyHeader>
             <button
               onClick={onManage}
               className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors duration-200"
@@ -166,7 +167,7 @@ export function ConnectionsView({
               Add a connection
               <ExternalLink className="size-3.5" />
             </button>
-          </div>
+          </Empty>
         )}
 
         {/* Connection grid */}

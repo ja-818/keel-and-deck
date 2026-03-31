@@ -17,7 +17,7 @@ export interface ChannelSetupFormProps {
 }
 
 const inputClass = cn(
-  "w-full px-3 py-2 rounded-xl border border-border bg-white",
+  "w-full px-3 py-2 rounded-xl border border-border bg-background",
   "text-sm text-foreground placeholder:text-muted-foreground/60",
   "focus:outline-none focus:border-border/80 transition-colors",
 )
@@ -102,7 +102,7 @@ export function ChannelSetupForm({
       )}
 
       {error && (
-        <p className="text-[12px] text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+        <p className="text-[12px] text-destructive bg-destructive/10 px-3 py-2 rounded-lg">
           {error}
         </p>
       )}

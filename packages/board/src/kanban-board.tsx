@@ -45,7 +45,7 @@ export function KanbanBoard({
 
   if (items.length === 0 && emptyState) {
     return (
-      <div className="flex-1 flex flex-col items-center pt-[20vh] gap-4 px-8">
+      <div className="flex-1 flex items-center justify-center px-8">
         {emptyState}
       </div>
     )

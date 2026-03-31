@@ -3,6 +3,9 @@
  * Accepts data and callbacks via props (no Zustand, no Tauri).
  */
 import { useMemo } from "react"
+import {
+  Empty, EmptyHeader, EmptyTitle, EmptyDescription,
+} from "@deck-ui/core"
 import type { Routine } from "./types"
 import { RoutineCard } from "./routine-card"
 
@@ -47,17 +50,15 @@ export function RoutinesGrid({
 
   if (sorted.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center pt-[20vh] gap-4 px-8">
-        <div className="space-y-2 text-center max-w-md">
-          <h1 className="text-2xl font-semibold text-foreground tracking-tight">
-            Automate recurring work
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Routines run on a schedule so Houston can work for you
-            automatically — daily reports, weekly research, and more.
-          </p>
-        </div>
-      </div>
+      <Empty className="flex-1 border-0">
+        <EmptyHeader>
+          <EmptyTitle>Automate recurring work</EmptyTitle>
+          <EmptyDescription>
+            Routines run on a schedule — daily reports, weekly research, and
+            more.
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     )
   }
 

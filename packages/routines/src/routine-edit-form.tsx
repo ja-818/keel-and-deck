@@ -27,7 +27,7 @@ const TRIGGER_OPTIONS: { value: TriggerType; label: string }[] = [
 ]
 
 const inputClass = cn(
-  "w-full px-3 py-2 rounded-xl border border-border bg-white",
+  "w-full px-3 py-2 rounded-xl border border-border bg-background",
   "text-sm text-foreground placeholder:text-muted-foreground/60",
   "focus:outline-none focus:border-border/80 transition-colors",
 )

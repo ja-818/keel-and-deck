@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 
 export function DeliverableCard({ content }: { content: string }) {
   return (
-    <div className="rounded-xl border border-border bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+    <div className="rounded-xl border border-border bg-background p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
       <div className="prose prose-sm prose-stone max-w-none text-foreground">
         <ReactMarkdown>{content}</ReactMarkdown>
       </div>

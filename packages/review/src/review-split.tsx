@@ -47,7 +47,7 @@ export function ReviewSplit({
         {selectedItem ? (
           <ReviewDetailPanel item={selectedItem} renderChat={renderChat} />
         ) : (
-          <div className="flex h-full items-center justify-center bg-white">
+          <div className="flex h-full items-center justify-center bg-background">
             <p className="text-sm text-muted-foreground">{emptyMessage}</p>
           </div>
         )}
