@@ -30,6 +30,8 @@ import {
 } from "react";
 import { Streamdown } from "streamdown";
 
+const MessageAvatarContext = createContext<React.ReactNode | undefined>(undefined);
+
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
   from: UIMessage["role"];
   /** Optional badge avatar shown on the message bubble (e.g., channel logo). */
@@ -37,21 +39,18 @@ export type MessageProps = HTMLAttributes<HTMLDivElement> & {
 };
 
 export const Message = ({ className, from, avatar, children, ...props }: MessageProps) => (
-  <div
-    className={cn(
-      "group relative flex w-full flex-col gap-2",
-      from === "user" ? "is-user ml-auto max-w-[70%] justify-end" : "is-assistant",
-      className
-    )}
-    {...props}
-  >
-    {children}
-    {avatar && (
-      <div className="absolute -bottom-1.5 group-[.is-user]:right-full group-[.is-user]:mr-2 group-[.is-assistant]:left-full group-[.is-assistant]:ml-2">
-        {avatar}
-      </div>
-    )}
-  </div>
+  <MessageAvatarContext.Provider value={avatar}>
+    <div
+      className={cn(
+        "group flex w-full flex-col gap-2",
+        from === "user" ? "is-user ml-auto max-w-[70%] justify-end" : "is-assistant",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </div>
+  </MessageAvatarContext.Provider>
 );
 
 export type MessageContentProps = HTMLAttributes<HTMLDivElement>;
@@ -60,19 +59,29 @@ export const MessageContent = ({
   children,
   className,
   ...props
-}: MessageContentProps) => (
-  <div
-    className={cn(
-      "flex w-fit min-w-0 max-w-full flex-col gap-2 overflow-hidden text-base leading-6",
-      "group-[.is-user]:ml-auto group-[.is-user]:rounded-[22px] group-[.is-user]:bg-muted group-[.is-user]:px-4 group-[.is-user]:py-2.5 group-[.is-user]:text-foreground",
-      "group-[.is-assistant]:text-foreground",
-      className
-    )}
-    {...props}
-  >
-    {children}
-  </div>
-);
+}: MessageContentProps) => {
+  const avatar = useContext(MessageAvatarContext);
+  return (
+    <div className={cn("relative", avatar && "group-[.is-user]:mr-4")}>
+      <div
+        className={cn(
+          "flex w-fit min-w-0 max-w-full flex-col gap-2 overflow-hidden text-base leading-6",
+          "group-[.is-user]:ml-auto group-[.is-user]:rounded-[22px] group-[.is-user]:bg-muted group-[.is-user]:px-4 group-[.is-user]:py-2.5 group-[.is-user]:text-foreground",
+          "group-[.is-assistant]:text-foreground",
+          className
+        )}
+        {...props}
+      >
+        {children}
+      </div>
+      {avatar && (
+        <div className="absolute -bottom-1 -right-3.5 group-[.is-assistant]:-left-3.5 group-[.is-assistant]:right-auto">
+          {avatar}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export type MessageActionsProps = ComponentProps<"div">;
 
