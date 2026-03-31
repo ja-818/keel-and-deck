@@ -19,6 +19,7 @@ export const GROUPS: Group[] = [
       { id: "dialog", label: "Dialog" },
       { id: "empty", label: "Empty" },
       { id: "separator", label: "Separator" },
+      { id: "stepper", label: "Stepper" },
     ],
   },
   {

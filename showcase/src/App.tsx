@@ -33,6 +33,11 @@ const pages: Record<string, React.LazyExoticComponent<React.ComponentType>> = {
       default: m.SeparatorPage,
     })),
   ),
+  stepper: lazy(() =>
+    import("./pages/core/stepper").then((m) => ({
+      default: m.StepperPage,
+    })),
+  ),
   "kanban-board": lazy(() =>
     import("./pages/board/kanban-board").then((m) => ({
       default: m.KanbanBoardPage,
