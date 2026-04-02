@@ -1003,7 +1003,7 @@ Workspace file management — file browser and editable instruction files.
 
 ### FilesBrowser
 
-File browser with folder grouping, file type icons, sizes, and actions.
+File browser with folder grouping, file type icons, sizes, and actions. Supports Finder-style drag-and-drop with folder targeting and inline folder creation.
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
@@ -1012,8 +1012,12 @@ File browser with folder grouping, file type icons, sizes, and actions.
 | onOpen | `(file: FileEntry) => void` | — | Called when a file row is clicked |
 | onReveal | `(file: FileEntry) => void` | — | Called when "Show in Finder" is selected |
 | onDelete | `(file: FileEntry) => void` | — | Called when delete is selected |
+| onFilesDropped | `(files: File[], targetFolder?: string) => void` | — | Called when files are dropped from the OS. `targetFolder` is the folder path when dropped on a folder, `undefined` for root. |
+| onCreateFolder | `(name: string) => void` | — | Called when the user creates a folder via the inline input. Shows a FolderPlus button in the header. |
 | emptyTitle | `string` | `"Your work shows up here"` | Title for empty state |
 | emptyDescription | `string` | — | Description for empty state |
+
+**Drag-and-drop behavior:** When dragging files over the component, the root area highlights. Hovering over a folder section (header or expanded children) highlights that folder instead. Dropping on a folder passes its path as `targetFolder`. Dropping elsewhere targets root.
 
 ```tsx
 import { FilesBrowser } from "@deck-ui/workspace"
@@ -1024,7 +1028,49 @@ import type { FileEntry } from "@deck-ui/workspace"
   onOpen={(f) => openFile(f.path)}
   onReveal={(f) => showInFinder(f.path)}
   onDelete={(f) => deleteFile(f.path)}
+  onFilesDropped={(dropped, folder) => importFiles(dropped, folder)}
+  onCreateFolder={(name) => createFolder(name)}
 />
+```
+
+**Hooks:** `useDropZone` and `useFolderDropTarget` are exported for custom drop zone implementations.
+
+### Keel backend (Rust) — workspace helpers
+
+`keel_tauri::workspace` provides the Rust helpers that apps wire to the FilesBrowser callbacks via Tauri commands:
+
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `copy_file_to_dir` | `(dir: &Path, source: &Path) -> Result<String, String>` | Copy a file from an absolute source path into the workspace. Returns the final file name (deduplicated if a file with the same name exists). |
+| `import_file` | `(dir: &Path, name: &str, data: &[u8]) -> Result<String, String>` | Write raw bytes as a named file into the workspace. Returns the final name (deduplicated). |
+| `create_folder` | `(dir: &Path, relative: &str) -> Result<String, String>` | Create a folder (with intermediate dirs) inside the workspace. Returns the relative path. |
+
+**Typical Tauri command wiring:**
+
+```rust
+use keel_tauri::workspace;
+
+#[tauri::command]
+pub async fn import_dropped_files(
+    state: State<'_, AppState>,
+    project_id: String,
+    file_paths: Vec<String>,
+    target_folder: Option<String>,
+) -> Result<Vec<String>, String> {
+    let dir = get_workspace_dir(&state, &project_id).await?;
+    let dest = match &target_folder {
+        Some(folder) => {
+            let d = dir.join(folder);
+            std::fs::create_dir_all(&d).map_err(|e| e.to_string())?;
+            d
+        }
+        None => dir,
+    };
+    file_paths
+        .iter()
+        .map(|p| workspace::copy_file_to_dir(&dest, Path::new(p)))
+        .collect()
+}
 ```
 
 ### InstructionsPanel
