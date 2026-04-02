@@ -142,17 +142,24 @@ import "@deck-ui/chat/src/styles.css"
 
 ---
 
-## AI Skill
+## AI Skills
 
-Teach your coding agent (Claude Code, Codex, etc.) how to use every Deck UI component with correct props, types, and patterns:
+Teach your coding agent (Claude Code, Codex, etc.) how to build with Keel & Deck:
 
 ```bash
 npx skills add ja-818/keel-and-deck
 ```
 
-This installs the [SKILL.md](./SKILL.md) into your project — a comprehensive reference covering all 10 packages, 70+ components, TypeScript interfaces, and real-world wiring examples. Your agent will know exactly what exists and how to use it.
+This installs **4 skills** into your project:
 
-Browse it on [skills.sh](https://skills.sh).
+| Skill | Audience | What it teaches |
+|-------|----------|----------------|
+| `deck-ui` | Builders | 70+ React components, props, types, and patterns |
+| `keel-backend` | Builders | Rust crates — session management, channels, DB, Tauri integration |
+| `keel-and-deck` | Builders | How to scaffold and architect a full app from scratch |
+| `keel` | Agents inside your app | CLI commands for managing tasks and routines |
+
+Browse on [skills.sh](https://skills.sh).
 
 ---
 
