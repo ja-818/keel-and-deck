@@ -7,3 +7,6 @@ export type { FilesBrowserProps } from "./files-browser"
 
 export { InstructionsPanel } from "./instructions-panel"
 export type { InstructionsPanelProps } from "./instructions-panel"
+
+// Hooks
+export { useDropZone, useFolderDropTarget } from "./drop-zone"

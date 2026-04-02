@@ -81,3 +81,81 @@ pub fn read_file(
     fs::read_to_string(dir.join(name))
         .map_err(|e| format!("Failed to read {name}: {e}"))
 }
+
+/// Copy a file from an absolute source path into a workspace directory.
+/// Returns the file name used (which may be deduplicated if a file with the
+/// same name already exists).
+pub fn copy_file_to_dir(dir: &Path, source: &Path) -> Result<String, String> {
+    if !source.is_file() {
+        return Err(format!("Source is not a file: {}", source.display()));
+    }
+    let name = source
+        .file_name()
+        .ok_or_else(|| "Source has no file name".to_string())?
+        .to_string_lossy()
+        .to_string();
+
+    let dest = deduplicate_name(dir, &name);
+    let final_name = dest
+        .file_name()
+        .unwrap()
+        .to_string_lossy()
+        .to_string();
+
+    fs::copy(source, &dest)
+        .map_err(|e| format!("Failed to copy {}: {e}", source.display()))?;
+    Ok(final_name)
+}
+
+/// Write raw bytes as a file into a workspace directory.
+/// Returns the file name used (which may be deduplicated).
+pub fn import_file(dir: &Path, name: &str, data: &[u8]) -> Result<String, String> {
+    let dest = deduplicate_name(dir, name);
+    let final_name = dest
+        .file_name()
+        .unwrap()
+        .to_string_lossy()
+        .to_string();
+
+    fs::write(&dest, data)
+        .map_err(|e| format!("Failed to write {name}: {e}"))?;
+    Ok(final_name)
+}
+
+/// Create a folder inside a workspace directory.
+/// Accepts a relative path (e.g., "docs" or "output/images") and creates all
+/// intermediate directories. Returns the relative path that was created.
+pub fn create_folder(dir: &Path, relative: &str) -> Result<String, String> {
+    let relative = relative.trim().trim_matches('/');
+    if relative.is_empty() {
+        return Err("Folder name cannot be empty".to_string());
+    }
+    let target = dir.join(relative);
+    fs::create_dir_all(&target)
+        .map_err(|e| format!("Failed to create folder {relative}: {e}"))?;
+    Ok(relative.to_string())
+}
+
+/// If `dir/name` already exists, append `(2)`, `(3)`, etc. before the extension.
+fn deduplicate_name(dir: &Path, name: &str) -> std::path::PathBuf {
+    let candidate = dir.join(name);
+    if !candidate.exists() {
+        return candidate;
+    }
+
+    let path = Path::new(name);
+    let stem = path.file_stem().unwrap_or_default().to_string_lossy();
+    let ext = path.extension().map(|e| e.to_string_lossy().to_string());
+
+    for i in 2..=999 {
+        let new_name = match &ext {
+            Some(e) => format!("{stem} ({i}).{e}"),
+            None => format!("{stem} ({i})"),
+        };
+        let candidate = dir.join(&new_name);
+        if !candidate.exists() {
+            return candidate;
+        }
+    }
+    dir.join(name)
+}
