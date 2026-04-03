@@ -1,14 +1,15 @@
 /**
  * FilesBrowser — file browser for an agent workspace.
- * Shows files grouped by folder with icons, sizes, and actions.
- * Supports drag-and-drop file import (with folder targeting) and folder creation.
+ * Shows files as a full folder hierarchy with expandable/collapsible folders
+ * at any nesting depth. Supports drag-and-drop file import.
  */
 import { useCallback, useRef, useState } from "react"
-import { cn } from "@deck-ui/core"
-import { FolderPlus } from "lucide-react"
+import { cn, Button } from "@deck-ui/core"
+import { FolderPlus, Upload, FolderOpen } from "lucide-react"
 import type { FileEntry } from "./types"
 import { useDropZone } from "./drop-zone"
 import { FileRow, FolderSection } from "./file-row"
+import { buildTree } from "./tree"
 
 export interface FilesBrowserProps {
   /** Files to display */
@@ -25,6 +26,10 @@ export interface FilesBrowserProps {
   onFilesDropped?: (files: File[], targetFolder?: string) => void
   /** Called when the user creates a new folder via the inline input */
   onCreateFolder?: (name: string) => void
+  /** Called when "Browse files" is clicked — wire to native file picker (e.g. tauri-plugin-dialog). */
+  onBrowse?: () => void
+  /** Called when "Open folder" is clicked — wire to reveal workspace dir (e.g. shell open). */
+  onRevealWorkspace?: () => void
   /** Title for empty state */
   emptyTitle?: string
   /** Description for empty state */
@@ -39,6 +44,8 @@ export function FilesBrowser({
   onDelete,
   onFilesDropped,
   onCreateFolder,
+  onBrowse,
+  onRevealWorkspace,
   emptyTitle = "Your work shows up here",
   emptyDescription = "When agents create files, they'll appear here for you to open and review.",
 }: FilesBrowserProps) {
@@ -46,14 +53,15 @@ export function FilesBrowser({
   const [creatingFolder, setCreatingFolder] = useState(false)
   const [folderDropTarget, setFolderDropTarget] = useState<string | null>(null)
   const isEmpty = !loading && files.length === 0
-  const grouped = isEmpty ? {} : groupByFolder(files)
-  const folders = isEmpty ? [] : Object.keys(grouped).sort()
 
   const isRootTarget = isDragging && folderDropTarget === null
 
   const onDragActive = useCallback((folder: string | null) => {
     setFolderDropTarget(folder)
   }, [])
+
+  // Build tree from flat file list. Root children are rendered at depth=0.
+  const tree = isEmpty ? null : buildTree(files)
 
   return (
     <div
@@ -70,6 +78,22 @@ export function FilesBrowser({
               {emptyDescription}
             </p>
           </div>
+          {(onBrowse || onRevealWorkspace) && (
+            <div className="flex items-center gap-2">
+              {onBrowse && (
+                <Button variant="default" size="sm" onClick={onBrowse}>
+                  <Upload className="size-4 mr-1.5" />
+                  Browse files
+                </Button>
+              )}
+              {onRevealWorkspace && (
+                <Button variant="outline" size="sm" onClick={onRevealWorkspace}>
+                  <FolderOpen className="size-4 mr-1.5" />
+                  Open folder
+                </Button>
+              )}
+            </div>
+          )}
           {onCreateFolder && (
             <button
               onClick={() => setCreatingFolder(true)}
@@ -128,12 +152,12 @@ export function FilesBrowser({
                     onCancel={() => setCreatingFolder(false)}
                   />
                 )}
-                {folders.map((folder) =>
-                  folder ? (
+                {tree?.children.map((child) =>
+                  child.kind === "folder" ? (
                     <FolderSection
-                      key={folder}
-                      name={folder}
-                      files={grouped[folder]}
+                      key={child.path}
+                      node={child}
+                      depth={0}
                       onOpen={onOpen}
                       onReveal={onReveal}
                       onDelete={onDelete}
@@ -141,15 +165,13 @@ export function FilesBrowser({
                       onDragActive={onDragActive}
                     />
                   ) : (
-                    grouped[folder].map((f) => (
-                      <FileRow
-                        key={f.path}
-                        file={f}
-                        onOpen={onOpen}
-                        onReveal={onReveal}
-                        onDelete={onDelete}
-                      />
-                    ))
+                    <FileRow
+                      key={child.entry.path}
+                      file={child.entry}
+                      onOpen={onOpen}
+                      onReveal={onReveal}
+                      onDelete={onDelete}
+                    />
                   ),
                 )}
               </div>
@@ -192,14 +214,4 @@ function NewFolderInput({
       />
     </div>
   )
-}
-
-function groupByFolder(files: FileEntry[]): Record<string, FileEntry[]> {
-  const grouped: Record<string, FileEntry[]> = {}
-  for (const f of files) {
-    const parts = f.path.split("/")
-    const folder = parts.length > 1 ? parts.slice(0, -1).join("/") : ""
-    ;(grouped[folder] ??= []).push(f)
-  }
-  return grouped
 }

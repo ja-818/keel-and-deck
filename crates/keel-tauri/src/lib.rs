@@ -7,11 +7,13 @@ pub mod channel_manager;
 pub mod chat_session;
 pub mod events;
 pub mod paths;
+pub mod session_queue;
 pub mod session_runner;
 pub mod state;
 pub mod supervisor;
 pub mod tray;
 pub mod workspace;
+pub mod workspace_commands;
 
 // Re-export sub-crates for convenience.
 pub use keel_db;

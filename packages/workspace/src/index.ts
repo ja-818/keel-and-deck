@@ -1,5 +1,7 @@
 // Types
 export type { FileEntry, InstructionFile } from "./types"
+export type { FolderNode, FileNode, TreeNode } from "./tree"
+export { buildTree, countFiles } from "./tree"
 
 // Components
 export { FilesBrowser } from "./files-browser"

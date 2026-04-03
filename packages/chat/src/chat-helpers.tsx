@@ -40,20 +40,65 @@ function humanizeToolName(
   return labels[short] || short.replace(/_/g, " ");
 }
 
-function collapseToolEntries(
-  tools: ToolEntry[],
-): { name: string; count: number; hasResult: boolean }[] {
-  const result: { name: string; count: number; hasResult: boolean }[] = [];
+interface CollapsedTool {
+  name: string;
+  count: number;
+  hasResult: boolean;
+  /** The input of the last tool in the group (shown when active) */
+  lastInput?: Record<string, unknown>;
+}
+
+function collapseToolEntries(tools: ToolEntry[]): CollapsedTool[] {
+  const result: CollapsedTool[] = [];
   for (const tool of tools) {
     const last = result[result.length - 1];
     if (last && last.name === tool.name) {
       last.count++;
       if (tool.result) last.hasResult = true;
+      last.lastInput = tool.input as Record<string, unknown> | undefined;
     } else {
-      result.push({ name: tool.name, count: 1, hasResult: !!tool.result });
+      result.push({
+        name: tool.name,
+        count: 1,
+        hasResult: !!tool.result,
+        lastInput: tool.input as Record<string, unknown> | undefined,
+      });
     }
   }
   return result;
+}
+
+/**
+ * Split collapsed entries into completed groups + the active tool.
+ * When the last entry in a group is still running (no result, streaming),
+ * peel it off as a separate "active" item so the user sees:
+ *   [check] Running command 23x
+ *   [spinner] Running command — npm install
+ */
+function splitActive(
+  collapsed: CollapsedTool[],
+  isStreaming: boolean,
+): { completed: CollapsedTool[]; active: CollapsedTool | null } {
+  if (!isStreaming || collapsed.length === 0) {
+    return { completed: collapsed, active: null };
+  }
+  const last = collapsed[collapsed.length - 1];
+  if (last.hasResult) {
+    return { completed: collapsed, active: null };
+  }
+  // Peel the active tool off the last group
+  if (last.count > 1) {
+    const completedLast = { ...last, count: last.count - 1, hasResult: true };
+    const activeTool = { ...last, count: 1, hasResult: false };
+    return {
+      completed: [...collapsed.slice(0, -1), completedLast],
+      active: activeTool,
+    };
+  }
+  return {
+    completed: collapsed.slice(0, -1),
+    active: last,
+  };
 }
 
 export interface ToolActivityProps {
@@ -61,6 +106,25 @@ export interface ToolActivityProps {
   isStreaming: boolean;
   /** Custom tool name → human label mappings, merged with defaults */
   toolLabels?: Record<string, string>;
+}
+
+/** Extract a short detail string from tool input for display. */
+function toolDetail(input?: Record<string, unknown>): string | null {
+  if (!input) return null;
+  // Bash: show command
+  if (typeof input.command === "string") {
+    const cmd = input.command as string;
+    return cmd.length > 60 ? cmd.slice(0, 57) + "..." : cmd;
+  }
+  // Read/Write/Edit: show file path
+  if (typeof input.file_path === "string") {
+    const fp = input.file_path as string;
+    const parts = fp.split("/");
+    return parts.length > 2 ? parts.slice(-2).join("/") : fp;
+  }
+  // Grep/Glob: show pattern
+  if (typeof input.pattern === "string") return input.pattern as string;
+  return null;
 }
 
 export function ToolActivity({
@@ -81,35 +145,35 @@ export function ToolActivity({
   }, [isStreaming]);
 
   const collapsed = collapseToolEntries(tools);
-  const lastIdx = collapsed.length - 1;
+  const { completed, active } = splitActive(collapsed, isStreaming);
 
   return (
     <div className="space-y-0.5 py-1">
-      {collapsed.map((item, i) => {
-        const isLast = i === lastIdx;
-        const hasResult = item.hasResult;
-        const isActive = isLast && isStreaming && !hasResult;
-        return (
-          <div
-            key={i}
-            className={`flex items-center gap-2 text-xs py-0.5 transition-opacity duration-300 ${
-              isActive ? "text-foreground/70" : "text-muted-foreground/40"
-            }`}
-          >
-            {isActive ? (
-              <Loader2 className="size-3 animate-spin text-foreground/40 shrink-0" />
-            ) : (
-              <CheckIcon className="size-3 text-muted-foreground/30 shrink-0" />
-            )}
-            <span className={isActive ? "font-medium" : ""}>
-              {humanizeToolName(item.name, toolLabels)}
+      {completed.map((item, i) => (
+        <div
+          key={i}
+          className="flex items-center gap-2 text-xs py-0.5 text-muted-foreground/40"
+        >
+          <CheckIcon className="size-3 text-muted-foreground/30 shrink-0" />
+          <span>{humanizeToolName(item.name, toolLabels)}</span>
+          {item.count > 1 && (
+            <span className="text-muted-foreground/30">{item.count}x</span>
+          )}
+        </div>
+      ))}
+      {active && (
+        <div className="flex items-center gap-2 text-xs py-0.5 text-foreground/70">
+          <Loader2 className="size-3 animate-spin text-foreground/40 shrink-0" />
+          <span className="font-medium">
+            {humanizeToolName(active.name, toolLabels)}
+          </span>
+          {toolDetail(active.lastInput) && (
+            <span className="text-muted-foreground/40 truncate max-w-[300px]">
+              {toolDetail(active.lastInput)}
             </span>
-            {item.count > 1 && (
-              <span className="text-muted-foreground/30">{item.count}x</span>
-            )}
-          </div>
-        );
-      })}
+          )}
+        </div>
+      )}
       {isStreaming && tools.length > 0 && (
         <div className="text-[10px] text-muted-foreground/30 pl-5 pt-0.5">
           {tools.length} {tools.length === 1 ? "step" : "steps"} · {elapsed}s

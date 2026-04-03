@@ -18,6 +18,7 @@ pub struct SessionResult {
 }
 
 /// Options for feed persistence.
+#[derive(Clone)]
 pub struct PersistOptions {
     pub db: Database,
     pub project_id: String,

@@ -37,7 +37,7 @@ type ChatStatus = "ready" | "streaming" | "submitted";
 export interface ChatPanelProps {
   sessionKey: string;
   feedItems: FeedItem[];
-  onSend: (text: string) => void;
+  onSend: (text: string, files: File[]) => void;
   onStop?: () => void;
   onBack?: () => void;
   isLoading: boolean;

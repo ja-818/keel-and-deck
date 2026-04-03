@@ -45,7 +45,7 @@ export function ChatPanelPage() {
           <ChatPanel
             sessionKey="showcase-demo"
             feedItems={SAMPLE_FEED}
-            onSend={(text) => console.log("Send:", text)}
+            onSend={(text, files) => console.log("Send:", text, files)}
             isLoading={false}
             placeholder="Try typing a message..."
             status="ready"

@@ -1,5 +1,6 @@
 /**
  * File row, folder section, and file icon sub-components.
+ * Supports recursive folder hierarchies at any depth.
  * Extracted from FilesBrowser to keep files under 200 lines.
  */
 import { useEffect, useState } from "react"
@@ -20,19 +21,26 @@ import {
   Trash2,
 } from "lucide-react"
 import type { FileEntry } from "./types"
+import type { FolderNode } from "./tree"
+import { countFiles } from "./tree"
 import { useFolderDropTarget } from "./drop-zone"
 
+// ---------------------------------------------------------------------------
+// FolderSection — renders one folder node recursively
+// ---------------------------------------------------------------------------
+
 export function FolderSection({
-  name,
-  files,
+  node,
+  depth,
   onOpen,
   onReveal,
   onDelete,
   onFilesDropped,
   onDragActive,
 }: {
-  name: string
-  files: FileEntry[]
+  node: FolderNode
+  /** Nesting depth (0 = top-level folder, 1 = subfolder, etc.) */
+  depth: number
   onOpen?: (file: FileEntry) => void
   onReveal?: (file: FileEntry) => void
   onDelete?: (file: FileEntry) => void
@@ -40,77 +48,104 @@ export function FolderSection({
   onDragActive?: (folder: string | null) => void
 }) {
   const [open, setOpen] = useState(true)
-  const { isOver, folderHandlers } = useFolderDropTarget(name, onFilesDropped)
+  const { isOver, folderHandlers } = useFolderDropTarget(node.path, onFilesDropped)
 
   useEffect(() => {
-    onDragActive?.(isOver ? name : null)
-  }, [isOver, name, onDragActive])
+    onDragActive?.(isOver ? node.path : null)
+  }, [isOver, node.path, onDragActive])
+
+  // Base px-6 = 24px. Each additional depth level indents by 16px.
+  const headerPaddingLeft = 24 + depth * 16
 
   return (
     <div {...(onFilesDropped ? folderHandlers : {})}>
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center h-8 px-6 transition-colors duration-150 select-none hover:bg-secondary"
-        style={isOver ? { backgroundColor: "rgba(0,0,0,0.06)" } : undefined}
+        className="w-full flex items-center h-8 transition-colors duration-150 select-none hover:bg-secondary"
+        style={{
+          paddingLeft: headerPaddingLeft,
+          paddingRight: 24,
+          ...(isOver ? { backgroundColor: "rgba(0,0,0,0.06)" } : {}),
+        }}
       >
         <ChevronRight
           className={cn(
-            "size-3.5 text-muted-foreground/40 transition-transform duration-200 mr-2",
+            "size-3.5 text-muted-foreground/40 transition-transform duration-200 mr-2 shrink-0",
             open && "rotate-90",
           )}
         />
         <span
-          className="text-xs font-medium flex-1 text-left text-muted-foreground/60"
+          className="text-xs font-medium flex-1 text-left text-muted-foreground/60 truncate"
           style={isOver ? { color: "var(--color-foreground)" } : undefined}
         >
-          {name}
+          {node.name}
         </span>
-        <span className="text-[10px] text-muted-foreground/30">
-          {files.length}
+        <span className="text-[10px] text-muted-foreground/30 ml-2 shrink-0">
+          {countFiles(node)}
         </span>
       </button>
       {open && (
         <div style={isOver ? { backgroundColor: "rgba(0,0,0,0.03)" } : undefined}>
-          {files.map((f) => (
-            <FileRow
-              key={f.path}
-              file={f}
-              indent
-              onOpen={onOpen}
-              onReveal={onReveal}
-              onDelete={onDelete}
-            />
-          ))}
+          {node.children.map((child) =>
+            child.kind === "folder" ? (
+              <FolderSection
+                key={child.path}
+                node={child}
+                depth={depth + 1}
+                onOpen={onOpen}
+                onReveal={onReveal}
+                onDelete={onDelete}
+                onFilesDropped={onFilesDropped}
+                onDragActive={onDragActive}
+              />
+            ) : (
+              <FileRow
+                key={child.entry.path}
+                file={child.entry}
+                depth={depth + 1}
+                onOpen={onOpen}
+                onReveal={onReveal}
+                onDelete={onDelete}
+              />
+            ),
+          )}
         </div>
       )}
     </div>
   )
 }
 
+// ---------------------------------------------------------------------------
+// FileRow
+// ---------------------------------------------------------------------------
+
 export function FileRow({
   file,
-  indent,
+  depth,
   onOpen,
   onReveal,
   onDelete,
 }: {
   file: FileEntry
-  indent?: boolean
+  /** Nesting depth (0 or undefined = root level, 1 = inside a top-level folder, etc.) */
+  depth?: number
   onOpen?: (file: FileEntry) => void
   onReveal?: (file: FileEntry) => void
   onDelete?: (file: FileEntry) => void
 }) {
   const ext = file.extension
   const hasActions = onOpen || onReveal || onDelete
+  // Base px-6 = 24px. Indented files get +16px per depth + 4px icon offset.
+  const paddingLeft = depth != null && depth > 0 ? 24 + depth * 16 + 4 : 24
 
   return (
     <button
       onClick={() => onOpen?.(file)}
       className={cn(
-        "w-full flex items-center h-9 px-6 hover:bg-secondary",
+        "w-full flex items-center h-9 pr-6 hover:bg-secondary",
         "active:bg-accent transition-colors duration-100 text-left group",
-        indent && "pl-11",
       )}
+      style={{ paddingLeft }}
     >
       <div className="flex items-center gap-2.5 flex-1 min-w-0">
         <FileIcon extension={ext} />
@@ -176,6 +211,10 @@ export function FileRow({
   )
 }
 
+// ---------------------------------------------------------------------------
+// FileIcon
+// ---------------------------------------------------------------------------
+
 function FileIcon({ extension }: { extension: string }) {
   if (["png", "jpg", "jpeg", "svg", "gif", "webp"].includes(extension)) {
     return <ImageIcon className="size-4 shrink-0 text-muted-foreground/50" />
@@ -200,6 +239,10 @@ function FileIcon({ extension }: { extension: string }) {
   }
   return <FileText className="size-4 shrink-0 text-muted-foreground/50" />
 }
+
+// ---------------------------------------------------------------------------
+// Utilities
+// ---------------------------------------------------------------------------
 
 export function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`

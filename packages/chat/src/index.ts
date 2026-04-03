@@ -161,6 +161,8 @@ export { ChatPanel } from "./chat-panel";
 export type { ChatPanelProps } from "./chat-panel";
 
 export { ChatInput } from "./chat-input";
+export type { ChatInputProps } from "./chat-input";
+export type { AttachMenuItem } from "./chat-input-parts";
 
 export { ToolActivity, ToolsAndCards, feedItemsToMessages } from "./chat-helpers";
 export type { ToolActivityProps, ToolsAndCardsProps } from "./chat-helpers";

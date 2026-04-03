@@ -27,7 +27,7 @@ function MyChat({ items }: { items: FeedItem[] }) {
     <ChatPanel
       sessionKey="session-1"
       feedItems={items}
-      onSend={(text) => sendToAgent(text)}
+      onSend={(text, files) => sendToAgent(text, files)}
       isLoading={isStreaming}
       status="streaming"
     />
@@ -36,8 +36,14 @@ function MyChat({ items }: { items: FeedItem[] }) {
 
 export const CHAT_INPUT_CODE = `import { ChatInput } from "@deck-ui/chat"
 
+// onSend now receives both text and any files the user attached
 <ChatInput
-  onSend={(text) => sendMessage(text)}
+  onSend={(text, files) => {
+    if (files.length > 0) {
+      await saveFilesToDisk(files);
+    }
+    sendMessage(text);
+  }}
   onStop={() => cancelStream()}
   status="ready"
   placeholder="Ask anything..."
@@ -138,7 +144,7 @@ interface ToolEntry {
 export const CHAT_PANEL_PROPS: PropDef[] = [
   { name: "sessionKey", type: "string", description: "Unique key to reset internal state when switching sessions" },
   { name: "feedItems", type: "FeedItem[]", description: "Raw stream items from Claude CLI or similar" },
-  { name: "onSend", type: "(text) => void", description: "Called when the user submits a message" },
+  { name: "onSend", type: "(text: string, files: File[]) => void", description: "Called when the user submits a message; files contains any attachments from the + button" },
   { name: "onStop", type: "() => void", description: "Called when the user clicks stop during streaming" },
   { name: "onBack", type: "() => void", description: "Shows a back button and calls this on click" },
   { name: "isLoading", type: "boolean", description: "Whether the agent is processing (used for status derivation)" },
@@ -154,7 +160,7 @@ export const CHAT_PANEL_PROPS: PropDef[] = [
 ];
 
 export const CHAT_INPUT_PROPS: PropDef[] = [
-  { name: "onSend", type: "(text) => void", description: "Called with trimmed text when user submits" },
+  { name: "onSend", type: "(text: string, files: File[]) => void", description: "Called with trimmed text and any attached files when user submits" },
   { name: "onStop", type: "() => void", description: "Called when stop button is clicked" },
   { name: "status", type: '"ready" | "streaming" | "submitted"', default: '"ready"', description: "Controls button states (send/stop)" },
   { name: "placeholder", type: "string", default: '"Type a message..."', description: "Input placeholder text" },
