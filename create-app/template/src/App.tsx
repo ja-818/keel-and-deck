@@ -27,7 +27,7 @@ const TABS = [
 ];
 
 export function App() {
-  const { agents, current, ready, loadAgents, setCurrentAgent } =
+  const { agents, current, ready, loadAgents, setCurrentAgent, renameAgent, deleteAgent } =
     useAgentStore();
   const mainFeed = useFeedStore((s) => s.items[MAIN_KEY]);
   const pushFeedItem = useFeedStore((s) => s.pushFeedItem);
@@ -100,6 +100,8 @@ export function App() {
           if (agent) setCurrentAgent(agent);
         }}
         onAdd={() => setShowCreate(true)}
+        onRename={(id, newName) => renameAgent(id, newName)}
+        onDelete={(id) => deleteAgent(id)}
         sectionLabel="Agents"
       >
         <div className="flex-1 flex flex-col min-w-0">

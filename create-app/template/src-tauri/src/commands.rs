@@ -53,6 +53,32 @@ pub async fn create_agent(
 }
 
 #[tauri::command]
+pub async fn rename_agent(
+    agent_path: String,
+    new_name: String,
+) -> Result<Agent, String> {
+    let old_dir = expand_tilde(&PathBuf::from(&agent_path));
+    let parent = old_dir.parent().ok_or("Invalid agent path")?;
+    let new_dir = parent.join(&new_name);
+    std::fs::rename(&old_dir, &new_dir)
+        .map_err(|e| format!("Failed to rename agent: {e}"))?;
+    Ok(Agent {
+        name: new_name,
+        path: new_dir.to_string_lossy().to_string(),
+    })
+}
+
+#[tauri::command]
+pub async fn delete_agent(agent_path: String) -> Result<(), String> {
+    let dir = expand_tilde(&PathBuf::from(&agent_path));
+    if dir.exists() {
+        std::fs::remove_dir_all(&dir)
+            .map_err(|e| format!("Failed to delete agent: {e}"))?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn send_message(
     app_handle: tauri::AppHandle,
     state: State<'_, AppState>,

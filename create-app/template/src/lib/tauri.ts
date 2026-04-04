@@ -4,6 +4,9 @@ import type { Agent } from "./types";
 export const tauriAgents = {
   list: () => invoke<Agent[]>("list_agents"),
   create: (name: string) => invoke<Agent>("create_agent", { name }),
+  rename: (path: string, newName: string) =>
+    invoke<Agent>("rename_agent", { agentPath: path, newName }),
+  delete: (path: string) => invoke<void>("delete_agent", { agentPath: path }),
 };
 
 export const tauriChat = {

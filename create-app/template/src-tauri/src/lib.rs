@@ -38,6 +38,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::list_agents,
             commands::create_agent,
+            commands::rename_agent,
+            commands::delete_agent,
             commands::send_message,
             commands::load_chat_history,
             commands::read_workspace_file,
