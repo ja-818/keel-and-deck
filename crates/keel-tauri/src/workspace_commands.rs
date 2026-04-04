@@ -223,6 +223,33 @@ pub async fn read_project_file(
         .map_err(|e| format!("Failed to read {relative_path}: {e}"))
 }
 
+/// Load persisted chat feed for hydrating the UI on app restart.
+/// Reads from the `chat_feed` table and returns items as JSON.
+#[tauri::command]
+pub async fn load_chat_feed(
+    state: State<'_, AppState>,
+    project_id: String,
+) -> Result<Vec<serde_json::Value>, String> {
+    let rows = state
+        .db
+        .list_chat_feed(&project_id, "main")
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let items: Vec<serde_json::Value> = rows
+        .into_iter()
+        .map(|row| {
+            serde_json::json!({
+                "feed_type": row.feed_type,
+                "data": serde_json::from_str::<serde_json::Value>(&row.data_json)
+                    .unwrap_or(serde_json::Value::String(row.data_json)),
+            })
+        })
+        .collect();
+
+    Ok(items)
+}
+
 // -- Helpers --
 
 async fn resolve_project_dir(state: &AppState, project_id: &str) -> Result<PathBuf, String> {

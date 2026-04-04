@@ -2359,6 +2359,7 @@ dependencies = [
  "keel-memory",
  "keel-scheduler",
  "keel-sessions",
+ "libsql",
  "serde",
  "serde_json",
  "tauri",

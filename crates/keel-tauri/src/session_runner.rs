@@ -28,6 +28,9 @@ pub struct PersistOptions {
 
 /// Spawn a Claude session, emit events, optionally persist feed items, and return
 /// a JoinHandle that resolves to the final response.
+///
+/// Automatically calls `claude_path::init()` (idempotent via `OnceLock`)
+/// so apps don't need to remember to initialize PATH resolution.
 pub fn spawn_and_monitor(
     app_handle: &tauri::AppHandle,
     session_key: String,
@@ -38,6 +41,13 @@ pub fn spawn_and_monitor(
     chat_state: Option<ChatSessionState>,
     persist: Option<PersistOptions>,
 ) -> tokio::task::JoinHandle<SessionResult> {
+    // Ensure the user's shell PATH is resolved before spawning claude.
+    // OnceLock inside init() makes this a no-op after the first call.
+    keel_sessions::claude_path::init();
+
+    // Clone working_dir before spawn_session consumes it — needed for .claude_session_id persistence.
+    let persist_dir = working_dir.clone();
+
     let (mut rx, _handle) = SessionManager::spawn_session(
         prompt,
         resume_id,
@@ -52,6 +62,7 @@ pub fn spawn_and_monitor(
 
     let handle = app_handle.clone();
     let key = session_key;
+    let working_dir = persist_dir;
     tokio::spawn(async move {
         let mut response_text: Option<String> = None;
         let mut claude_session_id: Option<String> = None;
@@ -86,7 +97,12 @@ pub fn spawn_and_monitor(
                 SessionUpdate::SessionId(sid) => {
                     claude_session_id = Some(sid.clone());
                     if let Some(ref state) = chat_state {
-                        state.set(sid).await;
+                        state.set(sid.clone()).await;
+                    }
+                    // Persist to disk so --resume survives app restarts.
+                    if let Some(ref dir) = working_dir {
+                        let session_file = dir.join(".claude_session_id");
+                        std::fs::write(&session_file, &sid).ok();
                     }
                 }
                 SessionUpdate::Status(ref status) => {

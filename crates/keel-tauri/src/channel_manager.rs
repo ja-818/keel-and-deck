@@ -101,6 +101,44 @@ impl ChannelManager {
     }
 }
 
+/// Auto-reconnect channels that were connected before app restart.
+/// Queries the `channels` table for rows with `status = 'connected'`,
+/// parses their config, and starts each one.
+pub async fn auto_reconnect(db: &keel_db::Database, mgr: &ChannelManager) {
+    let query = "SELECT id, channel_type, config FROM channels WHERE status = 'connected'";
+    let rows = match db.conn().query(query, libsql::params![]).await {
+        Ok(rows) => rows,
+        Err(e) => {
+            eprintln!("[channels] auto-reconnect query failed: {e}");
+            return;
+        }
+    };
+
+    let mut rows = rows;
+    while let Ok(Some(row)) = rows.next().await {
+        let id: String = row.get(0).unwrap_or_default();
+        let ch_type: String = row.get(1).unwrap_or_default();
+        let config_str: String = row.get(2).unwrap_or_default();
+        if let Ok(config_val) = serde_json::from_str::<serde_json::Value>(&config_str) {
+            let token = config_val
+                .get("token")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .to_string();
+            let config = ChannelConfig {
+                channel_type: ch_type.clone(),
+                token,
+                extra: config_val,
+            };
+            if let Err(e) = mgr.start_channel(id.clone(), config).await {
+                eprintln!("[channels] auto-reconnect failed for {id} ({ch_type}): {e}");
+            } else {
+                eprintln!("[channels] auto-reconnected {id} ({ch_type})");
+            }
+        }
+    }
+}
+
 /// Create a channel adapter from config.
 fn create_adapter(config: &ChannelConfig) -> Result<Box<dyn Channel>, String> {
     match config.channel_type.as_str() {

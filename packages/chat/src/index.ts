@@ -167,6 +167,12 @@ export type { AttachMenuItem } from "./chat-input-parts";
 export { ToolActivity, ToolsAndCards, feedItemsToMessages } from "./chat-helpers";
 export type { ToolActivityProps, ToolsAndCardsProps } from "./chat-helpers";
 
+// === Progress ===
+export { useProgressSteps } from "./use-progress-steps";
+export type { ProgressStep, StepStatus } from "./use-progress-steps";
+export { ProgressPanel } from "./progress-panel";
+export type { ProgressPanelProps } from "./progress-panel";
+
 // === Utilities ===
 export { Typewriter } from "./typewriter";
 export { mergeFeedItem } from "./feed-merge";

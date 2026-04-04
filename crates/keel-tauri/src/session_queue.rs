@@ -137,7 +137,12 @@ async fn queue_loop(
                 }
                 SessionUpdate::SessionId(sid) => {
                     if let Some(ref state) = config.chat_state {
-                        state.set(sid).await;
+                        state.set(sid.clone()).await;
+                    }
+                    // Persist to disk so --resume survives app restarts.
+                    if let Some(ref dir) = config.working_dir {
+                        let session_file = dir.join(".claude_session_id");
+                        std::fs::write(&session_file, &sid).ok();
                     }
                 }
                 SessionUpdate::Status(ref status) => {

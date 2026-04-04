@@ -3,6 +3,7 @@
 //! Provides generic AppState, event types, and a session supervisor
 //! for Tauri 2 desktop apps built with the Keel framework.
 
+pub mod agent_sessions;
 pub mod channel_manager;
 pub mod chat_session;
 pub mod events;

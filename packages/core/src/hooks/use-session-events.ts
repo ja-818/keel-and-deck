@@ -1,0 +1,88 @@
+/**
+ * Base hook for subscribing to keel-tauri backend events.
+ *
+ * Uses a ref-based handler pattern to avoid the race condition in
+ * useKeelEvent (where handler recreation tears down and re-registers
+ * the listener, causing missed events).
+ *
+ * Apps pass their own `listen` function from `@tauri-apps/api/event`
+ * so @deck-ui/core doesn't need a build-time dependency on Tauri.
+ *
+ * Handles the core events (FeedItem, SessionStatus, Toast) and calls
+ * an optional `onEvent` callback for app-specific event handling.
+ */
+
+import { useEffect, useRef } from "react";
+import type { KeelEvent } from "../types";
+
+/** Tauri listen function signature. */
+export type TauriListenFn = <T>(
+  event: string,
+  handler: (event: { payload: T }) => void,
+) => Promise<() => void>;
+
+export interface SessionEventsHandlers {
+  /** The Tauri `listen` function — import from `@tauri-apps/api/event`. */
+  listen: TauriListenFn;
+  /** Called for every FeedItem event. Receives (feedKey, item). */
+  onFeedItem: (feedKey: string, item: { feed_type: string; data: unknown }) => void;
+  /** Returns the current active session ID for desktop-duplicate filtering. */
+  getActiveSessionId?: () => string | null;
+  /** Called for app-specific events not handled by the base hook. */
+  onEvent?: (event: KeelEvent) => void;
+}
+
+/**
+ * Subscribe to "keel-event" from the Rust backend.
+ *
+ * Core events handled:
+ * - FeedItem → calls `onFeedItem("main", item)`, with desktop-dupe filtering
+ * - SessionStatus → pushes system_message on error
+ * - Toast → console.log
+ *
+ * All other events forwarded to `onEvent` if provided.
+ */
+export function useSessionEvents(handlers: SessionEventsHandlers): void {
+  const ref = useRef(handlers);
+  ref.current = handlers;
+
+  useEffect(() => {
+    const unlisten = ref.current.listen<KeelEvent>("keel-event", (event) => {
+      const h = ref.current;
+      const payload = event.payload;
+
+      switch (payload.type) {
+        case "FeedItem": {
+          const activeId = h.getActiveSessionId?.() ?? null;
+          const isDesktopDupe =
+            payload.data.session_key === activeId &&
+            (payload.data.item as { feed_type: string }).feed_type === "user_message";
+          if (!isDesktopDupe) {
+            h.onFeedItem("main", payload.data.item as { feed_type: string; data: unknown });
+          }
+          break;
+        }
+        case "SessionStatus":
+          if (payload.data.status === "error" && payload.data.error) {
+            h.onFeedItem("main", {
+              feed_type: "system_message",
+              data: `Session error: ${payload.data.error}`,
+            });
+          }
+          h.onEvent?.(payload);
+          break;
+        case "Toast":
+          console.log(`[toast:${payload.data.variant}]`, payload.data.message);
+          h.onEvent?.(payload);
+          break;
+        default:
+          h.onEvent?.(payload);
+          break;
+      }
+    });
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []); // stable — no deps, uses refs
+}
