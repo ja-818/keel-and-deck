@@ -1,5 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Agent, SkillSummary, SkillDetail, FileEntry } from "./types";
+import type {
+  Agent,
+  SkillSummary,
+  SkillDetail,
+  FileEntry,
+  MemorySnapshot,
+} from "./types";
 
 export const tauriAgents = {
   list: () => invoke<Agent[]>("list_agents"),
@@ -44,6 +50,27 @@ export const tauriSkills = {
     invoke<void>("delete_skill", { workspacePath, name }),
   save: (workspacePath: string, name: string, content: string) =>
     invoke<void>("save_skill", { workspacePath, name, content }),
+};
+
+export const tauriMemory = {
+  load: (workspacePath: string) =>
+    invoke<MemorySnapshot>("load_memory", { workspacePath }),
+  addEntry: (workspacePath: string, target: string, text: string) =>
+    invoke<void>("add_memory_entry", { workspacePath, target, text }),
+  replaceEntry: (
+    workspacePath: string,
+    target: string,
+    index: number,
+    text: string,
+  ) =>
+    invoke<void>("replace_memory_entry", {
+      workspacePath,
+      target,
+      index,
+      text,
+    }),
+  removeEntry: (workspacePath: string, target: string, index: number) =>
+    invoke<void>("remove_memory_entry", { workspacePath, target, index }),
 };
 
 export const tauriFiles = {

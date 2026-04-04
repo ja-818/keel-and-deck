@@ -17,6 +17,7 @@ import { useSessionEvents } from "./hooks/use-session-events";
 import { tauriChat } from "./lib/tauri";
 import { ContextTab } from "./components/context-tab";
 import { SkillsTab } from "./components/skills-tab";
+import { MemoryTab } from "./components/memory-tab";
 import { FilesTab } from "./components/files-tab";
 import { CreateAgentDialog } from "./components/create-agent-dialog";
 
@@ -26,6 +27,7 @@ const TABS = [
   { id: "chat" as const, label: "Chat" },
   { id: "context" as const, label: "Context" },
   { id: "skills" as const, label: "Skills" },
+  { id: "memory" as const, label: "Memory" },
   { id: "files" as const, label: "Files" },
 ];
 
@@ -145,6 +147,8 @@ export function App() {
               <ContextTab workspacePath={current.path} />
             ) : viewMode === "skills" ? (
               <SkillsTab workspacePath={current.path} />
+            ) : viewMode === "memory" ? (
+              <MemoryTab workspacePath={current.path} />
             ) : (
               <FilesTab workspacePath={current.path} />
             )}
