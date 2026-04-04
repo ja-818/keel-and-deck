@@ -6,6 +6,7 @@ import {
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
+  Button,
 } from "@deck-ui/core";
 import { AppSidebar } from "@deck-ui/layout";
 import { TabBar } from "@deck-ui/layout";
@@ -84,6 +85,28 @@ export function App() {
     return (
       <div className="h-screen flex items-center justify-center bg-background text-foreground">
         <p className="text-muted-foreground text-sm">Starting...</p>
+      </div>
+    );
+  }
+
+  // No agents yet — full-screen empty state
+  if (agents.length === 0) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-background text-foreground">
+        <Empty className="border-0">
+          <EmptyHeader>
+            <EmptyTitle>Welcome to {"{{APP_NAME_TITLE}}"}</EmptyTitle>
+            <EmptyDescription>
+              Create your first agent to get started.
+            </EmptyDescription>
+          </EmptyHeader>
+          <Button onClick={() => setShowCreate(true)} className="mt-4">
+            Create agent
+          </Button>
+        </Empty>
+        {showCreate && (
+          <CreateAgentDialog onClose={() => setShowCreate(false)} />
+        )}
       </div>
     );
   }
