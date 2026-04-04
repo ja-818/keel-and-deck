@@ -7,7 +7,7 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from "@deck-ui/core";
-import { MessageSquare, FileText } from "lucide-react";
+import { TabBar } from "@deck-ui/layout";
 import { useWorkspaceStore } from "./stores/workspace";
 import { useFeedStore } from "./stores/feeds";
 import { useUIStore, type ViewMode } from "./stores/ui";
@@ -17,9 +17,9 @@ import { ClaudeMdEditor } from "./components/claude-md-editor";
 
 const MAIN_KEY = "main";
 
-const TABS: { id: ViewMode; label: string; icon: typeof MessageSquare }[] = [
-  { id: "chat", label: "Chat", icon: MessageSquare },
-  { id: "claude-md", label: "CLAUDE.md", icon: FileText },
+const TABS = [
+  { id: "chat", label: "Chat" },
+  { id: "claude-md", label: "CLAUDE.md" },
 ];
 
 export function App() {
@@ -81,25 +81,12 @@ export function App() {
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground">
-      <header className="h-[52px] flex items-center justify-between px-4 border-b border-black/5">
-        <span className="text-sm font-semibold">{"{{APP_NAME_TITLE}}"}</span>
-        <nav className="flex gap-1">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setViewMode(tab.id)}
-              className={`flex items-center gap-1.5 rounded-full h-8 px-3 text-sm font-medium transition-colors ${
-                viewMode === tab.id
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent"
-              }`}
-            >
-              <tab.icon className="size-4" />
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-      </header>
+      <TabBar
+        title={"{{APP_NAME_TITLE}}"}
+        tabs={TABS}
+        activeTab={viewMode}
+        onTabChange={(id) => setViewMode(id as ViewMode)}
+      />
       <main className="flex-1 min-h-0">
         {viewMode === "chat" && (
           <div className="h-full flex flex-col max-w-3xl mx-auto">

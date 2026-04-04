@@ -11,9 +11,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@deck-ui/chat": "^0.4.3",
-    "@deck-ui/core": "^0.2.0",
+    "@deck-ui/chat": "^0.6.0",
+    "@deck-ui/core": "^0.3.1",
     "@deck-ui/layout": "^0.4.0",
+    "@deck-ui/workspace": "^0.3.0",
     "@tauri-apps/api": "^2.5.0",
     "lucide-react": "^0.577.0",
     "react": "^19.1.0",
