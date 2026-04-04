@@ -23,6 +23,7 @@ export interface FilesBrowserProps {
   onFilesDropped?: (files: File[], targetFolder?: string) => void
   /** Move a file/folder to a new location (null = root) */
   onMove?: (sourcePath: string, targetFolder: string | null) => void
+  onRename?: (file: FileEntry, newName: string) => void
   onCreateFolder?: (name: string) => void
   onBrowse?: () => void
   emptyTitle?: string
@@ -31,7 +32,7 @@ export interface FilesBrowserProps {
 
 export function FilesBrowser({
   files, loading, selectedPath: controlledSelected, onSelect, onOpen, onReveal, onDelete,
-  onFilesDropped, onMove, onCreateFolder, onBrowse,
+  onFilesDropped, onMove, onRename, onCreateFolder, onBrowse,
   emptyTitle = "No files yet",
   emptyDescription = "When agents create files, they\u2019ll appear here.",
 }: FilesBrowserProps) {
@@ -100,19 +101,30 @@ export function FilesBrowser({
       className="relative flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-white"
       {...(onFilesDropped || onMove ? dragHandlers : {})}
     >
-      <div
-        className="h-[24px] shrink-0 border-b border-[#e5e5e5] bg-[#fafafa] select-none items-center"
-        style={{ display: "grid", gridTemplateColumns: COL_GRID }}
-      >
-        <HeaderCell label="Name" col="name" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="pl-7" />
-        <HeaderCell label="Date Modified" col="dateModified" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-        <HeaderCell label="Size" col="size" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="justify-end" />
-        <HeaderCell label="Kind" col="kind" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} last />
+      <div className="h-[24px] shrink-0 border-b border-[#e5e5e5] bg-[#fafafa] select-none flex items-center">
+        <div className="flex-1 min-w-0 items-center h-full" style={{ display: "grid", gridTemplateColumns: COL_GRID }}>
+          <HeaderCell label="Name" col="name" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="pl-7" />
+          <HeaderCell label="Date Modified" col="dateModified" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+          <HeaderCell label="Size" col="size" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="justify-end" />
+          <HeaderCell label="Kind" col="kind" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} last />
+        </div>
+        {onCreateFolder && (
+          <button
+            onClick={() => setCreatingFolder(true)}
+            className="shrink-0 flex items-center gap-1 px-2 h-full text-[11px] font-medium text-[#6d6d6d] hover:bg-[#eaeaea] transition-colors border-l border-[#e5e5e5]"
+          >
+            <FolderPlus className="size-3" />
+            <span>New Folder</span>
+          </button>
+        )}
       </div>
 
       <div
         className="flex-1 overflow-y-auto [&>:nth-child(even)]:bg-[#f5f5f5] [&>:nth-child(even)]:rounded-lg"
         style={{ backgroundColor: isRootTarget ? "rgba(0,122,255,0.06)" : undefined }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) setInternalSelected(null)
+        }}
       >
         {loading ? (
           <div className="flex items-center justify-center py-16">
@@ -132,6 +144,7 @@ export function FilesBrowser({
                   key={child.path} node={child} depth={0}
                   selectedPath={selectedPath} onSelect={handleSelect}
                   onOpen={onOpen} onReveal={onReveal} onDelete={onDelete}
+                  onRename={onRename}
                   onFilesDropped={onFilesDropped} onDragActive={onDragActive} onMove={onMove}
                 />
               ) : (
@@ -139,7 +152,7 @@ export function FilesBrowser({
                   key={child.entry.path} file={child.entry}
                   selected={selectedPath === child.entry.path}
                   onSelect={handleSelect} onOpen={onOpen}
-                  onReveal={onReveal} onDelete={onDelete} onMove={onMove}
+                  onReveal={onReveal} onDelete={onDelete} onRename={onRename} onMove={onMove}
                 />
               ),
             )}
@@ -147,18 +160,8 @@ export function FilesBrowser({
         )}
       </div>
 
-      <div className="h-[24px] shrink-0 border-t border-[#e5e5e5] bg-[#fafafa] flex items-center justify-center">
-        <span className="text-[11px] text-[#6d6d6d]">
-          {files.length} item{files.length !== 1 ? "s" : ""}
-          {onCreateFolder && (
-            <button
-              onClick={() => setCreatingFolder(true)}
-              className="ml-3 hover:text-[#333] transition-colors"
-            >
-              <FolderPlus className="size-3 inline -mt-px" />
-            </button>
-          )}
-        </span>
+      <div className="h-[24px] shrink-0 border-t border-[#e5e5e5] bg-[#fafafa] flex items-center justify-center text-[11px] text-[#6d6d6d]">
+        {files.length} item{files.length !== 1 ? "s" : ""}
       </div>
     </div>
   )

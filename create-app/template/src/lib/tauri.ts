@@ -82,6 +82,8 @@ export const tauriFiles = {
     invoke<void>("reveal_file", { workspacePath, relativePath }),
   delete: (workspacePath: string, relativePath: string) =>
     invoke<void>("delete_file", { workspacePath, relativePath }),
+  createFolder: (workspacePath: string, name: string) =>
+    invoke<void>("create_workspace_folder", { workspacePath, name }),
   revealWorkspace: (workspacePath: string) =>
     invoke<void>("reveal_workspace", { workspacePath }),
 };

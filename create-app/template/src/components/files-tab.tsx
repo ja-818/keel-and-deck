@@ -35,6 +35,11 @@ export function FilesTab({ workspacePath }: FilesTabProps) {
         await tauriFiles.delete(workspacePath, file.path);
         loadFiles();
       }}
+      onCreateFolder={async (name) => {
+        await tauriFiles.createFolder(workspacePath, name);
+        loadFiles();
+      }}
+      // onRename requires a backend rename_file command — wire when available
       emptyTitle="No files yet"
       emptyDescription="Files created by your agent will appear here."
     />
