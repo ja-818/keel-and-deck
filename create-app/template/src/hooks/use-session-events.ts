@@ -41,5 +41,5 @@ export function useSessionEvents() {
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, []); // stable — no deps, uses refs
+  }, []);
 }

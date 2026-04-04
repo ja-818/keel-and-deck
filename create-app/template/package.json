@@ -8,21 +8,12 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "typecheck": "tsc --noEmit",
-    "icons": "tauri icon logo.png && cp logo.png public/app-icon.png"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@deck-ui/board": "^0.4.3",
     "@deck-ui/chat": "^0.4.3",
-    "@deck-ui/connections": "^0.4.5",
     "@deck-ui/core": "^0.2.0",
-    "@deck-ui/events": "^0.3.6",
     "@deck-ui/layout": "^0.4.0",
-    "@deck-ui/memory": "^0.3.5",
-    "@deck-ui/review": "^0.3.0",
-    "@deck-ui/routines": "^0.4.5",
-    "@deck-ui/skills": "^0.3.0",
-    "@deck-ui/workspace": "^0.3.0",
     "@tauri-apps/api": "^2.5.0",
     "lucide-react": "^0.577.0",
     "react": "^19.1.0",

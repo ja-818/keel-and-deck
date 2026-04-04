@@ -5,23 +5,15 @@
 
 /* Scan local source + deck-ui packages for Tailwind classes */
 @source "../";
-@source "../../node_modules/@deck-ui/board/src";
 @source "../../node_modules/@deck-ui/chat/src";
 @source "../../node_modules/@deck-ui/layout/src";
 @source "../../node_modules/@deck-ui/core/src";
-@source "../../node_modules/@deck-ui/skills/src";
-@source "../../node_modules/@deck-ui/routines/src";
-@source "../../node_modules/@deck-ui/connections/src";
-@source "../../node_modules/@deck-ui/events/src";
-@source "../../node_modules/@deck-ui/memory/src";
-@source "../../node_modules/@deck-ui/review/src";
-@source "../../node_modules/@deck-ui/workspace/src";
 
-/* {{APP_NAME_TITLE}} brand — deep navy */
+/* {{APP_NAME_TITLE}} brand — near-black (default keel theme) */
 @theme {
-  --color-primary: #1a365d;
+  --color-primary: #0d0d0d;
   --color-primary-foreground: #ffffff;
-  --color-ring: #1a365d;
+  --color-ring: #0d0d0d;
 }
 
 body {

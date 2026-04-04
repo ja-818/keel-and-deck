@@ -6,6 +6,7 @@ pub use agent_sessions::AgentSessionMap;
 
 use keel_tauri::keel_db::Database;
 use keel_tauri::state::AppState;
+use tauri::Manager;
 
 pub fn run() {
     tauri::Builder::default()

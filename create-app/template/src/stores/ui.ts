@@ -1,14 +1,6 @@
 import { create } from "zustand";
 
-export type ViewMode =
-  | "chat"
-  | "activity"
-  | "events"
-  | "memory"
-  | "routines"
-  | "channels"
-  | "agent"
-  | "connections";
+export type ViewMode = "chat" | "claude-md";
 
 interface UIState {
   viewMode: ViewMode;

@@ -24,6 +24,22 @@ pub async fn read_workspace_file(
     kw::read_file(&dir, &file_name, &allowed)
 }
 
+#[tauri::command]
+pub async fn write_workspace_file(
+    state: State<'_, AppState>,
+    project_id: String,
+    file_name: String,
+    content: String,
+) -> Result<(), String> {
+    let dir = get_workspace_dir(&state, &project_id).await?;
+    let allowed: Vec<&str> = crate::workspace::KNOWN_FILES.iter().map(|(n, _)| *n).collect();
+    if !allowed.contains(&file_name.as_str()) {
+        return Err(format!("Unknown workspace file: {file_name}"));
+    }
+    std::fs::write(dir.join(&file_name), &content)
+        .map_err(|e| format!("Failed to write {file_name}: {e}"))
+}
+
 async fn get_workspace_dir(state: &AppState, project_id: &str) -> Result<PathBuf, String> {
     let project = state.db.get_project(project_id).await
         .map_err(|e| e.to_string())?
