@@ -119,35 +119,32 @@ pub async fn load_chat_history(
     let working_dir = expand_tilde(&PathBuf::from(&workspace_path));
     let session_file = working_dir.join(".claude_session_id");
 
-    if let Ok(id) = std::fs::read_to_string(&session_file) {
-        let id = id.trim();
-        if !id.is_empty() {
-            let rows = state
-                .db
-                .list_chat_feed_by_session(id)
-                .await
-                .map_err(|e| e.to_string())?;
-            return Ok(rows
-                .into_iter()
-                .map(|row| {
-                    serde_json::json!({
-                        "feed_type": row.feed_type,
-                        "data": serde_json::from_str::<serde_json::Value>(&row.data_json)
-                            .unwrap_or(serde_json::Value::String(row.data_json)),
-                    })
-                })
-                .collect());
-        }
-    }
-
-    // Fallback: try loading by agent key (v1 compat)
+    // Load from both v1 (agent_key + feed_key) and v2 (claude_session_id) sources.
+    // User messages are persisted via v1 path (before session ID is known).
+    // Agent messages are persisted via v2 path (after session ID arrives).
     let agent_key = working_dir.to_string_lossy().to_string();
-    let rows = state
+    let mut v1_rows = state
         .db
         .list_chat_feed(&agent_key, "main")
         .await
         .map_err(|e| e.to_string())?;
-    Ok(rows
+
+    if let Ok(id) = std::fs::read_to_string(&session_file) {
+        let id = id.trim().to_string();
+        if !id.is_empty() {
+            let v2_rows = state
+                .db
+                .list_chat_feed_by_session(&id)
+                .await
+                .map_err(|e| e.to_string())?;
+            v1_rows.extend(v2_rows);
+        }
+    }
+
+    // Sort by timestamp and deduplicate
+    v1_rows.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
+
+    Ok(v1_rows
         .into_iter()
         .map(|row| {
             serde_json::json!({
