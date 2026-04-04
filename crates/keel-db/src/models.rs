@@ -77,6 +77,8 @@ pub struct SessionEvent {
     pub timestamp: String,
 }
 
+/// v1 compat — routines now live in .keel/routines.json via workspace_store.
+/// Kept as a type definition only; no repo file backs this anymore.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Routine {
     pub id: String,
@@ -92,6 +94,8 @@ pub struct Routine {
     pub updated_at: String,
 }
 
+/// v1 compat — routine runs now tracked in .keel/log.jsonl via workspace_store.
+/// Kept as a type definition only; no repo file backs this anymore.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RoutineRun {
     pub id: String,

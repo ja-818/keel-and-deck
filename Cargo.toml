@@ -4,7 +4,6 @@ members = [
     "crates/keel-sessions",
     "crates/keel-db",
     "crates/keel-tauri",
-    "crates/keel-cli",
     "crates/keel-events",
     "crates/keel-scheduler",
     "crates/keel-channels",

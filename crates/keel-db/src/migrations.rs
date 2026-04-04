@@ -4,9 +4,16 @@ use anyhow::Result;
 impl Database {
     /// Run base migrations for the generic Keel tables.
     /// Application-specific migrations should be run separately by the consuming app.
+    ///
+    /// ## v2 migration status
+    ///
+    /// Permanent tables: chat_feed, preferences (in init_tables)
+    /// v1 compat tables: projects, sessions, session_events (in init_tables),
+    ///   issues, issue_dependencies, channels, event_log (here)
+    /// Removed (repo files deleted, tables no longer created):
+    ///   routines, routine_runs, issue_feed_items, webhooks
     pub(crate) async fn run_migrations(&self) -> Result<()> {
-        // DEPRECATED (v2): Issues table moves to .keel/tasks.json.
-        // Kept for backward compat during migration period.
+        // -- v1 compat: issues table (apps still use via repo_issues.rs) --
         self.conn()
             .execute_batch(
                 "CREATE TABLE IF NOT EXISTS issues (
@@ -27,8 +34,7 @@ impl Database {
             .await
             .ok();
 
-        // DEPRECATED (v2): Issue dependencies removed in v2.
-        // Kept for backward compat during migration period.
+        // -- v1 compat: issue_dependencies (used by repo_issue_deps.rs) --
         self.conn()
             .execute_batch(
                 "CREATE TABLE IF NOT EXISTS issue_dependencies (
@@ -40,23 +46,7 @@ impl Database {
             .await
             .ok();
 
-        // DEPRECATED (v2): Issue feed merged into chat_feed (keyed by claude_session_id).
-        // Kept for backward compat during migration period.
-        self.conn()
-            .execute_batch(
-                "CREATE TABLE IF NOT EXISTS issue_feed_items (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                issue_id TEXT NOT NULL,
-                feed_type TEXT NOT NULL,
-                data_json TEXT NOT NULL,
-                timestamp TEXT NOT NULL
-            );
-            CREATE INDEX IF NOT EXISTS idx_issue_feed_issue_id ON issue_feed_items(issue_id);",
-            )
-            .await
-            .ok();
-
-        // Projects: pm_instructions column.
+        // -- v1 compat: projects column migrations --
         let _ = self
             .conn()
             .execute(
@@ -65,7 +55,6 @@ impl Database {
             )
             .await;
 
-        // Projects: icon column.
         let _ = self
             .conn()
             .execute(
@@ -74,46 +63,7 @@ impl Database {
             )
             .await;
 
-        // DEPRECATED (v2): Routines move to .keel/routines.json.
-        // Kept for backward compat during migration period.
-        self.conn()
-            .execute_batch(
-                "CREATE TABLE IF NOT EXISTS routines (
-                id TEXT PRIMARY KEY,
-                project_id TEXT NOT NULL REFERENCES projects(id),
-                name TEXT NOT NULL,
-                title TEXT NOT NULL,
-                description TEXT NOT NULL DEFAULT '',
-                trigger_type TEXT NOT NULL DEFAULT 'daily',
-                schedule_type TEXT NOT NULL DEFAULT 'daily',
-                trigger_config TEXT NOT NULL DEFAULT '{}',
-                status TEXT NOT NULL DEFAULT 'active',
-                schedule_time TEXT NOT NULL DEFAULT '09:00',
-                autonomy TEXT NOT NULL DEFAULT 'notify',
-                enabled INTEGER NOT NULL DEFAULT 1,
-                is_system INTEGER NOT NULL DEFAULT 0,
-                run_count INTEGER NOT NULL DEFAULT 0,
-                approval_count INTEGER NOT NULL DEFAULT 0,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS routine_runs (
-                id TEXT PRIMARY KEY,
-                routine_id TEXT NOT NULL REFERENCES routines(id) ON DELETE CASCADE,
-                project_id TEXT NOT NULL REFERENCES projects(id),
-                status TEXT NOT NULL DEFAULT 'running',
-                output_summary TEXT,
-                created_at TEXT NOT NULL,
-                completed_at TEXT
-            );
-            CREATE INDEX IF NOT EXISTS idx_routine_runs_routine
-                ON routine_runs(routine_id);",
-            )
-            .await
-            .ok();
-
-        // DEPRECATED (v2): Event log moves to .keel/log.jsonl.
-        // Kept for backward compat during migration period.
+        // -- v1 compat: event_log (DesktopClaw/Taxflow query directly) --
         self.conn()
             .execute_batch(
                 "CREATE TABLE IF NOT EXISTS event_log (
@@ -136,26 +86,7 @@ impl Database {
             .await
             .ok();
 
-        // DEPRECATED (v2): Webhooks removed in v2.
-        // Kept for backward compat during migration period.
-        self.conn()
-            .execute_batch(
-                "CREATE TABLE IF NOT EXISTS webhooks (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                endpoint_path TEXT NOT NULL UNIQUE,
-                secret TEXT,
-                enabled INTEGER NOT NULL DEFAULT 1,
-                project_id TEXT REFERENCES projects(id),
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            );",
-            )
-            .await
-            .ok();
-
-        // DEPRECATED (v2): Channels move to .keel/channels.json.
-        // Kept for backward compat during migration period.
+        // -- v1 compat: channels (DesktopClaw/Taxflow query directly) --
         self.conn()
             .execute_batch(
                 "CREATE TABLE IF NOT EXISTS channels (
@@ -176,7 +107,7 @@ impl Database {
             .await
             .ok();
 
-        // Chat feed persistence (main conversation history across app restarts).
+        // -- Permanent: chat_feed --
         self.conn()
             .execute_batch(
                 "CREATE TABLE IF NOT EXISTS chat_feed (
@@ -195,7 +126,6 @@ impl Database {
             .ok();
 
         // v2 migration: add claude_session_id to chat_feed for session-keyed lookups.
-        // Existing rows will have NULL — backward compatible.
         let _ = self
             .conn()
             .execute(
