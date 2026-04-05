@@ -1,18 +1,18 @@
-# @deck-ui/board
+# @houston-ai/board
 
 Kanban board for AI agent task management. Cards glow with a rotating conic-gradient border when agents are running.
 
 ## Install
 
 ```bash
-pnpm add @deck-ui/board
+pnpm add @houston-ai/board
 ```
 
 ## Usage
 
 ```tsx
-import { KanbanBoard } from "@deck-ui/board"
-import "@deck-ui/board/src/styles.css"
+import { KanbanBoard } from "@houston-ai/board"
+import "@houston-ai/board/src/styles.css"
 
 const columns = [
   { id: "todo",    label: "To Do",   statuses: ["todo"] },
@@ -44,8 +44,8 @@ Cards matching `runningStatuses` get the `card-running-glow` CSS class: a `conic
 ## Peer Dependencies
 
 - React 19+
-- @deck-ui/core
+- @houston-ai/core
 
 ---
 
-Part of [Keel & Deck](../../README.md).
+Part of [Houston](../../README.md).

@@ -1,68 +1,68 @@
 ---
-name: deck-ui
-description: "Deck UI (@deck-ui/*) React components for AI agent desktop apps. 10 packages: core (shadcn/ui, KeelEvent, useSessionEvents), chat (ChatPanel, ProgressPanel, streaming), board (KanbanBoard), layout (TabBar, SplitView, AppSidebar), connections, events, routines, skills, review, workspace (FilesBrowser, InstructionsPanel). Props-driven, no store dependencies. Tailwind CSS 4."
+name: houston-ui
+description: "Houston UI (@houston-ai/*) React components for AI agent desktop apps. 10 packages: core (shadcn/ui, HoustonEvent, useSessionEvents), chat (ChatPanel, ProgressPanel, streaming), board (KanbanBoard), layout (TabBar, SplitView, AppSidebar), connections, events, routines, skills, review, workspace (FilesBrowser, InstructionsPanel). Props-driven, no store dependencies. Tailwind CSS 4."
 ---
 
-# Deck UI — Component Reference
+# Houston UI -- Component Reference
 
 10 React packages for building AI agent desktop apps. All components are props-driven with no store dependencies.
 
 ## Install
 
 ```bash
-pnpm add @deck-ui/core @deck-ui/chat @deck-ui/board @deck-ui/layout
-pnpm add @deck-ui/connections @deck-ui/events @deck-ui/routines
-pnpm add @deck-ui/skills @deck-ui/review @deck-ui/workspace
+pnpm add @houston-ai/core @houston-ai/chat @houston-ai/board @houston-ai/layout
+pnpm add @houston-ai/connections @houston-ai/events @houston-ai/routines
+pnpm add @houston-ai/skills @houston-ai/review @houston-ai/workspace
 ```
 
 CSS setup (in your main.tsx or App.tsx):
 ```tsx
-import "@deck-ui/core/src/globals.css"
+import "@houston-ai/core/src/globals.css"
 import "streamdown/styles.css"  // required if using ChatPanel
 ```
 
 ## Rules
 
-1. **Props over stores** — never import Zustand/Redux inside @deck-ui. Data via props, actions via callbacks.
-2. **Generic types** — `KanbanItem`, `FeedItem`, `ChatMessage`. Apps map domain types at the app level.
-3. **No `@/` path aliases** — relative imports within packages, package imports between packages.
-4. **Tailwind CSS 4** — no config file. Tokens are CSS variables in `globals.css`. Uses `@tailwindcss/vite`.
-5. **Monochrome** — near-black primary (`#0d0d0d`), white bg. Override `--color-primary` for brand color.
+1. **Props over stores** -- never import Zustand/Redux inside @houston-ai. Data via props, actions via callbacks.
+2. **Generic types** -- `KanbanItem`, `FeedItem`, `ChatMessage`. Apps map domain types at the app level.
+3. **No `@/` path aliases** -- relative imports within packages, package imports between packages.
+4. **Tailwind CSS 4** -- no config file. Tokens are CSS variables in `globals.css`. Uses `@tailwindcss/vite`.
+5. **Monochrome** -- near-black primary (`#0d0d0d`), white bg. Override `--color-primary` for brand color.
 
 ---
 
-## @deck-ui/core
+## @houston-ai/core
 
 Foundation: 38 shadcn/ui components, design tokens, event hooks, utilities.
 
 ### Key Components
 
-**Button** — `variant`: default | destructive | outline | secondary | ghost | link. `size`: default | xs | sm | lg | icon | icon-xs | icon-sm | icon-lg.
+**Button** -- `variant`: default | destructive | outline | secondary | ghost | link. `size`: default | xs | sm | lg | icon | icon-xs | icon-sm | icon-lg.
 
-**Card** — Compound: `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`.
+**Card** -- Compound: `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`.
 
-**Dialog** — Radix-based modal: `Dialog`, `DialogTrigger`, `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogFooter`. `showCloseButton` on DialogContent.
+**Dialog** -- Radix-based modal: `Dialog`, `DialogTrigger`, `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogFooter`. `showCloseButton` on DialogContent.
 
-**Empty** — Empty state: `Empty`, `EmptyHeader`, `EmptyTitle`, `EmptyDescription`, `EmptyContent`.
+**Empty** -- Empty state: `Empty`, `EmptyHeader`, `EmptyTitle`, `EmptyDescription`, `EmptyContent`.
 
-**ConfirmDialog** — One-shot: `open`, `onOpenChange`, `title`, `description`, `onConfirm`.
+**ConfirmDialog** -- One-shot: `open`, `onOpenChange`, `title`, `description`, `onConfirm`.
 
 **Other shadcn/ui:** Accordion, Alert, AlertDialog, Avatar, Badge, Collapsible, Command, DropdownMenu, HoverCard, Input, Popover, Progress, ScrollArea, Select, Separator, Sheet, Skeleton, Spinner, Stepper, Switch, Tabs, Textarea, Toast, ToastContainer, Tooltip.
 
 ### Utilities and Hooks
 
 ```tsx
-import { cn } from "@deck-ui/core"                    // clsx + tailwind-merge
-import { useIsMobile } from "@deck-ui/core"            // viewport < 768px
-import { useKeelEvent } from "@deck-ui/core"           // single Tauri event subscription
-import { useSessionEvents } from "@deck-ui/core"       // session event subscription (preferred)
-import type { KeelEvent } from "@deck-ui/core"          // TypeScript event union
-import type { TauriListenFn, SessionEventsHandlers } from "@deck-ui/core"
+import { cn } from "@houston-ai/core"                    // clsx + tailwind-merge
+import { useIsMobile } from "@houston-ai/core"            // viewport < 768px
+import { useHoustonEvent } from "@houston-ai/core"        // single Tauri event subscription
+import { useSessionEvents } from "@houston-ai/core"       // session event subscription (preferred)
+import type { HoustonEvent } from "@houston-ai/core"      // TypeScript event union
+import type { TauriListenFn, SessionEventsHandlers } from "@houston-ai/core"
 ```
 
-### KeelEvent Type
+### HoustonEvent Type
 
-Discriminated union matching the Rust `KeelEvent` enum. Variants:
+Discriminated union matching the Rust `HoustonEvent` enum. Variants:
 
 | Variant | Data |
 |---------|------|
@@ -82,10 +82,10 @@ Discriminated union matching the Rust `KeelEvent` enum. Variants:
 
 ### useSessionEvents
 
-Preferred hook for session events. Dependency-injected `listen` — no build-time Tauri dependency. Ref-based handlers avoid listener teardown race conditions.
+Preferred hook for session events. Dependency-injected `listen` -- no build-time Tauri dependency. Ref-based handlers avoid listener teardown race conditions.
 
 ```tsx
-import { useSessionEvents } from "@deck-ui/core"
+import { useSessionEvents } from "@houston-ai/core"
 import { listen } from "@tauri-apps/api/event"
 
 useSessionEvents({
@@ -102,7 +102,7 @@ Core handling: FeedItem (with desktop-duplicate filtering), SessionStatus (auto-
 
 ---
 
-## @deck-ui/chat
+## @houston-ai/chat
 
 Drop-in chat experience for Claude sessions.
 
@@ -124,7 +124,7 @@ Full chat: messages + streaming + thinking + tools + input.
 | `toolLabels` | `Record<string, string>` | Custom labels for tool names |
 
 ```tsx
-import { ChatPanel, ChannelAvatar } from "@deck-ui/chat"
+import { ChatPanel, ChannelAvatar } from "@houston-ai/chat"
 
 <ChatPanel
   sessionKey="session-1"
@@ -142,12 +142,10 @@ import { ChatPanel, ChannelAvatar } from "@deck-ui/chat"
 Multi-step progress display. Agents call `update_progress` tool to communicate steps.
 
 ```tsx
-import { ProgressPanel } from "@deck-ui/chat"
-import { useProgressSteps } from "@deck-ui/chat"
+import { ProgressPanel } from "@houston-ai/chat"
+import { useProgressSteps } from "@houston-ai/chat"
 
 const steps = useProgressSteps(feedItems)
-// steps: ProgressStep[] — { title, status: "pending" | "active" | "done" }
-
 <ProgressPanel steps={steps} />
 ```
 
@@ -168,7 +166,7 @@ const steps = useProgressSteps(feedItems)
 ### Feed Utilities
 
 ```tsx
-import { feedItemsToMessages, mergeFeedItem } from "@deck-ui/chat"
+import { feedItemsToMessages, mergeFeedItem } from "@houston-ai/chat"
 
 // Convert FeedItem[] to ChatMessage[] (extracts [ChannelName] prefix into source)
 const messages = feedItemsToMessages(feedItems)
@@ -177,27 +175,9 @@ const messages = feedItemsToMessages(feedItems)
 addFeedItem: (item) => set((s) => ({ items: mergeFeedItem(s.items, item) }))
 ```
 
-### Chat Types
-
-```typescript
-interface FeedItem {
-  feed_type: "user_message" | "assistant_text" | "assistant_text_streaming"
-    | "thinking" | "thinking_streaming" | "tool_call" | "tool_result"
-    | "system_message" | "final_result"
-  data: string | object
-}
-
-interface ChatMessage {
-  role: "user" | "assistant"
-  content: string
-  source?: string  // auto-extracted from [ChannelName] prefix
-  tools?: ToolEntry[]
-}
-```
-
 ---
 
-## @deck-ui/board
+## @houston-ai/board
 
 Kanban board with animated cards that glow when agents are running.
 
@@ -216,8 +196,8 @@ Kanban board with animated cards that glow when agents are running.
 | `emptyState` | `ReactNode` | Empty state content |
 
 ```tsx
-import { KanbanBoard } from "@deck-ui/board"
-import type { KanbanItem, KanbanColumnConfig } from "@deck-ui/board"
+import { KanbanBoard } from "@houston-ai/board"
+import type { KanbanItem, KanbanColumnConfig } from "@houston-ai/board"
 
 const columns: KanbanColumnConfig[] = [
   { id: "active", label: "Active", statuses: ["running"] },
@@ -228,36 +208,14 @@ const columns: KanbanColumnConfig[] = [
 <KanbanBoard columns={columns} items={items} onSelect={setSelected} />
 ```
 
-### KanbanDetailPanel
-
-Side panel with header + children slot. Props: `title`, `subtitle`, `status`, `onClose`, `children`, `actions`, `runningStatuses`, `statusLabels`.
-
-### Board Types
-
-```typescript
-interface KanbanItem {
-  id: string; title: string; subtitle?: string;
-  status: string; updatedAt: string; icon?: ReactNode;
-}
-interface KanbanColumnConfig { id: string; label: string; statuses: string[] }
-```
-
 ---
 
-## @deck-ui/layout
+## @houston-ai/layout
 
 ### TabBar
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `tabs` | `Tab[]` | `{ id, label, badge? }` |
-| `activeTab` | `string` | Active tab ID |
-| `onTabChange` | `(id: string) => void` | Tab click callback |
-| `actions` | `ReactNode` | Right-side action buttons |
-| `menu` | `ReactNode` | Settings dropdown |
-
 ```tsx
-import { TabBar } from "@deck-ui/layout"
+import { TabBar } from "@houston-ai/layout"
 
 <TabBar
   tabs={[
@@ -276,11 +234,11 @@ Props: `items` (`{ id, name }[]`), `selectedId`, `onSelect`, `onAdd`, `onDelete`
 
 ### SplitView
 
-Resizable two-panel layout. Props: `left`, `right`, `defaultLeftSize` (55), `defaultRightSize` (45), `minLeftSize` (30), `minRightSize` (25).
+Resizable two-panel layout. Props: `left`, `right`, `defaultLeftSize` (55), `defaultRightSize` (45).
 
 ---
 
-## @deck-ui/connections
+## @houston-ai/connections
 
 | Component | What it does |
 |-----------|-------------|
@@ -289,11 +247,11 @@ Resizable two-panel layout. Props: `left`, `right`, `defaultLeftSize` (55), `def
 | `ChannelSetupForm` | Config form for Slack (bot + app token) or Telegram (bot token) |
 | `ChannelsSection` | Channel list with "Add Channel" dropdown |
 
-Types: `ChannelType` ("slack" | "telegram"), `ChannelStatus` ("disconnected" | "connecting" | "connected" | "error"), `ChannelConnection` (id, type, name, status, config, lastActiveAt, messageCount, error).
+Types: `ChannelType` ("slack" | "telegram"), `ChannelStatus` ("disconnected" | "connecting" | "connected" | "error").
 
 ---
 
-## @deck-ui/events
+## @houston-ai/events
 
 | Component | What it does |
 |-----------|-------------|
@@ -301,11 +259,9 @@ Types: `ChannelType` ("slack" | "telegram"), `ChannelStatus` ("disconnected" | "
 | `EventItem` | Individual event row |
 | `EventFilter` | Event type filter |
 
-Types: `EventType` ("message" | "heartbeat" | "cron" | "hook" | "webhook" | "agent_message"), `EventStatus` ("pending" | "processing" | "completed" | "suppressed" | "error").
-
 ---
 
-## @deck-ui/routines
+## @houston-ai/routines
 
 | Component | What it does |
 |-----------|-------------|
@@ -318,7 +274,7 @@ Types: `EventType` ("message" | "heartbeat" | "cron" | "hook" | "webhook" | "age
 
 ---
 
-## @deck-ui/skills
+## @houston-ai/skills
 
 | Component | What it does |
 |-----------|-------------|
@@ -328,7 +284,7 @@ Types: `EventType` ("message" | "heartbeat" | "cron" | "hook" | "webhook" | "age
 
 ---
 
-## @deck-ui/review
+## @houston-ai/review
 
 | Component | What it does |
 |-----------|-------------|
@@ -338,14 +294,14 @@ Types: `EventType` ("message" | "heartbeat" | "cron" | "hook" | "webhook" | "age
 
 ---
 
-## @deck-ui/workspace
+## @houston-ai/workspace
 
 ### InstructionsPanel
 
-Editable workspace files with auto-save on blur. Props: `files` (`InstructionFile[]`), `onSave` (`(name, content) => Promise<void>`).
+Editable workspace files with auto-save on blur.
 
 ```tsx
-import { InstructionsPanel } from "@deck-ui/workspace"
+import { InstructionsPanel } from "@houston-ai/workspace"
 
 <InstructionsPanel
   files={[{ name: "CLAUDE.md", label: "CLAUDE.md", content: claudeMd }]}
@@ -355,9 +311,7 @@ import { InstructionsPanel } from "@deck-ui/workspace"
 
 ### FilesBrowser
 
-File browser with folder grouping, type icons, drag-and-drop. Props: `files` (`FileEntry[]`), `onOpen`, `onReveal`, `onDelete`, `onFilesDropped`, `onCreateFolder`.
-
-Types: `FileEntry` (path, name, extension, size), `InstructionFile` (name, label, content).
+File browser with folder grouping, type icons, drag-and-drop.
 
 ---
 
@@ -366,7 +320,7 @@ Types: `FileEntry` (path, name, extension, size), `InstructionFile` (name, label
 ### Thin Wrapper (connecting stores to components)
 
 ```tsx
-import { KanbanBoard } from "@deck-ui/board"
+import { KanbanBoard } from "@houston-ai/board"
 import { useTaskStore } from "@/stores/tasks"
 
 export function TaskBoard() {
@@ -381,24 +335,10 @@ export function TaskBoard() {
 }
 ```
 
-### Channel Messages in Chat
-
-```tsx
-<ChatPanel
-  sessionKey="main"
-  feedItems={feed}
-  onSend={send}
-  isLoading={loading}
-  renderMessageAvatar={(msg) =>
-    msg.source ? <ChannelAvatar source={msg.source} /> : undefined
-  }
-/>
-```
-
 ### Brand Override
 
 ```css
-@import "@deck-ui/core/src/globals.css";
+@import "@houston-ai/core/src/globals.css";
 @theme {
   --color-primary: #c0392b;
   --color-primary-foreground: #ffffff;
@@ -410,9 +350,9 @@ export function TaskBoard() {
 
 ```css
 @import "tailwindcss";
-@import "@deck-ui/core/src/globals.css";
-@source "../node_modules/@deck-ui/core/src";
-@source "../node_modules/@deck-ui/chat/src";
-@source "../node_modules/@deck-ui/board/src";
-@source "../node_modules/@deck-ui/layout/src";
+@import "@houston-ai/core/src/globals.css";
+@source "../node_modules/@houston-ai/core/src";
+@source "../node_modules/@houston-ai/chat/src";
+@source "../node_modules/@houston-ai/board/src";
+@source "../node_modules/@houston-ai/layout/src";
 ```

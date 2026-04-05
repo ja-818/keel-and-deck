@@ -1,17 +1,17 @@
-# @deck-ui/connections
+# @houston-ai/connections
 
 External service connections management. Display connected services, manage OAuth tokens, handle connection status.
 
 ## Install
 
 ```bash
-pnpm add @deck-ui/connections
+pnpm add @houston-ai/connections
 ```
 
 ## Usage
 
 ```tsx
-import { ConnectionsView } from "@deck-ui/connections"
+import { ConnectionsView } from "@houston-ai/connections"
 
 <ConnectionsView
   connections={connections}
@@ -29,8 +29,8 @@ import { ConnectionsView } from "@deck-ui/connections"
 ## Peer Dependencies
 
 - React 19+
-- @deck-ui/core
+- @houston-ai/core
 
 ---
 
-Part of [Keel & Deck](../../README.md).
+Part of [Houston](../../README.md).

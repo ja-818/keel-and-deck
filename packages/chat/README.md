@@ -1,18 +1,18 @@
-# @deck-ui/chat
+# @houston-ai/chat
 
 Full-featured AI chat interface. Streaming markdown, thinking blocks, tool activity, prompt input -- one component or pick individual pieces.
 
 ## Install
 
 ```bash
-pnpm add @deck-ui/chat
+pnpm add @houston-ai/chat
 ```
 
 ## Usage
 
 ```tsx
-import { ChatPanel } from "@deck-ui/chat"
-import "@deck-ui/chat/src/styles.css"
+import { ChatPanel } from "@houston-ai/chat"
+import "@houston-ai/chat/src/styles.css"
 
 <ChatPanel
   sessionKey={session.id}
@@ -40,8 +40,8 @@ The AI Elements are composable -- use `ChatPanel` for the batteries-included exp
 ## Peer Dependencies
 
 - React 19+
-- @deck-ui/core
+- @houston-ai/core
 
 ---
 
-Part of [Keel & Deck](../../README.md).
+Part of [Houston](../../README.md).

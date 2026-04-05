@@ -1,7 +1,7 @@
 //! Generic session lifecycle: spawn → monitor → emit events → persist → collect response.
 //!
 //! Replaces the duplicated "spawn + tokio::spawn + match update" pattern
-//! that both Houston and DesktopClaw implement manually.
+//! that apps previously implemented manually.
 
 use crate::chat_session::ChatSessionState;
 use crate::events::HoustonEvent;

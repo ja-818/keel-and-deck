@@ -1,18 +1,18 @@
-# keel-tauri
+# houston-tauri
 
-Tauri 2 plugin wrapping keel-sessions and keel-db. Provides app state, event types, and a session supervisor for Tauri desktop apps.
+Tauri 2 integration layer wrapping houston-sessions and houston-db. Provides app state, event types, session lifecycle, workspace persistence, and channel management for Tauri desktop apps.
 
 ## Install
 
 ```toml
 [dependencies]
-keel-tauri = "0.1"
+houston-tauri = "0.3"
 ```
 
 ## Usage
 
 ```rust
-use keel_tauri::{state::AppState, supervisor, events};
+use houston_tauri::{state::AppState, supervisor, events};
 
 // In your Tauri setup
 fn main() {
@@ -25,7 +25,7 @@ fn main() {
         .expect("error running app");
 }
 
-// The supervisor bridges keel-sessions events to Tauri event emission
+// The supervisor bridges houston-sessions events to Tauri event emission
 supervisor::start(&app_handle, &state).await;
 ```
 
@@ -37,13 +37,13 @@ supervisor::start(&app_handle, &state).await;
 
 ## Re-exports
 
-This crate re-exports both sub-crates for convenience:
+This crate re-exports all sub-crates for convenience:
 
 ```rust
-use keel_tauri::keel_sessions;
-use keel_tauri::keel_db;
+use houston_tauri::houston_sessions;
+use houston_tauri::houston_db;
 ```
 
 ---
 
-Part of [Keel & Deck](../../README.md).
+Part of [Houston](../../README.md).

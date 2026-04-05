@@ -1,5 +1,5 @@
 /**
- * Base hook for subscribing to keel-tauri backend events.
+ * Base hook for subscribing to houston-tauri backend events.
  *
  * Uses a ref-based handler pattern to avoid the race condition in
  * useHoustonEvent (where handler recreation tears down and re-registers

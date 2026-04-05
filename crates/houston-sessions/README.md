@@ -1,4 +1,4 @@
-# keel-sessions
+# houston-sessions
 
 Claude/Codex CLI process management. Spawn sessions, parse NDJSON streams, pump events, and control concurrency.
 
@@ -6,13 +6,13 @@ Claude/Codex CLI process management. Spawn sessions, parse NDJSON streams, pump 
 
 ```toml
 [dependencies]
-keel-sessions = "0.1"
+houston-sessions = "0.1"
 ```
 
 ## Usage
 
 ```rust
-use keel_sessions::{SessionManager, SessionUpdate, ClaudeEvent};
+use houston_sessions::{SessionManager, SessionUpdate, ClaudeEvent};
 
 let manager = SessionManager::new();
 
@@ -48,4 +48,4 @@ while let Some(update) = handle.recv().await {
 
 ---
 
-Part of [Keel & Deck](../../README.md).
+Part of [Houston](../../README.md).

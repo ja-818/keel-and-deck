@@ -1,4 +1,4 @@
-# keel-db
+# houston-db
 
 SQLite database layer for AI agent desktop apps. Local-first persistence via libsql with automatic migrations and typed repositories.
 
@@ -6,13 +6,13 @@ SQLite database layer for AI agent desktop apps. Local-first persistence via lib
 
 ```toml
 [dependencies]
-keel-db = "0.1"
+houston-db = "0.2"
 ```
 
 ## Usage
 
 ```rust
-use keel_db::{Database, Project, Issue, IssueStatus};
+use houston_db::{Database, Project, Issue, IssueStatus};
 
 // Open (or create) the database
 let db = Database::open("~/.myapp/data.db").await?;
@@ -50,4 +50,4 @@ let running = repo_issues::list_by_status(&db, IssueStatus::Running).await?;
 
 ---
 
-Part of [Keel & Deck](../../README.md).
+Part of [Houston](../../README.md).

@@ -1,18 +1,18 @@
-# @deck-ui/layout
+# @houston-ai/layout
 
 App-level layout primitives. Sidebar for navigation, tab bar for view switching, split view for panels.
 
 ## Install
 
 ```bash
-pnpm add @deck-ui/layout
+pnpm add @houston-ai/layout
 ```
 
 ## Usage
 
 ```tsx
-import { AppSidebar, TabBar, SplitView } from "@deck-ui/layout"
-import "@deck-ui/layout/src/styles.css"
+import { AppSidebar, TabBar, SplitView } from "@houston-ai/layout"
+import "@houston-ai/layout/src/styles.css"
 
 <AppSidebar
   logo={<Logo />}
@@ -42,8 +42,8 @@ import "@deck-ui/layout/src/styles.css"
 ## Peer Dependencies
 
 - React 19+
-- @deck-ui/core
+- @houston-ai/core
 
 ---
 
-Part of [Keel & Deck](../../README.md).
+Part of [Houston](../../README.md).

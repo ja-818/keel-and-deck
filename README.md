@@ -292,15 +292,17 @@ Everything is controlled by CSS variables:
 }
 ```
 
-Override `--color-primary` for brand theming. DesktopClaw uses `#c0392b` (lobster red). All components pick it up automatically.
+Override `--color-primary` for brand theming. All components pick it up automatically.
 
 ---
 
 ## Built with Houston
 
-- [**Houston App**](https://github.com/ja-818/houston) -- AI work delegation app with kanban board
-- [**DesktopClaw**](https://github.com/ja-818/desktopclaw) -- Always-on AI assistant with Telegram/Slack
-- [**Taxflow**](https://github.com/ja-818/taxflow) -- AI-powered tax workpaper assistant
+Build your own AI agent experience with `create-houston-experience`:
+
+```bash
+npx create-houston-experience my-app
+```
 
 *Building something? Open a PR to add it here.*
 

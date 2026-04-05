@@ -1,5 +1,5 @@
 ---
-name: keel
+name: houston
 description: CLI for managing the task board and routines
 invariants:
   - Always pass --db-path to specify the SQLite database
@@ -12,7 +12,7 @@ invariants:
   - Success outputs JSON to stdout with exit code 0
 ---
 
-# keel CLI
+# houston CLI
 
 CLI for managing AI agent tasks and routines. Replaces the MCP server with direct bash commands.
 
@@ -29,22 +29,22 @@ CLI for managing AI agent tasks and routines. Replaces the MCP server with direc
 
 ```bash
 # Create a task
-keel --db-path DB --project-id PID task create --title "Build feature X" --description "Details..." --tags "rust,backend"
+houston --db-path DB --project-id PID task create --title "Build feature X" --description "Details..." --tags "rust,backend"
 
 # Create a task with dependencies (blocked until deps are done)
-keel --db-path DB --project-id PID task create --title "Deploy" --depends-on "id1,id2"
+houston --db-path DB --project-id PID task create --title "Deploy" --depends-on "id1,id2"
 
 # List all tasks
-keel --db-path DB --project-id PID task list
+houston --db-path DB --project-id PID task list
 
 # List tasks filtered by status
-keel --db-path DB --project-id PID task list --status running
+houston --db-path DB --project-id PID task list --status running
 
 # Update a task
-keel --db-path DB --project-id PID task update TASK_ID --title "New title" --status done
+houston --db-path DB --project-id PID task update TASK_ID --title "New title" --status done
 
 # Delete a task
-keel --db-path DB --project-id PID task delete TASK_ID
+houston --db-path DB --project-id PID task delete TASK_ID
 ```
 
 ### Task Statuses
@@ -58,26 +58,26 @@ keel --db-path DB --project-id PID task delete TASK_ID
 
 ```bash
 # Create a routine
-keel --db-path DB routine create --project-id PID --name "Daily digest" --trigger daily --description "Summarize activity"
+houston --db-path DB routine create --project-id PID --name "Daily digest" --trigger daily --description "Summarize activity"
 
 # List routines
-keel --db-path DB routine list --project-id PID
+houston --db-path DB routine list --project-id PID
 
 # Update a routine
-keel --db-path DB routine update ROUTINE_ID --name "Weekly digest" --trigger weekly
+houston --db-path DB routine update ROUTINE_ID --name "Weekly digest" --trigger weekly
 
 # Pause/resume
-keel --db-path DB routine pause ROUTINE_ID
-keel --db-path DB routine resume ROUTINE_ID
+houston --db-path DB routine pause ROUTINE_ID
+houston --db-path DB routine resume ROUTINE_ID
 
 # View run history
-keel --db-path DB routine history ROUTINE_ID --limit 5
+houston --db-path DB routine history ROUTINE_ID --limit 5
 
 # Start a run manually
-keel --db-path DB routine run ROUTINE_ID
+houston --db-path DB routine run ROUTINE_ID
 
 # Delete a routine
-keel --db-path DB routine delete ROUTINE_ID
+houston --db-path DB routine delete ROUTINE_ID
 ```
 
 ### Routine Trigger Types
@@ -90,10 +90,10 @@ keel --db-path DB routine delete ROUTINE_ID
 
 ```bash
 # List all available commands and their parameters
-keel --db-path DB schema
+houston --db-path DB schema
 
 # Get schema for a specific command
-keel --db-path DB schema task.create
+houston --db-path DB schema task.create
 ```
 
 ## Output Format

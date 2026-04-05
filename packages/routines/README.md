@@ -1,17 +1,17 @@
-# @deck-ui/routines
+# @houston-ai/routines
 
 Automated routine management. Create, edit, run, and review recurring agent tasks with trigger scheduling and approval controls.
 
 ## Install
 
 ```bash
-pnpm add @deck-ui/routines
+pnpm add @houston-ai/routines
 ```
 
 ## Usage
 
 ```tsx
-import { RoutinesGrid, RoutineDetailPage } from "@deck-ui/routines"
+import { RoutinesGrid, RoutineDetailPage } from "@houston-ai/routines"
 
 <RoutinesGrid
   routines={routines}
@@ -35,8 +35,8 @@ import { RoutinesGrid, RoutineDetailPage } from "@deck-ui/routines"
 ## Peer Dependencies
 
 - React 19+
-- @deck-ui/core
+- @houston-ai/core
 
 ---
 
-Part of [Keel & Deck](../../README.md).
+Part of [Houston](../../README.md).

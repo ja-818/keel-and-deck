@@ -1657,7 +1657,7 @@ dependencies = [
 
 [[package]]
 name = "houston-db"
-version = "0.2.0"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1682,7 +1682,7 @@ dependencies = [
 
 [[package]]
 name = "houston-memory"
-version = "0.2.0"
+version = "0.1.0"
 dependencies = [
  "tempfile",
  "thiserror 2.0.18",
@@ -1726,7 +1726,7 @@ dependencies = [
 
 [[package]]
 name = "houston-tauri"
-version = "0.3.1"
+version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "houston-channels",

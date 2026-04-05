@@ -5,7 +5,7 @@
 import { useCallback, useRef, useState } from "react"
 
 /** MIME type used for internal file moves. */
-export const INTERNAL_DRAG_TYPE = "application/x-deck-file"
+export const INTERNAL_DRAG_TYPE = "application/x-houston-file"
 
 function hasDragData(e: React.DragEvent) {
   return e.dataTransfer.types.includes("Files") || e.dataTransfer.types.includes(INTERNAL_DRAG_TYPE)

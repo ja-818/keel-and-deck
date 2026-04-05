@@ -114,7 +114,7 @@ pub async fn install_skill(
 
 /// Install all skills from a GitHub repo's `skills/` directory.
 ///
-/// `source` is a GitHub `owner/repo` string (e.g. `"ja-818/keel-and-deck"`).
+/// `source` is a GitHub `owner/repo` string (e.g. `"ja-818/houston"`).
 /// Returns the names of all successfully installed skills.
 pub async fn install_from_repo(
     skills_dir: &Path,

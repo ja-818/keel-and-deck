@@ -1,17 +1,17 @@
-# @deck-ui/skills
+# @houston-ai/skills
 
 Skills management UI. Browse installed skills, view details, search and install from the community marketplace.
 
 ## Install
 
 ```bash
-pnpm add @deck-ui/skills
+pnpm add @houston-ai/skills
 ```
 
 ## Usage
 
 ```tsx
-import { SkillsGrid } from "@deck-ui/skills"
+import { SkillsGrid } from "@houston-ai/skills"
 
 <SkillsGrid
   skills={installedSkills}
@@ -37,8 +37,8 @@ import { SkillsGrid } from "@deck-ui/skills"
 ## Peer Dependencies
 
 - React 19+
-- @deck-ui/core
+- @houston-ai/core
 
 ---
 
-Part of [Keel & Deck](../../README.md).
+Part of [Houston](../../README.md).

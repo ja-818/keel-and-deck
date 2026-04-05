@@ -8,8 +8,8 @@ use tokio::sync::Mutex;
 
 /// Tracks the Claude CLI session ID for `--resume` across sends.
 ///
-/// For single-conversation apps (like DesktopClaw), manage one instance.
-/// For multi-conversation apps (like Houston), use the database instead.
+/// For single-conversation apps, manage one instance.
+/// For multi-conversation apps, use the database instead.
 #[derive(Default, Clone)]
 pub struct ChatSessionState {
     claude_session_id: Arc<Mutex<Option<String>>>,

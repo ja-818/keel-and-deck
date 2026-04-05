@@ -1,18 +1,18 @@
-# @deck-ui/core
+# @houston-ai/core
 
-Foundation layer for Deck. 36 shadcn/ui components, design tokens, CSS animations, and utilities.
+Foundation layer for Houston UI. 36 shadcn/ui components, design tokens, CSS animations, and utilities.
 
 ## Install
 
 ```bash
-pnpm add @deck-ui/core
+pnpm add @houston-ai/core
 ```
 
 ## Usage
 
 ```tsx
-import { Button, Badge, Card, Tooltip } from "@deck-ui/core"
-import "@deck-ui/core/src/globals.css"
+import { Button, Badge, Card, Tooltip } from "@houston-ai/core"
+import "@houston-ai/core/src/globals.css"
 
 <Button variant="default">Run Agent</Button>
 <Badge>3 tasks</Badge>
@@ -37,4 +37,4 @@ Override CSS variables in `globals.css` to customize the entire design system. S
 
 ---
 
-Part of [Keel & Deck](../../README.md).
+Part of [Houston](../../README.md).
