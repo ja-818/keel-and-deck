@@ -9,6 +9,7 @@ members = [
     "crates/houston-channels",
     "crates/houston-memory",
     "crates/houston-skills",
+    "app/src-tauri",
 ]
 exclude = [
     "create-app/template",

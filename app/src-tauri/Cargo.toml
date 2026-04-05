@@ -1,0 +1,23 @@
+[package]
+name = "houston-app"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "houston_app"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+dirs = "5"
+houston-tauri = { path = "../../crates/houston-tauri" }
+houston-memory = { path = "../../crates/houston-memory" }
+houston-skills = { path = "../../crates/houston-skills" }
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }

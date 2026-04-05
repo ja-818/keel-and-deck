@@ -1,0 +1,41 @@
+{
+  "name": "houston-app",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@houston-ai/board": "workspace:*",
+    "@houston-ai/chat": "workspace:*",
+    "@houston-ai/connections": "workspace:*",
+    "@houston-ai/core": "workspace:*",
+    "@houston-ai/events": "workspace:*",
+    "@houston-ai/layout": "workspace:*",
+    "@houston-ai/memory": "workspace:*",
+    "@houston-ai/review": "workspace:*",
+    "@houston-ai/routines": "workspace:*",
+    "@houston-ai/skills": "workspace:*",
+    "@houston-ai/workspace": "workspace:*",
+    "@tauri-apps/api": "^2.5.0",
+    "lucide-react": "^0.577.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "zustand": "^5.0.5"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.5.0",
+    "@tailwindcss/vite": "^4.1.8",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.5.2",
+    "tailwindcss": "^4.1.8",
+    "typescript": "^6.0.2",
+    "vite": "^6.3.5"
+  }
+}
