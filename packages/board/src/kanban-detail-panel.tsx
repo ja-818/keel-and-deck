@@ -1,5 +1,5 @@
 import { ArrowLeft, Loader2 } from "lucide-react"
-import { cn } from "@deck-ui/core"
+import { cn } from "@houston-ai/core"
 
 const STATUS_LABEL: Record<string, string> = {
   running: "Running",

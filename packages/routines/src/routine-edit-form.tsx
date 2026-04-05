@@ -4,7 +4,7 @@
  */
 import type { TriggerType, Skill } from "./types"
 import type { RoutineFormState } from "./types"
-import { cn } from "@deck-ui/core"
+import { cn } from "@houston-ai/core"
 import { ScheduleBuilder } from "./schedule-builder"
 
 export type { RoutineFormState }

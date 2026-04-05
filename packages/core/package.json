@@ -1,5 +1,5 @@
 {
-  "name": "@deck-ui/core",
+  "name": "@houston-ai/core",
   "version": "0.3.1",
   "type": "module",
   "main": "src/index.ts",

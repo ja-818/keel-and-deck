@@ -8,18 +8,18 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from "@deck-ui/core";
+} from "@houston-ai/core";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@deck-ui/core";
+} from "@houston-ai/core";
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
-} from "@deck-ui/core";
+} from "@houston-ai/core";
 import {
   // @ts-expect-error -- kept for type references in sub-components
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -27,21 +27,21 @@ import {
   InputGroupAddon,
   InputGroupButton,
   InputGroupTextarea,
-} from "@deck-ui/core";
+} from "@houston-ai/core";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@deck-ui/core";
-import { Spinner } from "@deck-ui/core";
+} from "@houston-ai/core";
+import { Spinner } from "@houston-ai/core";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@deck-ui/core";
-import { cn } from "@deck-ui/core";
+} from "@houston-ai/core";
+import { cn } from "@houston-ai/core";
 import type { ChatStatus, FileUIPart, SourceDocumentUIPart } from "ai";
 import {
 

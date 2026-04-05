@@ -1,7 +1,7 @@
 import { ExternalLink, Loader2, RefreshCw } from "lucide-react";
 import {
   Empty, EmptyHeader, EmptyTitle, EmptyDescription,
-} from "@deck-ui/core";
+} from "@houston-ai/core";
 import { ConnectionRow } from "./connection-row";
 import { ChannelsSection } from "./channels-section";
 import type { Connection, ConnectionsResult, ChannelConnection, ChannelType } from "./types";

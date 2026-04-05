@@ -3,7 +3,7 @@ import type { PropDef } from "../../components/props-table";
 /* ── Code examples ───────────────────────────────────────────── */
 
 export const USAGE_CODE = `import { useState } from "react"
-import { ScheduleBuilder } from "@deck-ui/routines"
+import { ScheduleBuilder } from "@houston-ai/routines"
 
 function MySchedule() {
   const [cron, setCron] = useState("0 9 * * *")
@@ -16,7 +16,7 @@ function MySchedule() {
   )
 }`;
 
-export const CUSTOM_PRESETS_CODE = `import type { SchedulePreset } from "@deck-ui/routines"
+export const CUSTOM_PRESETS_CODE = `import type { SchedulePreset } from "@houston-ai/routines"
 
 const presets: SchedulePreset[] = [
   "daily", "weekdays", "weekly", "custom",

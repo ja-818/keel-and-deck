@@ -40,7 +40,7 @@ export interface LearningsData {
   limit: number;
 }
 
-/** A channel entry from .keel/channels.json (matches Rust ChannelEntry) */
+/** A channel entry from .houston/channels.json (matches Rust ChannelEntry) */
 export interface ChannelEntry {
   id: string;
   channel_type: string;
@@ -48,11 +48,11 @@ export interface ChannelEntry {
   token: string;
 }
 
-/** Events emitted from the Rust backend via keel-tauri */
-export type KeelEvent =
+/** Events emitted from the Rust backend via houston-tauri */
+export type HoustonEvent =
   | {
       type: "FeedItem";
-      data: { session_key: string; item: import("@deck-ui/chat").FeedItem };
+      data: { session_key: string; item: import("@houston-ai/chat").FeedItem };
     }
   | {
       type: "SessionStatus";

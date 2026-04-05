@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import { mergeFeedItem } from "@deck-ui/chat";
-import type { FeedItem } from "@deck-ui/chat";
+import { mergeFeedItem } from "@houston-ai/chat";
+import type { FeedItem } from "@houston-ai/chat";
 
 interface FeedState {
   items: Record<string, FeedItem[]>;

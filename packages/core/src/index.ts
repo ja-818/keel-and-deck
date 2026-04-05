@@ -1,6 +1,6 @@
 export * from "./types"
 export * from "./utils"
-export * from "./hooks/use-keel-event"
+export * from "./hooks/use-houston-event"
 export * from "./hooks/use-mobile"
 export * from "./hooks/use-session-events"
 export * from "./components/accordion"

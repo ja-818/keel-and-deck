@@ -1,10 +1,10 @@
 {
-  "name": "create-keel-and-deck-app",
+  "name": "create-houston-experience",
   "version": "0.2.0",
-  "description": "Scaffold a Tauri 2 + React desktop app with the keel-and-deck framework",
+  "description": "Scaffold a Tauri 2 + React desktop app with the Houston framework",
   "type": "module",
   "bin": {
-    "create-keel-and-deck-app": "./index.js"
+    "create-houston-experience": "./index.js"
   },
   "files": [
     "index.js",
@@ -16,8 +16,8 @@
     "desktop",
     "ai",
     "scaffold",
-    "keel",
-    "deck-ui"
+    "houston",
+    "houston-ai"
   ],
   "license": "MIT"
 }

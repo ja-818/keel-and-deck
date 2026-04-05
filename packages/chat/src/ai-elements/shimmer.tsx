@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@deck-ui/core";
+import { cn } from "@houston-ai/core";
 import type { MotionProps } from "motion/react";
 import { motion } from "motion/react";
 import type { CSSProperties, ElementType, JSX } from "react";

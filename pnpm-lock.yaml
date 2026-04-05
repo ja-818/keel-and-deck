@@ -22,9 +22,9 @@ importers:
 
   packages/board:
     dependencies:
-      '@deck-ui/core':
-        specifier: '>=0.1.0'
-        version: 0.1.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwindcss@4.2.2)
+      '@houston-ai/core':
+        specifier: workspace:*
+        version: link:../core
       framer-motion:
         specifier: ^12.38.0
         version: 12.38.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -40,9 +40,9 @@ importers:
 
   packages/chat:
     dependencies:
-      '@deck-ui/core':
-        specifier: '>=0.1.0'
-        version: 0.1.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwindcss@4.2.2)
+      '@houston-ai/core':
+        specifier: workspace:*
+        version: link:../core
       '@radix-ui/react-use-controllable-state':
         specifier: ^1.2.2
         version: 1.2.2(@types/react@19.2.14)(react@19.2.4)
@@ -94,9 +94,9 @@ importers:
 
   packages/connections:
     dependencies:
-      '@deck-ui/core':
-        specifier: '>=0.1.0'
-        version: 0.1.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwindcss@4.2.2)
+      '@houston-ai/core':
+        specifier: workspace:*
+        version: link:../core
       lucide-react:
         specifier: ^0.577.0
         version: 0.577.0(react@19.2.4)
@@ -154,9 +154,9 @@ importers:
 
   packages/events:
     dependencies:
-      '@deck-ui/core':
-        specifier: '>=0.1.0'
-        version: 0.1.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwindcss@4.2.2)
+      '@houston-ai/core':
+        specifier: workspace:*
+        version: link:../core
       framer-motion:
         specifier: ^12.38.0
         version: 12.38.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -172,9 +172,9 @@ importers:
 
   packages/layout:
     dependencies:
-      '@deck-ui/core':
-        specifier: '>=0.1.0'
-        version: 0.1.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwindcss@4.2.2)
+      '@houston-ai/core':
+        specifier: workspace:*
+        version: link:../core
       lucide-react:
         specifier: ^0.577.0
         version: 0.577.0(react@19.2.4)
@@ -190,9 +190,9 @@ importers:
 
   packages/memory:
     dependencies:
-      '@deck-ui/core':
-        specifier: '>=0.1.0'
-        version: 0.1.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwindcss@4.2.2)
+      '@houston-ai/core':
+        specifier: workspace:*
+        version: link:../core
       lucide-react:
         specifier: ^0.577.0
         version: 0.577.0(react@19.2.4)
@@ -205,9 +205,9 @@ importers:
 
   packages/review:
     dependencies:
-      '@deck-ui/core':
-        specifier: '>=0.1.0'
-        version: 0.1.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwindcss@4.2.2)
+      '@houston-ai/core':
+        specifier: workspace:*
+        version: link:../core
       lucide-react:
         specifier: ^0.577.0
         version: 0.577.0(react@19.2.4)
@@ -223,9 +223,9 @@ importers:
 
   packages/routines:
     dependencies:
-      '@deck-ui/core':
-        specifier: '>=0.1.0'
-        version: 0.1.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwindcss@4.2.2)
+      '@houston-ai/core':
+        specifier: workspace:*
+        version: link:../core
       framer-motion:
         specifier: ^12.38.0
         version: 12.38.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -241,9 +241,9 @@ importers:
 
   packages/skills:
     dependencies:
-      '@deck-ui/core':
-        specifier: '>=0.1.0'
-        version: 0.1.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwindcss@4.2.2)
+      '@houston-ai/core':
+        specifier: workspace:*
+        version: link:../core
       lucide-react:
         specifier: ^0.577.0
         version: 0.577.0(react@19.2.4)
@@ -256,9 +256,9 @@ importers:
 
   packages/workspace:
     dependencies:
-      '@deck-ui/core':
-        specifier: '>=0.1.0'
-        version: 0.1.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwindcss@4.2.2)
+      '@houston-ai/core':
+        specifier: workspace:*
+        version: link:../core
       lucide-react:
         specifier: ^0.577.0
         version: 0.577.0(react@19.2.4)
@@ -271,37 +271,37 @@ importers:
 
   showcase:
     dependencies:
-      '@deck-ui/board':
+      '@houston-ai/board':
         specifier: link:../packages/board
         version: link:../packages/board
-      '@deck-ui/chat':
+      '@houston-ai/chat':
         specifier: link:../packages/chat
         version: link:../packages/chat
-      '@deck-ui/connections':
+      '@houston-ai/connections':
         specifier: link:../packages/connections
         version: link:../packages/connections
-      '@deck-ui/core':
+      '@houston-ai/core':
         specifier: link:../packages/core
         version: link:../packages/core
-      '@deck-ui/events':
+      '@houston-ai/events':
         specifier: link:../packages/events
         version: link:../packages/events
-      '@deck-ui/layout':
+      '@houston-ai/layout':
         specifier: link:../packages/layout
         version: link:../packages/layout
-      '@deck-ui/memory':
+      '@houston-ai/memory':
         specifier: link:../packages/memory
         version: link:../packages/memory
-      '@deck-ui/review':
+      '@houston-ai/review':
         specifier: link:../packages/review
         version: link:../packages/review
-      '@deck-ui/routines':
+      '@houston-ai/routines':
         specifier: link:../packages/routines
         version: link:../packages/routines
-      '@deck-ui/skills':
+      '@houston-ai/skills':
         specifier: link:../packages/skills
         version: link:../packages/skills
-      '@deck-ui/workspace':
+      '@houston-ai/workspace':
         specifier: link:../packages/workspace
         version: link:../packages/workspace
       lucide-react:
@@ -460,13 +460,6 @@ packages:
 
   '@chevrotain/utils@11.1.2':
     resolution: {integrity: sha512-4mudFAQ6H+MqBTfqLmU7G1ZwRzCLfJEooL/fsF6rCX5eePMbGhoy5n4g+G4vlh2muDcsCTJtL+uKbOzWxs5LHA==}
-
-  '@deck-ui/core@0.1.1':
-    resolution: {integrity: sha512-4hHAtOfc/SXHBasovC8PgdBetpFFRUB7/9IcahcJbNpzoktkU7j+uIMTbLZbpUD0q8JL10cyhLgnJ0CdZKBgng==}
-    peerDependencies:
-      react: ^19.0.0
-      react-dom: ^19.0.0
-      tailwindcss: ^4.0.0
 
   '@esbuild/aix-ppc64@0.25.12':
     resolution: {integrity: sha512-Hhmwd6CInZ3dwpuGTF8fJG6yoWmsToE+vYgD4nytZVxcu1ulHpUQRAB1UJ8+N1Am3Mz4+xOByoQoSZf4D+CpkA==}
@@ -3208,27 +3201,6 @@ snapshots:
   '@chevrotain/types@11.1.2': {}
 
   '@chevrotain/utils@11.1.2': {}
-
-  '@deck-ui/core@0.1.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwindcss@4.2.2)':
-    dependencies:
-      class-variance-authority: 0.7.1
-      clsx: 2.1.1
-      cmdk: 1.1.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      embla-carousel-react: 8.6.0(react@19.2.4)
-      framer-motion: 12.38.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      lucide-react: 0.577.0(react@19.2.4)
-      next-themes: 0.4.6(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      radix-ui: 1.4.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      react: 19.2.4
-      react-dom: 19.2.4(react@19.2.4)
-      react-resizable-panels: 4.7.6(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      sonner: 2.0.7(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      tailwind-merge: 3.5.0
-      tailwindcss: 4.2.2
-    transitivePeerDependencies:
-      - '@emotion/is-prop-valid'
-      - '@types/react'
-      - '@types/react-dom'
 
   '@esbuild/aix-ppc64@0.25.12':
     optional: true

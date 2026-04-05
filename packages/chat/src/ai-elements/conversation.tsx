@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "@deck-ui/core";
-import { cn } from "@deck-ui/core";
+import { Button } from "@houston-ai/core";
+import { cn } from "@houston-ai/core";
 import type { UIMessage } from "ai";
 import { ArrowDownIcon, DownloadIcon } from "lucide-react";
 import type { ComponentProps } from "react";

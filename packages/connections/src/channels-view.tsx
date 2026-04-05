@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from "@deck-ui/core"
+} from "@houston-ai/core"
 import type { ChannelConnection, ChannelType } from "./types"
 import { CHANNEL_LABELS } from "./types"
 import { ChannelConnectionCard } from "./channel-connection-card"

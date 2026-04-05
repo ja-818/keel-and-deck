@@ -2,7 +2,7 @@
  * MemoryDetail -- Full memory view with inline editing.
  */
 import { useCallback, useEffect, useState } from "react"
-import { Button } from "@deck-ui/core"
+import { Button } from "@houston-ai/core"
 import {
   MessageCircle,
   Settings,

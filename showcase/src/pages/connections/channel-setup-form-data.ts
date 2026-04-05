@@ -3,8 +3,8 @@ import type { PropDef } from "../../components/props-table";
 /* ── Code examples ───────────────────────────────────────────── */
 
 export const USAGE_CODE = `import { useState } from "react"
-import { ChannelSetupForm } from "@deck-ui/connections"
-import type { ChannelType } from "@deck-ui/connections"
+import { ChannelSetupForm } from "@houston-ai/connections"
+import type { ChannelType } from "@houston-ai/connections"
 
 function MySetup() {
   const [type, setType] = useState<ChannelType>("slack")

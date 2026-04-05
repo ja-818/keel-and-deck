@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { EventType } from "@deck-ui/events";
-import { EventFeed } from "@deck-ui/events";
+import type { EventType } from "@houston-ai/events";
+import { EventFeed } from "@houston-ai/events";
 import { CodeBlock } from "../../components/code-block";
 import { PropsTable } from "../../components/props-table";
 import {
@@ -25,7 +25,7 @@ export function EventFeedPage() {
       <div>
         <h1 className="text-xl font-semibold mb-1">EventFeed</h1>
         <p className="inline-block text-xs font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded mb-3">
-          @deck-ui/events
+          @houston-ai/events
         </p>
         <p className="text-sm text-muted-foreground leading-relaxed mb-4">
           Filterable event stream with type indicators, status dots, and
@@ -90,7 +90,7 @@ export function EventFeedPage() {
       {/* EventEmpty */}
       <ComponentSection
         name="EventEmpty"
-        description="Empty state shown when no events match the current filter. Uses the shared Empty component from @deck-ui/core."
+        description="Empty state shown when no events match the current filter. Uses the shared Empty component from @houston-ai/core."
         props={EVENT_EMPTY_PROPS}
         code={EVENT_EMPTY_CODE}
       />

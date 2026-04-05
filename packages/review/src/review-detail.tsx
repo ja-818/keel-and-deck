@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Input } from "@deck-ui/core";
+import { Button, Input } from "@houston-ai/core";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { DeliverableCard, UserFeedback } from "./deliverable-card";
 

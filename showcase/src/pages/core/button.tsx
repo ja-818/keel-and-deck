@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button } from "@deck-ui/core";
+import { Button } from "@houston-ai/core";
 import { Plus, Settings, Trash2 } from "lucide-react";
 import { CodeBlock } from "../../components/code-block";
 import { PropsTable } from "../../components/props-table";
@@ -32,7 +32,7 @@ export function ButtonPage() {
       <div>
         <h1 className="text-xl font-semibold mb-1">Button</h1>
         <p className="inline-block text-xs font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded mb-3">
-          @deck-ui/core
+          @houston-ai/core
         </p>
         <p className="text-sm text-muted-foreground leading-relaxed mb-4">
           Primary action element with multiple variants, sizes, and icon-only

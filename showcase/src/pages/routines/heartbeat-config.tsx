@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { HeartbeatConfigPanel } from "@deck-ui/routines";
-import type { HeartbeatConfig } from "@deck-ui/routines";
+import { HeartbeatConfigPanel } from "@houston-ai/routines";
+import type { HeartbeatConfig } from "@houston-ai/routines";
 import { CodeBlock } from "../../components/code-block";
 import { PropsTable } from "../../components/props-table";
 import {
@@ -19,7 +19,7 @@ export function HeartbeatConfigPage() {
       <div>
         <h1 className="text-xl font-semibold mb-1">HeartbeatConfigPanel</h1>
         <p className="inline-block text-xs font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded mb-3">
-          @deck-ui/routines
+          @houston-ai/routines
         </p>
         <p className="text-sm text-muted-foreground leading-relaxed mb-4">
           Configuration form for agent heartbeat check-ins. Includes an

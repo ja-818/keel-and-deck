@@ -12,7 +12,7 @@ export const SAMPLE_ITEMS = [
 /* ── Code examples ───────────────────────────────────────────── */
 
 export const QUICK_START_CODE = `import { useState } from "react"
-import { AppSidebar } from "@deck-ui/layout"
+import { AppSidebar } from "@houston-ai/layout"
 
 const projects = [
   { id: "p1", name: "Marketing Site" },

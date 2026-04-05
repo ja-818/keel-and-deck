@@ -3,7 +3,7 @@
  * Shows appropriate fields and help text based on channel type.
  */
 import { Loader2 } from "lucide-react"
-import { cn } from "@deck-ui/core"
+import { cn } from "@houston-ai/core"
 import type { ChannelType } from "./types"
 import { useState } from "react"
 

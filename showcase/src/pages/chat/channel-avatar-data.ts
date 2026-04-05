@@ -1,6 +1,6 @@
 import type { PropDef } from "../../components/props-table";
 
-export const CHANNEL_AVATAR_USAGE_CODE = `import { ChannelAvatar } from "@deck-ui/chat"
+export const CHANNEL_AVATAR_USAGE_CODE = `import { ChannelAvatar } from "@houston-ai/chat"
 
 // Telegram (blue circle with paper plane)
 <ChannelAvatar source="telegram" />
@@ -12,8 +12,8 @@ export const CHANNEL_AVATAR_USAGE_CODE = `import { ChannelAvatar } from "@deck-u
 <ChannelAvatar source="telegram" size="sm" />  // 24px (default)
 <ChannelAvatar source="slack" size="md" />      // 32px`;
 
-export const MESSAGE_AVATAR_CODE = `import { ChatPanel, ChannelAvatar } from "@deck-ui/chat"
-import type { ChatMessage } from "@deck-ui/chat"
+export const MESSAGE_AVATAR_CODE = `import { ChatPanel, ChannelAvatar } from "@houston-ai/chat"
+import type { ChatMessage } from "@houston-ai/chat"
 
 // Show channel logos on messages from external sources
 <ChatPanel
@@ -37,8 +37,8 @@ export const SOURCE_DETECTION_CODE = `// User messages with a [Channel] prefix a
 // feedItemsToMessages() extracts the source automatically.
 // Use renderMessageAvatar to render the avatar based on msg.source.`;
 
-export const MERGE_FEED_CODE = `import { mergeFeedItem } from "@deck-ui/chat"
-import type { FeedItem } from "@deck-ui/chat"
+export const MERGE_FEED_CODE = `import { mergeFeedItem } from "@houston-ai/chat"
+import type { FeedItem } from "@houston-ai/chat"
 
 // Smart-merge a new item into an existing feed array.
 // Handles streaming replacement:

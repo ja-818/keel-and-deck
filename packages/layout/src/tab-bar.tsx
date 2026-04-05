@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cn } from "@deck-ui/core";
+import { cn } from "@houston-ai/core";
 
 export interface TabBarProps {
   title?: string;

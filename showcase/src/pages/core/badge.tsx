@@ -1,4 +1,4 @@
-import { Badge } from "@deck-ui/core";
+import { Badge } from "@houston-ai/core";
 import { Circle, AlertTriangle, Star, Clock } from "lucide-react";
 import { CodeBlock } from "../../components/code-block";
 import { PropsTable } from "../../components/props-table";
@@ -26,7 +26,7 @@ export function BadgePage() {
       <div>
         <h1 className="text-xl font-semibold mb-1">Badge</h1>
         <p className="inline-block text-xs font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded mb-3">
-          @deck-ui/core
+          @houston-ai/core
         </p>
         <p className="text-sm text-muted-foreground leading-relaxed mb-4">
           Status indicators and labels. Compact pill-shaped elements for

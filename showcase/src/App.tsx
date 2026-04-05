@@ -1,6 +1,6 @@
 import { useState, useMemo, lazy, Suspense } from "react";
 import { Search } from "lucide-react";
-import { Input } from "@deck-ui/core";
+import { Input } from "@houston-ai/core";
 import { ThemeSwitcher } from "./components/theme-switcher";
 import { SCREENS, PRIMITIVES } from "./sidebar-groups";
 

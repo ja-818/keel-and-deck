@@ -4,7 +4,7 @@
  */
 import { useState } from "react"
 import { Pause, Play, RefreshCw, Save, Trash2 } from "lucide-react"
-import { cn } from "@deck-ui/core"
+import { cn } from "@houston-ai/core"
 
 export interface RoutineDetailActionsProps {
   isActive: boolean

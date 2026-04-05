@@ -2,18 +2,18 @@
  * Base hook for subscribing to keel-tauri backend events.
  *
  * Uses a ref-based handler pattern to avoid the race condition in
- * useKeelEvent (where handler recreation tears down and re-registers
+ * useHoustonEvent (where handler recreation tears down and re-registers
  * the listener, causing missed events).
  *
  * Apps pass their own `listen` function from `@tauri-apps/api/event`
- * so @deck-ui/core doesn't need a build-time dependency on Tauri.
+ * so @houston-ai/core doesn't need a build-time dependency on Tauri.
  *
  * Handles the core events (FeedItem, SessionStatus, Toast) and calls
  * an optional `onEvent` callback for app-specific event handling.
  */
 
 import { useEffect, useRef } from "react";
-import type { KeelEvent } from "../types";
+import type { HoustonEvent } from "../types";
 
 /** Tauri listen function signature. */
 export type TauriListenFn = <T>(
@@ -29,11 +29,11 @@ export interface SessionEventsHandlers {
   /** Returns the current active session ID for desktop-duplicate filtering. */
   getActiveSessionId?: () => string | null;
   /** Called for app-specific events not handled by the base hook. */
-  onEvent?: (event: KeelEvent) => void;
+  onEvent?: (event: HoustonEvent) => void;
 }
 
 /**
- * Subscribe to "keel-event" from the Rust backend.
+ * Subscribe to "houston-event" from the Rust backend.
  *
  * Core events handled:
  * - FeedItem → calls `onFeedItem("main", item)`, with desktop-dupe filtering
@@ -47,7 +47,7 @@ export function useSessionEvents(handlers: SessionEventsHandlers): void {
   ref.current = handlers;
 
   useEffect(() => {
-    const unlisten = ref.current.listen<KeelEvent>("keel-event", (event) => {
+    const unlisten = ref.current.listen<HoustonEvent>("houston-event", (event) => {
       const h = ref.current;
       const payload = event.payload;
 

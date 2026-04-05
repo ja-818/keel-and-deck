@@ -1,0 +1,21 @@
+[package]
+name = "houston-cli"
+version = "0.1.0"
+edition = "2021"
+description = "CLI for managing AI agent tasks and routines"
+license = "MIT"
+repository = "https://github.com/ja-818/keel-and-deck"
+
+[[bin]]
+name = "houston"
+path = "src/main.rs"
+
+[dependencies]
+houston-db = { path = "../houston-db" }
+clap = { version = "4", features = ["derive"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+anyhow = { workspace = true }

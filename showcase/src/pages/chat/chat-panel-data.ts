@@ -1,5 +1,5 @@
 import type { PropDef } from "../../components/props-table";
-import type { FeedItem } from "@deck-ui/chat";
+import type { FeedItem } from "@houston-ai/chat";
 
 /* -- Sample data --------------------------------------------------------- */
 
@@ -8,7 +8,7 @@ export const SAMPLE_FEED: FeedItem[] = [
   { feed_type: "assistant_text", data: "Checking your calendar... You have a standup at 10am and a design review at 2pm." },
   { feed_type: "user_message", data: "What tasks are pending?" },
   { feed_type: "thinking", data: "The user wants a status update. Let me check the board." },
-  { feed_type: "tool_call", data: { name: "Bash", input: { command: "keel task list" } } },
+  { feed_type: "tool_call", data: { name: "Bash", input: { command: "houston task list" } } },
   { feed_type: "tool_result", data: { content: '{"tasks":[{"id":1,"status":"running"}]}', is_error: false } },
   { feed_type: "assistant_text", data: "You have 3 pending tasks:\n\n1. **Deploy v2.0** — running\n2. **Review PR #42** — needs your review\n3. **Update docs** — in queue" },
   { feed_type: "user_message", data: "Approve PR #42" },
@@ -19,8 +19,8 @@ export const SAMPLE_FEED: FeedItem[] = [
 
 /* -- Code examples ------------------------------------------------------- */
 
-export const QUICK_START_CODE = `import { ChatPanel } from "@deck-ui/chat"
-import type { FeedItem } from "@deck-ui/chat"
+export const QUICK_START_CODE = `import { ChatPanel } from "@houston-ai/chat"
+import type { FeedItem } from "@houston-ai/chat"
 
 function MyChat({ items }: { items: FeedItem[] }) {
   return (
@@ -34,7 +34,7 @@ function MyChat({ items }: { items: FeedItem[] }) {
   )
 }`;
 
-export const CHAT_INPUT_CODE = `import { ChatInput } from "@deck-ui/chat"
+export const CHAT_INPUT_CODE = `import { ChatInput } from "@houston-ai/chat"
 
 // onSend now receives both text and any files the user attached
 <ChatInput
@@ -49,7 +49,7 @@ export const CHAT_INPUT_CODE = `import { ChatInput } from "@deck-ui/chat"
   placeholder="Ask anything..."
 />`;
 
-export const TOOL_ACTIVITY_CODE = `import { ToolActivity } from "@deck-ui/chat"
+export const TOOL_ACTIVITY_CODE = `import { ToolActivity } from "@houston-ai/chat"
 
 <ToolActivity
   tools={[
@@ -60,7 +60,7 @@ export const TOOL_ACTIVITY_CODE = `import { ToolActivity } from "@deck-ui/chat"
   toolLabels={{ custom_tool: "Running custom tool" }}
 />`;
 
-export const CONVERSATION_CODE = `import { Conversation, ConversationContent, ConversationScrollButton } from "@deck-ui/chat"
+export const CONVERSATION_CODE = `import { Conversation, ConversationContent, ConversationScrollButton } from "@houston-ai/chat"
 
 <Conversation className="flex-1 min-h-0">
   <ConversationContent className="max-w-3xl mx-auto">
@@ -77,7 +77,7 @@ export const CONVERSATION_CODE = `import { Conversation, ConversationContent, Co
 
 export const MESSAGE_CODE = `import {
   Message, MessageContent, MessageResponse, MessageActions, MessageAction
-} from "@deck-ui/chat"
+} from "@houston-ai/chat"
 
 <Message from="assistant">
   <MessageContent>
@@ -92,7 +92,7 @@ export const MESSAGE_CODE = `import {
   </MessageActions>
 </Message>`;
 
-export const REASONING_CODE = `import { Reasoning, ReasoningTrigger, ReasoningContent } from "@deck-ui/chat"
+export const REASONING_CODE = `import { Reasoning, ReasoningTrigger, ReasoningContent } from "@houston-ai/chat"
 
 <Reasoning isStreaming={true} defaultOpen={true}>
   <ReasoningTrigger />
@@ -103,7 +103,7 @@ export const REASONING_CODE = `import { Reasoning, ReasoningTrigger, ReasoningCo
 
 export const PROMPT_INPUT_CODE = `import {
   PromptInput, PromptInputBody, PromptInputTextarea, PromptInputSubmit
-} from "@deck-ui/chat"
+} from "@houston-ai/chat"
 
 <PromptInput onSubmit={(msg) => sendMessage(msg.text)}>
   <PromptInputBody>

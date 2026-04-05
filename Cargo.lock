@@ -1600,6 +1600,114 @@ dependencies = [
 ]
 
 [[package]]
+name = "houston-channels"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "futures-util",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-tungstenite",
+ "tracing",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "houston-db"
+version = "0.2.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "libsql",
+ "serde",
+ "tokio",
+]
+
+[[package]]
+name = "houston-events"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "houston-memory"
+version = "0.2.0"
+dependencies = [
+ "tempfile",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "houston-scheduler"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "cron",
+ "houston-events",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "houston-sessions"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "houston-skills"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+]
+
+[[package]]
+name = "houston-tauri"
+version = "0.3.1"
+dependencies = [
+ "base64 0.22.1",
+ "houston-channels",
+ "houston-db",
+ "houston-events",
+ "houston-memory",
+ "houston-scheduler",
+ "houston-sessions",
+ "libsql",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tauri",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "html5ever"
 version = "0.29.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2147,114 +2255,6 @@ checksum = "5dea2b27dd239b2556ed7a25ba842fe47fd602e7fc7433c2a8d6106d4d9edd70"
 dependencies = [
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "keel-channels"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "chrono",
- "futures-util",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "tokio",
- "tokio-tungstenite",
- "tracing",
- "url",
- "uuid",
-]
-
-[[package]]
-name = "keel-db"
-version = "0.2.0"
-dependencies = [
- "anyhow",
- "chrono",
- "libsql",
- "serde",
- "tokio",
-]
-
-[[package]]
-name = "keel-events"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "chrono",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "keel-memory"
-version = "0.2.0"
-dependencies = [
- "tempfile",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "keel-scheduler"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "cron",
- "keel-events",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "keel-sessions"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
-name = "keel-skills"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
-]
-
-[[package]]
-name = "keel-tauri"
-version = "0.3.1"
-dependencies = [
- "base64 0.22.1",
- "keel-channels",
- "keel-db",
- "keel-events",
- "keel-memory",
- "keel-scheduler",
- "keel-sessions",
- "libsql",
- "reqwest 0.12.28",
- "serde",
- "serde_json",
- "sha2",
- "tauri",
- "tokio",
- "uuid",
 ]
 
 [[package]]

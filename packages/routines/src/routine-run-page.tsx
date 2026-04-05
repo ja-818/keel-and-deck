@@ -5,7 +5,7 @@
  */
 import type { Routine, RoutineRun } from "./types"
 import { ArrowLeft, Loader2 } from "lucide-react"
-import { cn } from "@deck-ui/core"
+import { cn } from "@houston-ai/core"
 
 export interface RoutineRunPageProps {
   routine: Routine | undefined

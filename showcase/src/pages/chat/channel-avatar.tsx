@@ -1,4 +1,4 @@
-import { ChannelAvatar } from "@deck-ui/chat";
+import { ChannelAvatar } from "@houston-ai/chat";
 import { CodeBlock } from "../../components/code-block";
 import { PropsTable } from "../../components/props-table";
 import {
@@ -16,7 +16,7 @@ export function ChannelAvatarPage() {
       <div>
         <h1 className="text-xl font-semibold mb-1">ChannelAvatar + Utilities</h1>
         <p className="inline-block text-xs font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded mb-3">
-          @deck-ui/chat
+          @houston-ai/chat
         </p>
         <p className="text-sm text-muted-foreground leading-relaxed mb-4">
           Components and utilities for multi-channel AI agent apps. Show branded

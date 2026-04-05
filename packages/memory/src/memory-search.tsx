@@ -2,7 +2,7 @@
  * MemorySearch -- Search input with debounced onChange.
  */
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Input } from "@deck-ui/core"
+import { Input } from "@houston-ai/core"
 import { Search } from "lucide-react"
 
 export interface MemorySearchProps {

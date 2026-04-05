@@ -1,5 +1,5 @@
 import type { PropDef } from "../../components/props-table";
-import type { EventEntry } from "@deck-ui/events";
+import type { EventEntry } from "@houston-ai/events";
 
 /* -- Sample data --------------------------------------------------------- */
 
@@ -57,8 +57,8 @@ export const SAMPLE_EVENTS: EventEntry[] = [
 /* -- Code examples -------------------------------------------------------- */
 
 export const QUICK_START_CODE = `import { useState } from "react"
-import { EventFeed } from "@deck-ui/events"
-import type { EventEntry, EventType } from "@deck-ui/events"
+import { EventFeed } from "@houston-ai/events"
+import type { EventEntry, EventType } from "@houston-ai/events"
 
 function MyEventStream({ events }: { events: EventEntry[] }) {
   const [filter, setFilter] = useState<EventType | null>(null)
@@ -74,14 +74,14 @@ function MyEventStream({ events }: { events: EventEntry[] }) {
   )
 }`;
 
-export const EVENT_ITEM_CODE = `import { EventItem } from "@deck-ui/events"
+export const EVENT_ITEM_CODE = `import { EventItem } from "@houston-ai/events"
 
 <EventItem
   event={event}
   onClick={(e) => openDetail(e.id)}
 />`;
 
-export const EVENT_FILTER_CODE = `import { EventFilter } from "@deck-ui/events"
+export const EVENT_FILTER_CODE = `import { EventFilter } from "@houston-ai/events"
 
 <EventFilter
   value={currentFilter}
@@ -89,7 +89,7 @@ export const EVENT_FILTER_CODE = `import { EventFilter } from "@deck-ui/events"
   counts={{ message: 3, cron: 1, webhook: 2 }}
 />`;
 
-export const EVENT_EMPTY_CODE = `import { EventEmpty } from "@deck-ui/events"
+export const EVENT_EMPTY_CODE = `import { EventEmpty } from "@houston-ai/events"
 
 <EventEmpty message="No events match this filter." />`;
 

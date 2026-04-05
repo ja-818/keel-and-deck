@@ -1,4 +1,4 @@
-use keel_tauri::workspace as kw;
+use houston_tauri::workspace as kw;
 use std::path::Path;
 
 pub fn seed_workspace(dir: &Path) -> Result<(), String> {
@@ -14,21 +14,21 @@ pub fn build_system_prompt(dir: &Path) -> String {
 
     // 2. Self-improvement guidance
     parts.push(
-        keel_tauri::self_improvement::SELF_IMPROVEMENT_GUIDANCE.to_string(),
+        houston_tauri::self_improvement::SELF_IMPROVEMENT_GUIDANCE.to_string(),
     );
 
     // 3. Learnings snapshot
-    let memory_dir = dir.join(".keel/memory");
-    let config = keel_memory::LearningsConfig::default();
-    if let Ok(prompt) = keel_memory::build_learnings_prompt(&memory_dir, &config) {
+    let memory_dir = dir.join(".houston/memory");
+    let config = houston_memory::LearningsConfig::default();
+    if let Ok(prompt) = houston_memory::build_learnings_prompt(&memory_dir, &config) {
         if !prompt.is_empty() {
             parts.push(prompt);
         }
     }
 
     // 4. Skills index
-    let skills_dir = dir.join(".keel/skills");
-    if let Ok(index) = keel_skills::build_skills_index(&skills_dir) {
+    let skills_dir = dir.join(".houston/skills");
+    if let Ok(index) = houston_skills::build_skills_index(&skills_dir) {
         if !index.is_empty() {
             parts.push(index);
         }

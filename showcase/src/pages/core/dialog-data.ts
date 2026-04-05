@@ -5,7 +5,7 @@ import type { PropDef } from "../../components/props-table";
 export const BASIC_CODE = `import {
   Dialog, DialogTrigger, DialogContent,
   DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-} from "@deck-ui/core"
+} from "@houston-ai/core"
 
 <Dialog>
   <DialogTrigger asChild>

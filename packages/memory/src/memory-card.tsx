@@ -1,7 +1,7 @@
 /**
  * MemoryCard -- Individual memory card with category badge, content, tags.
  */
-import { cn, Card } from "@deck-ui/core"
+import { cn, Card } from "@houston-ai/core"
 import {
   MessageCircle,
   Settings,

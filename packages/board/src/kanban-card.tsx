@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { cn, ConfirmDialog } from "@deck-ui/core"
+import { cn, ConfirmDialog } from "@houston-ai/core"
 import { Trash2, CheckCircle } from "lucide-react"
 import type { KanbanItem } from "./types"
 

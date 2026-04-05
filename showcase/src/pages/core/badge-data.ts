@@ -2,7 +2,7 @@ import type { PropDef } from "../../components/props-table";
 
 /* ── Code examples ───────────────────────────────────────────── */
 
-export const QUICK_START_CODE = `import { Badge } from "@deck-ui/core"
+export const QUICK_START_CODE = `import { Badge } from "@houston-ai/core"
 
 function StatusLabel() {
   return <Badge>Active</Badge>
@@ -15,14 +15,14 @@ export const VARIANTS_CODE = `<Badge>Default</Badge>
 <Badge variant="ghost">Ghost</Badge>
 <Badge variant="link">Link</Badge>`;
 
-export const AS_CHILD_CODE = `import { Badge } from "@deck-ui/core"
+export const AS_CHILD_CODE = `import { Badge } from "@houston-ai/core"
 
 {/* Renders as an <a> tag with badge styles */}
 <Badge asChild>
   <a href="/status">View status</a>
 </Badge>`;
 
-export const WITH_ICON_CODE = `import { Badge } from "@deck-ui/core"
+export const WITH_ICON_CODE = `import { Badge } from "@houston-ai/core"
 import { Circle, AlertTriangle } from "lucide-react"
 
 <Badge variant="secondary">

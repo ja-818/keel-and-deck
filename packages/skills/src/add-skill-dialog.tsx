@@ -14,7 +14,7 @@ import {
   DialogTitle,
   Input,
   Spinner,
-} from "@deck-ui/core"
+} from "@houston-ai/core"
 import {
   AlertCircle, ArrowLeft, Check, Loader2,
   Plus, Search,

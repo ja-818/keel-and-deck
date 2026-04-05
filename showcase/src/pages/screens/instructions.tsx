@@ -1,6 +1,6 @@
-import { InstructionsPanel } from "@deck-ui/workspace"
-import type { InstructionFile } from "@deck-ui/workspace"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@deck-ui/core"
+import { InstructionsPanel } from "@houston-ai/workspace"
+import type { InstructionFile } from "@houston-ai/workspace"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@houston-ai/core"
 import { CodeBlock } from "../../components/code-block"
 
 const SIMPLE_FILES: InstructionFile[] = [
@@ -15,7 +15,7 @@ You are a helpful assistant for managing my project.
 ## Rules
 - Always be concise
 - Ask before making destructive changes
-- Use the keel CLI for task management`,
+- Use the houston CLI for task management`,
   },
 ]
 
@@ -46,8 +46,8 @@ const RICH_FILES: InstructionFile[] = [
   },
 ]
 
-const USAGE_CODE = `import { InstructionsPanel } from "@deck-ui/workspace"
-import type { InstructionFile } from "@deck-ui/workspace"
+const USAGE_CODE = `import { InstructionsPanel } from "@houston-ai/workspace"
+import type { InstructionFile } from "@houston-ai/workspace"
 
 function MyInstructions({ files }: { files: InstructionFile[] }) {
   return (
@@ -66,7 +66,7 @@ export function InstructionsScreen() {
       <div>
         <h1 className="text-xl font-semibold mb-1">Instructions</h1>
         <p className="inline-block text-xs font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded mb-3">
-          @deck-ui/workspace
+          @houston-ai/workspace
         </p>
         <p className="text-sm text-muted-foreground leading-relaxed mb-4">
           Editable workspace files for configuring an agent. Each file is

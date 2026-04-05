@@ -1,7 +1,7 @@
 /**
  * MemoryCategoryFilter -- Horizontal row of category pill buttons.
  */
-import { cn } from "@deck-ui/core"
+import { cn } from "@houston-ai/core"
 import type { MemoryCategory } from "./types"
 import { CATEGORY_LABELS } from "./types"
 

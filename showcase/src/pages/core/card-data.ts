@@ -5,7 +5,7 @@ import type { PropDef } from "../../components/props-table";
 export const BASIC_CODE = `import {
   Card, CardHeader, CardTitle,
   CardDescription, CardContent, CardFooter,
-} from "@deck-ui/core"
+} from "@houston-ai/core"
 
 <Card>
   <CardHeader>
@@ -22,7 +22,7 @@ export const BASIC_CODE = `import {
   </CardFooter>
 </Card>`;
 
-export const WITH_ACTION_CODE = `import { Card, CardHeader, CardTitle, CardAction, CardContent } from "@deck-ui/core"
+export const WITH_ACTION_CODE = `import { Card, CardHeader, CardTitle, CardAction, CardContent } from "@houston-ai/core"
 
 <Card>
   <CardHeader>

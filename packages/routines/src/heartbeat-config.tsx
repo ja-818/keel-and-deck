@@ -4,7 +4,7 @@
  */
 import { useState } from "react"
 import { ChevronDown, ChevronRight } from "lucide-react"
-import { cn } from "@deck-ui/core"
+import { cn } from "@houston-ai/core"
 import type { HeartbeatConfig as HeartbeatConfigType } from "./types"
 
 export interface HeartbeatConfigProps {

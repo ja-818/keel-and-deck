@@ -1,6 +1,6 @@
 import { useState, type KeyboardEvent, type ReactNode } from "react";
 import { Plus, MoreHorizontal } from "lucide-react";
-import { cn, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@deck-ui/core";
+import { cn, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@houston-ai/core";
 
 export interface SidebarProps {
   logo?: ReactNode;

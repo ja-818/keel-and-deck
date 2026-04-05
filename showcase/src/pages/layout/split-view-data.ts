@@ -2,7 +2,7 @@ import type { PropDef } from "../../components/props-table";
 
 /* ── Code examples ───────────────────────────────────────────── */
 
-export const QUICK_START_CODE = `import { SplitView } from "@deck-ui/layout"
+export const QUICK_START_CODE = `import { SplitView } from "@houston-ai/layout"
 
 function MyLayout() {
   return (

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { FilesBrowser } from "@deck-ui/workspace";
-import type { FileEntry } from "@deck-ui/workspace";
+import { FilesBrowser } from "@houston-ai/workspace";
+import type { FileEntry } from "@houston-ai/workspace";
 import { tauriFiles } from "../lib/tauri";
 
 interface FilesTabProps {

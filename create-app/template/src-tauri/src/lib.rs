@@ -3,9 +3,9 @@ mod memory_commands;
 mod skill_commands;
 mod workspace;
 
-use keel_tauri::agent_sessions::AgentSessionMap;
-use keel_tauri::keel_db::Database;
-use keel_tauri::state::AppState;
+use houston_tauri::agent_sessions::AgentSessionMap;
+use houston_tauri::houston_db::Database;
+use houston_tauri::state::AppState;
 use tauri::Manager;
 
 /// The parent directory containing all agent workspaces.
@@ -14,7 +14,7 @@ pub struct WorkspaceRoot(pub String);
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
-            let data_dir = keel_tauri::keel_db::db::default_data_dir("{{APP_NAME}}");
+            let data_dir = houston_tauri::houston_db::db::default_data_dir("{{APP_NAME}}");
             let db_path = data_dir.join("{{APP_NAME}}.db");
 
             let db = tauri::async_runtime::block_on(async {
@@ -58,17 +58,17 @@ pub fn run() {
             memory_commands::add_learning,
             memory_commands::replace_learning,
             memory_commands::remove_learning,
-            keel_tauri::workspace_commands::list_project_files,
-            keel_tauri::workspace_commands::open_file,
-            keel_tauri::workspace_commands::reveal_file,
-            keel_tauri::workspace_commands::delete_file,
-            keel_tauri::workspace_commands::rename_file,
-            keel_tauri::workspace_commands::create_workspace_folder,
-            keel_tauri::workspace_commands::reveal_workspace,
-            keel_tauri::workspace_commands::import_files,
-            keel_tauri::composio_commands::list_composio_connections,
-            keel_tauri::composio_commands::start_composio_oauth,
-            keel_tauri::workspace_commands::open_url,
+            houston_tauri::workspace_commands::list_project_files,
+            houston_tauri::workspace_commands::open_file,
+            houston_tauri::workspace_commands::reveal_file,
+            houston_tauri::workspace_commands::delete_file,
+            houston_tauri::workspace_commands::rename_file,
+            houston_tauri::workspace_commands::create_workspace_folder,
+            houston_tauri::workspace_commands::reveal_workspace,
+            houston_tauri::workspace_commands::import_files,
+            houston_tauri::composio_commands::list_composio_connections,
+            houston_tauri::composio_commands::start_composio_oauth,
+            houston_tauri::workspace_commands::open_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

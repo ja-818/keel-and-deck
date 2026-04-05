@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { InstructionsPanel } from "@deck-ui/workspace";
-import type { InstructionFile } from "@deck-ui/workspace";
+import { InstructionsPanel } from "@houston-ai/workspace";
+import type { InstructionFile } from "@houston-ai/workspace";
 import { tauriWorkspace } from "../lib/tauri";
 
 interface ContextTabProps {

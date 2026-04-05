@@ -1,4 +1,4 @@
-import { cn } from "@deck-ui/core";
+import { cn } from "@houston-ai/core";
 import ReactMarkdown from "react-markdown";
 
 export function DeliverableCard({ content }: { content: string }) {

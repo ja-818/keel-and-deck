@@ -1,5 +1,5 @@
 import { Hash, Send, Settings, Trash2, Power, PowerOff } from "lucide-react"
-import { cn } from "@deck-ui/core"
+import { cn } from "@houston-ai/core"
 import type { ChannelConnection } from "./types"
 import { CHANNEL_LABELS } from "./types"
 

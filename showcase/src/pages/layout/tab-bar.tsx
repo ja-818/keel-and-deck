@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { TabBar } from "@deck-ui/layout";
-import { Button } from "@deck-ui/core";
+import { TabBar } from "@houston-ai/layout";
+import { Button } from "@houston-ai/core";
 import { Plus, Settings } from "lucide-react";
 import { CodeBlock } from "../../components/code-block";
 import { PropsTable } from "../../components/props-table";
@@ -21,7 +21,7 @@ export function TabBarPage() {
       <div>
         <h1 className="text-xl font-semibold mb-1">TabBar</h1>
         <p className="inline-block text-xs font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded mb-3">
-          @deck-ui/layout
+          @houston-ai/layout
         </p>
         <p className="text-sm text-muted-foreground leading-relaxed mb-4">
           Horizontal tab navigation with a title row, badge counts, and

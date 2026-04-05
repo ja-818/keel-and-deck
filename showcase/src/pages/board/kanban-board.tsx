@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { KanbanBoard } from "@deck-ui/board";
-import type { KanbanItem } from "@deck-ui/board";
+import { KanbanBoard } from "@houston-ai/board";
+import type { KanbanItem } from "@houston-ai/board";
 import { CodeBlock } from "../../components/code-block";
 import { PropsTable } from "../../components/props-table";
 import {
@@ -33,7 +33,7 @@ export function KanbanBoardPage() {
       <div>
         <h1 className="text-xl font-semibold mb-1">Kanban Board</h1>
         <p className="inline-block text-xs font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded mb-3">
-          @deck-ui/board
+          @houston-ai/board
         </p>
         <p className="text-sm text-muted-foreground leading-relaxed mb-4">
           A column-based kanban board that groups items by status, with animated

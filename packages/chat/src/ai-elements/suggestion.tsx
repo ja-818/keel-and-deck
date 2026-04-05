@@ -1,11 +1,11 @@
 "use client";
 
-import { Button } from "@deck-ui/core";
+import { Button } from "@houston-ai/core";
 import {
   ScrollArea,
   ScrollBar,
-} from "@deck-ui/core";
-import { cn } from "@deck-ui/core";
+} from "@houston-ai/core";
+import { cn } from "@houston-ai/core";
 import type { ComponentProps } from "react";
 import { useCallback } from "react";
 

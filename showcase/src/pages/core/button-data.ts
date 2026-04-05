@@ -2,7 +2,7 @@ import type { PropDef } from "../../components/props-table";
 
 /* ── Code examples ───────────────────────────────────────────── */
 
-export const QUICK_START_CODE = `import { Button } from "@deck-ui/core"
+export const QUICK_START_CODE = `import { Button } from "@houston-ai/core"
 
 function MyApp() {
   return (
@@ -30,7 +30,7 @@ export const ICON_BUTTON_CODE = `import { Plus, Settings, Trash2 } from "lucide-
 <Button size="icon-sm" variant="ghost"><Settings /></Button>
 <Button size="icon-xs" variant="outline"><Trash2 /></Button>`;
 
-export const AS_CHILD_CODE = `import { Button } from "@deck-ui/core"
+export const AS_CHILD_CODE = `import { Button } from "@houston-ai/core"
 
 {/* Renders as an <a> tag with button styles */}
 <Button asChild>

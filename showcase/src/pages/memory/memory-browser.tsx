@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { MemoryCategory } from "@deck-ui/memory";
-import { MemoryBrowser } from "@deck-ui/memory";
+import type { MemoryCategory } from "@houston-ai/memory";
+import { MemoryBrowser } from "@houston-ai/memory";
 import { CodeBlock } from "../../components/code-block";
 import { PropsTable } from "../../components/props-table";
 import {
@@ -41,7 +41,7 @@ export function MemoryBrowserPage() {
       <div>
         <h1 className="text-xl font-semibold mb-1">MemoryBrowser</h1>
         <p className="inline-block text-xs font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded mb-3">
-          @deck-ui/memory
+          @houston-ai/memory
         </p>
         <p className="text-sm text-muted-foreground leading-relaxed mb-4">
           Search, filter, and browse agent memories by category. Combines a
@@ -123,7 +123,7 @@ export function MemoryBrowserPage() {
       />
       <ComponentSection
         name="MemoryEmpty"
-        description="Empty state using the shared Empty component from @deck-ui/core."
+        description="Empty state using the shared Empty component from @houston-ai/core."
         props={MEMORY_EMPTY_PROPS}
         code={MEMORY_EMPTY_CODE}
       />

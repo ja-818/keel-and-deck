@@ -1,5 +1,5 @@
 import type { PropDef } from "../../components/props-table";
-import type { HeartbeatConfig } from "@deck-ui/routines";
+import type { HeartbeatConfig } from "@houston-ai/routines";
 
 /* ── Sample data ─────────────────────────────────────────────── */
 
@@ -15,8 +15,8 @@ export const DEFAULT_HEARTBEAT: HeartbeatConfig = {
 /* ── Code examples ───────────────────────────────────────────── */
 
 export const USAGE_CODE = `import { useState } from "react"
-import { HeartbeatConfigPanel } from "@deck-ui/routines"
-import type { HeartbeatConfig } from "@deck-ui/routines"
+import { HeartbeatConfigPanel } from "@houston-ai/routines"
+import type { HeartbeatConfig } from "@houston-ai/routines"
 
 function MySettings() {
   const [heartbeat, setHeartbeat] = useState<HeartbeatConfig>({

@@ -1,4 +1,4 @@
-import type { Memory } from "@deck-ui/memory";
+import type { Memory } from "@houston-ai/memory";
 
 /* -- Sample data --------------------------------------------------------- */
 
@@ -69,8 +69,8 @@ export const SAMPLE_MEMORIES: Memory[] = [
 /* -- Code examples -------------------------------------------------------- */
 
 export const QUICK_START_CODE = `import { useState } from "react"
-import { MemoryBrowser } from "@deck-ui/memory"
-import type { Memory, MemoryCategory } from "@deck-ui/memory"
+import { MemoryBrowser } from "@houston-ai/memory"
+import type { Memory, MemoryCategory } from "@houston-ai/memory"
 
 function MyMemories({ memories }: { memories: Memory[] }) {
   const [search, setSearch] = useState("")
@@ -95,7 +95,7 @@ function MyMemories({ memories }: { memories: Memory[] }) {
   )
 }`;
 
-export const MEMORY_GRID_CODE = `import { MemoryGrid } from "@deck-ui/memory"
+export const MEMORY_GRID_CODE = `import { MemoryGrid } from "@houston-ai/memory"
 
 <MemoryGrid
   memories={memories}
@@ -104,7 +104,7 @@ export const MEMORY_GRID_CODE = `import { MemoryGrid } from "@deck-ui/memory"
   loading={isLoading}
 />`;
 
-export const MEMORY_CARD_CODE = `import { MemoryCard } from "@deck-ui/memory"
+export const MEMORY_CARD_CODE = `import { MemoryCard } from "@houston-ai/memory"
 
 <MemoryCard
   memory={memory}
@@ -112,7 +112,7 @@ export const MEMORY_CARD_CODE = `import { MemoryCard } from "@deck-ui/memory"
   onDelete={(m) => deleteMemory(m.id)}
 />`;
 
-export const MEMORY_DETAIL_CODE = `import { MemoryDetail } from "@deck-ui/memory"
+export const MEMORY_DETAIL_CODE = `import { MemoryDetail } from "@houston-ai/memory"
 
 <MemoryDetail
   memory={selectedMemory}
@@ -121,7 +121,7 @@ export const MEMORY_DETAIL_CODE = `import { MemoryDetail } from "@deck-ui/memory
   onClose={() => setSelected(null)}
 />`;
 
-export const MEMORY_SEARCH_CODE = `import { MemorySearch } from "@deck-ui/memory"
+export const MEMORY_SEARCH_CODE = `import { MemorySearch } from "@houston-ai/memory"
 
 <MemorySearch
   value={query}
@@ -129,7 +129,7 @@ export const MEMORY_SEARCH_CODE = `import { MemorySearch } from "@deck-ui/memory
   placeholder="Search memories..."
 />`;
 
-export const CATEGORY_FILTER_CODE = `import { MemoryCategoryFilter } from "@deck-ui/memory"
+export const CATEGORY_FILTER_CODE = `import { MemoryCategoryFilter } from "@houston-ai/memory"
 
 <MemoryCategoryFilter
   value={selectedCategory}
@@ -137,7 +137,7 @@ export const CATEGORY_FILTER_CODE = `import { MemoryCategoryFilter } from "@deck
   counts={{ preference: 5, fact: 3, context: 2 }}
 />`;
 
-export const MEMORY_EMPTY_CODE = `import { MemoryEmpty } from "@deck-ui/memory"
+export const MEMORY_EMPTY_CODE = `import { MemoryEmpty } from "@houston-ai/memory"
 
 <MemoryEmpty message="No memories match your search." />`;
 

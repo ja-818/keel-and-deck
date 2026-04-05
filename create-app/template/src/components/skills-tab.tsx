@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { SkillsGrid, SkillDetailPage } from "@deck-ui/skills";
-import type { Skill, CommunitySkill } from "@deck-ui/skills";
+import { SkillsGrid, SkillDetailPage } from "@houston-ai/skills";
+import type { Skill, CommunitySkill } from "@houston-ai/skills";
 import { tauriSkills } from "../lib/tauri";
 
 interface SkillsTabProps {

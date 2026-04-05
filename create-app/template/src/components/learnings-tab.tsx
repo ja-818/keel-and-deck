@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { LearningsPanel } from "@deck-ui/memory";
-import type { LearningEntry } from "@deck-ui/memory";
+import { LearningsPanel } from "@houston-ai/memory";
+import type { LearningEntry } from "@houston-ai/memory";
 import { tauriLearnings } from "../lib/tauri";
 
 interface LearningsTabProps {

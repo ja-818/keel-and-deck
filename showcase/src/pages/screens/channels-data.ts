@@ -1,4 +1,4 @@
-import type { ChannelConnection } from "@deck-ui/connections";
+import type { ChannelConnection } from "@houston-ai/connections";
 
 export const SAMPLE_CHANNELS: ChannelConnection[] = [
   {

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Button } from "@deck-ui/core"
+import { Button } from "@houston-ai/core"
 import { Plus, Trash2 } from "lucide-react"
 
 export interface LearningEntry {

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { cn } from "@deck-ui/core";
+import { cn } from "@houston-ai/core";
 import type { ReviewItemData } from "./types";
 
 export interface ReviewSidebarProps {

@@ -21,7 +21,7 @@ const __dirname = dirname(__filename);
 const projectName = process.argv[2];
 
 if (!projectName) {
-  console.error("\n  Usage: npx create-keel-and-deck-app <project-name>\n");
+  console.error("\n  Usage: npx create-houston-experience <project-name>\n");
   process.exit(1);
 }
 

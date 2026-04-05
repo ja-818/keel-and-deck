@@ -5,8 +5,8 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@deck-ui/core";
-import { cn } from "@deck-ui/core";
+} from "@houston-ai/core";
+import { cn } from "@houston-ai/core";
 import { cjk } from "@streamdown/cjk";
 import { code } from "@streamdown/code";
 import { math } from "@streamdown/math";

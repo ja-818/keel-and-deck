@@ -4,7 +4,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { cn, Button } from "@deck-ui/core"
+import { cn, Button } from "@houston-ai/core"
 import { Upload } from "lucide-react"
 import type { FileEntry } from "./types"
 import { useDropZone } from "./drop-zone"

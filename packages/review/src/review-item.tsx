@@ -1,4 +1,4 @@
-import { cn } from "@deck-ui/core";
+import { cn } from "@houston-ai/core";
 import { ChevronRight, Loader2 } from "lucide-react";
 import type { ReviewItemData, RunStatus } from "./types";
 

@@ -5,7 +5,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@deck-ui/core";
+} from "@houston-ai/core";
 
 const THEMES = [
   { id: "default", label: "Default", className: "" },

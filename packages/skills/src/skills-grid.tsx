@@ -6,7 +6,7 @@ import { useMemo, useState } from "react"
 import {
   Button,
   Empty, EmptyHeader, EmptyTitle, EmptyDescription,
-} from "@deck-ui/core"
+} from "@houston-ai/core"
 import { Plus } from "lucide-react"
 import type { Skill, CommunitySkill } from "./types"
 import { SkillRow } from "./skill-row"

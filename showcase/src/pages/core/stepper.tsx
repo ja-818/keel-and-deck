@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Stepper } from "@deck-ui/core";
+import { Stepper } from "@houston-ai/core";
 import { Section } from "../../components/section";
 
 const PLANNING_STEPS = [
@@ -26,7 +26,7 @@ export function StepperPage() {
       <div>
         <h1 className="text-xl font-semibold mb-1">Stepper</h1>
         <p className="inline-block text-xs font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded mb-3">
-          @deck-ui/core
+          @houston-ai/core
         </p>
         <p className="text-sm text-muted-foreground leading-relaxed mb-4">
           A horizontal progress stepper for sequential workflows. Shows

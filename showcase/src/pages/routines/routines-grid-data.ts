@@ -1,5 +1,5 @@
 import type { PropDef } from "../../components/props-table";
-import type { Routine } from "@deck-ui/routines";
+import type { Routine } from "@houston-ai/routines";
 
 /* ── Sample data ─────────────────────────────────────────────── */
 
@@ -80,8 +80,8 @@ export const SAMPLE_ROUTINES: Routine[] = [
 
 /* ── Code examples ───────────────────────────────────────────── */
 
-export const QUICK_START_CODE = `import { RoutinesGrid } from "@deck-ui/routines"
-import type { Routine } from "@deck-ui/routines"
+export const QUICK_START_CODE = `import { RoutinesGrid } from "@houston-ai/routines"
+import type { Routine } from "@houston-ai/routines"
 
 function MyRoutines({ routines }: { routines: Routine[] }) {
   return (
@@ -92,7 +92,7 @@ function MyRoutines({ routines }: { routines: Routine[] }) {
   )
 }`;
 
-export const ROUTINE_CARD_CODE = `import { RoutineCard } from "@deck-ui/routines"
+export const ROUTINE_CARD_CODE = `import { RoutineCard } from "@houston-ai/routines"
 
 <RoutineCard
   routine={routine}

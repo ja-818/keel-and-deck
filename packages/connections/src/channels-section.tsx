@@ -3,7 +3,7 @@
  * Shows empty state when no channels are configured.
  */
 import { Plus, Radio } from "lucide-react"
-import { cn } from "@deck-ui/core"
+import { cn } from "@houston-ai/core"
 import type { ChannelConnection, ChannelType } from "./types"
 import { CHANNEL_LABELS } from "./types"
 import { ChannelConnectionCard } from "./channel-connection-card"

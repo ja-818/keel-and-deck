@@ -5,7 +5,7 @@ import {
   EmptyTitle,
   EmptyDescription,
   EmptyContent,
-} from "@deck-ui/core";
+} from "@houston-ai/core";
 import { ExternalLink } from "lucide-react";
 import { CodeBlock } from "../../components/code-block";
 import { PropsTable } from "../../components/props-table";
@@ -26,7 +26,7 @@ export function EmptyPage() {
       <div>
         <h1 className="text-xl font-semibold mb-1">Empty</h1>
         <p className="inline-block text-xs font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded mb-3">
-          @deck-ui/core
+          @houston-ai/core
         </p>
         <p className="text-sm text-muted-foreground leading-relaxed mb-4">
           A compound placeholder for views with no content. Supports icons,

@@ -2,7 +2,7 @@
  * MemoryBrowser -- Main component: search + category filter + memory grid.
  * Fully props-driven: host app provides data and callbacks.
  */
-import { Button } from "@deck-ui/core"
+import { Button } from "@houston-ai/core"
 import { Plus } from "lucide-react"
 import type { Memory, MemoryCategory } from "./types"
 import { MemorySearch } from "./memory-search"

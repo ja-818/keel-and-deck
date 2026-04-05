@@ -1,5 +1,5 @@
-use keel_memory::LearningsConfig;
-use keel_tauri::paths::expand_tilde;
+use houston_memory::LearningsConfig;
+use houston_tauri::paths::expand_tilde;
 use serde::Serialize;
 use std::path::PathBuf;
 
@@ -17,7 +17,7 @@ pub struct LearningsResponse {
 }
 
 fn memory_dir(workspace_path: &str) -> PathBuf {
-    expand_tilde(&PathBuf::from(workspace_path)).join(".keel/memory")
+    expand_tilde(&PathBuf::from(workspace_path)).join(".houston/memory")
 }
 
 #[tauri::command]
@@ -27,7 +27,7 @@ pub async fn load_learnings(
     let dir = memory_dir(&workspace_path);
     let config = LearningsConfig::default();
     let data =
-        keel_memory::load_learnings(&dir, &config).map_err(|e| e.to_string())?;
+        houston_memory::load_learnings(&dir, &config).map_err(|e| e.to_string())?;
 
     Ok(LearningsResponse {
         entries: data
@@ -50,7 +50,7 @@ pub async fn add_learning(
 ) -> Result<(), String> {
     let dir = memory_dir(&workspace_path);
     let config = LearningsConfig::default();
-    keel_memory::add_entry(&dir, &text, &config)
+    houston_memory::add_entry(&dir, &text, &config)
         .map_err(|e| e.to_string())
 }
 
@@ -62,7 +62,7 @@ pub async fn replace_learning(
 ) -> Result<(), String> {
     let dir = memory_dir(&workspace_path);
     let config = LearningsConfig::default();
-    keel_memory::replace_entry(&dir, index, &text, &config)
+    houston_memory::replace_entry(&dir, index, &text, &config)
         .map_err(|e| e.to_string())
 }
 
@@ -72,6 +72,6 @@ pub async fn remove_learning(
     index: usize,
 ) -> Result<(), String> {
     let dir = memory_dir(&workspace_path);
-    keel_memory::remove_entry(&dir, index)
+    houston_memory::remove_entry(&dir, index)
         .map_err(|e| e.to_string())
 }

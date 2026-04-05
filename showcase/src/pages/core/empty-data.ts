@@ -4,7 +4,7 @@ import type { PropDef } from "../../components/props-table";
 
 export const BASIC_CODE = `import {
   Empty, EmptyHeader, EmptyTitle, EmptyDescription,
-} from "@deck-ui/core"
+} from "@houston-ai/core"
 
 <Empty>
   <EmptyHeader>
@@ -18,7 +18,7 @@ export const BASIC_CODE = `import {
 export const WITH_ACTION_CODE = `import {
   Empty, EmptyHeader, EmptyTitle,
   EmptyDescription, EmptyContent, Button,
-} from "@deck-ui/core"
+} from "@houston-ai/core"
 
 <Empty>
   <EmptyHeader>

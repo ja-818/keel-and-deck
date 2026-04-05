@@ -3,7 +3,7 @@ import {
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
-} from "@deck-ui/core"
+} from "@houston-ai/core"
 
 export interface EventEmptyProps {
   message?: string

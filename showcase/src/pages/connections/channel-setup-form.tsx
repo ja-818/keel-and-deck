@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { ChannelSetupForm } from "@deck-ui/connections";
-import type { ChannelType } from "@deck-ui/connections";
+import { ChannelSetupForm } from "@houston-ai/connections";
+import type { ChannelType } from "@houston-ai/connections";
 import { CodeBlock } from "../../components/code-block";
 import { PropsTable } from "../../components/props-table";
 import { USAGE_CODE, FORM_PROPS } from "./channel-setup-form-data";
@@ -14,7 +14,7 @@ export function ChannelSetupFormPage() {
       <div>
         <h1 className="text-xl font-semibold mb-1">ChannelSetupForm</h1>
         <p className="inline-block text-xs font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded mb-3">
-          @deck-ui/connections
+          @houston-ai/connections
         </p>
         <p className="text-sm text-muted-foreground leading-relaxed mb-4">
           Configuration form for Slack or Telegram channel setup. Shows

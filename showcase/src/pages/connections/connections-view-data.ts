@@ -1,5 +1,5 @@
 import type { PropDef } from "../../components/props-table";
-import type { Connection, ChannelConnection } from "@deck-ui/connections";
+import type { Connection, ChannelConnection } from "@houston-ai/connections";
 
 /* ── Sample data ─────────────────────────────────────────────── */
 
@@ -53,8 +53,8 @@ export const SAMPLE_CHANNELS: ChannelConnection[] = [
 
 /* ── Code examples ───────────────────────────────────────────── */
 
-export const QUICK_START_CODE = `import { ConnectionsView } from "@deck-ui/connections"
-import type { ConnectionsResult, ChannelConnection } from "@deck-ui/connections"
+export const QUICK_START_CODE = `import { ConnectionsView } from "@houston-ai/connections"
+import type { ConnectionsResult, ChannelConnection } from "@houston-ai/connections"
 
 function MyConnections({
   result,
@@ -77,7 +77,7 @@ function MyConnections({
   )
 }`;
 
-export const CONNECTION_ROW_CODE = `import { ConnectionRow } from "@deck-ui/connections"
+export const CONNECTION_ROW_CODE = `import { ConnectionRow } from "@houston-ai/connections"
 
 <ConnectionRow
   connection={{
@@ -90,7 +90,7 @@ export const CONNECTION_ROW_CODE = `import { ConnectionRow } from "@deck-ui/conn
   }}
 />`;
 
-export const CHANNEL_CARD_CODE = `import { ChannelConnectionCard } from "@deck-ui/connections"
+export const CHANNEL_CARD_CODE = `import { ChannelConnectionCard } from "@houston-ai/connections"
 
 <ChannelConnectionCard
   connection={channel}

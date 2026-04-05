@@ -1,15 +1,15 @@
 import { useEffect, useCallback, useRef, useState } from "react";
-import { ChatPanel } from "@deck-ui/chat";
-import type { FeedItem } from "@deck-ui/chat";
+import { ChatPanel } from "@houston-ai/chat";
+import type { FeedItem } from "@houston-ai/chat";
 import {
   Empty,
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
   Button,
-} from "@deck-ui/core";
-import { AppSidebar } from "@deck-ui/layout";
-import { TabBar } from "@deck-ui/layout";
+} from "@houston-ai/core";
+import { AppSidebar } from "@houston-ai/layout";
+import { TabBar } from "@houston-ai/layout";
 import { useAgentStore } from "./stores/agents";
 import { useFeedStore } from "./stores/feeds";
 import { useUIStore, type ViewMode } from "./stores/ui";

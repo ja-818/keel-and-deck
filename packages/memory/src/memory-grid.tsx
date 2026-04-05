@@ -1,7 +1,7 @@
 /**
  * MemoryGrid -- Responsive grid of memory cards with loading skeletons.
  */
-import { Skeleton } from "@deck-ui/core"
+import { Skeleton } from "@houston-ai/core"
 import type { Memory } from "./types"
 import { MemoryCard } from "./memory-card"
 

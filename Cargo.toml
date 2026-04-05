@@ -1,14 +1,14 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/keel-sessions",
-    "crates/keel-db",
-    "crates/keel-tauri",
-    "crates/keel-events",
-    "crates/keel-scheduler",
-    "crates/keel-channels",
-    "crates/keel-memory",
-    "crates/keel-skills",
+    "crates/houston-sessions",
+    "crates/houston-db",
+    "crates/houston-tauri",
+    "crates/houston-events",
+    "crates/houston-scheduler",
+    "crates/houston-channels",
+    "crates/houston-memory",
+    "crates/houston-skills",
 ]
 exclude = [
     "create-app/template",
@@ -23,11 +23,11 @@ chrono = { version = "0.4", features = ["serde"] }
 anyhow = "1"
 async-trait = "0.1"
 tracing = "0.1"
-keel-sessions = { version = "0.1.0", path = "crates/keel-sessions" }
-keel-db = { version = "0.2.0", path = "crates/keel-db" }
-keel-tauri = { version = "0.2.0", path = "crates/keel-tauri" }
-keel-events = { version = "0.1.0", path = "crates/keel-events" }
-keel-scheduler = { version = "0.1.0", path = "crates/keel-scheduler" }
-keel-channels = { version = "0.1.0", path = "crates/keel-channels" }
-keel-memory = { version = "0.2.0", path = "crates/keel-memory" }
-keel-skills = { version = "0.1.0", path = "crates/keel-skills" }
+houston-sessions = { version = "0.1.0", path = "crates/houston-sessions" }
+houston-db = { version = "0.2.0", path = "crates/houston-db" }
+houston-tauri = { version = "0.2.0", path = "crates/houston-tauri" }
+houston-events = { version = "0.1.0", path = "crates/houston-events" }
+houston-scheduler = { version = "0.1.0", path = "crates/houston-scheduler" }
+houston-channels = { version = "0.1.0", path = "crates/houston-channels" }
+houston-memory = { version = "0.2.0", path = "crates/houston-memory" }
+houston-skills = { version = "0.1.0", path = "crates/houston-skills" }

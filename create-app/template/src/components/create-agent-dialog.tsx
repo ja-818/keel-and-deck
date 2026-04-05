@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, Button, Input } from "@deck-ui/core";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, Button, Input } from "@houston-ai/core";
 import { useAgentStore } from "../stores/agents";
 
 interface CreateAgentDialogProps {

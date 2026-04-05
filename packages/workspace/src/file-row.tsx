@@ -4,7 +4,7 @@
  * Folders: click to expand/collapse, drop target for moves.
  */
 import { useEffect, useRef, useState } from "react"
-import { cn } from "@deck-ui/core"
+import { cn } from "@houston-ai/core"
 import type { FileEntry } from "./types"
 import type { FolderNode } from "./tree"
 import { INTERNAL_DRAG_TYPE, useFolderDropTarget } from "./drop-zone"

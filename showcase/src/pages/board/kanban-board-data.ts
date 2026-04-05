@@ -1,5 +1,5 @@
 import type { PropDef } from "../../components/props-table";
-import type { KanbanItem, KanbanColumnConfig } from "@deck-ui/board";
+import type { KanbanItem, KanbanColumnConfig } from "@houston-ai/board";
 
 /* ── Sample data ─────────────────────────────────────────────── */
 
@@ -19,8 +19,8 @@ export const SAMPLE_ITEMS: KanbanItem[] = [
 /* ── Code examples ───────────────────────────────────────────── */
 
 export const QUICK_START_CODE = `import { useState } from "react"
-import { KanbanBoard } from "@deck-ui/board"
-import type { KanbanItem, KanbanColumnConfig } from "@deck-ui/board"
+import { KanbanBoard } from "@houston-ai/board"
+import type { KanbanItem, KanbanColumnConfig } from "@houston-ai/board"
 
 const columns: KanbanColumnConfig[] = [
   { id: "active", label: "Active", statuses: ["running"] },
@@ -67,7 +67,7 @@ export const CUSTOM_CARD_CODE = `<KanbanBoard
   )}
 />`;
 
-export const DETAIL_PANEL_CODE = `import { KanbanDetailPanel } from "@deck-ui/board"
+export const DETAIL_PANEL_CODE = `import { KanbanDetailPanel } from "@houston-ai/board"
 
 <KanbanDetailPanel
   title="Deploy v2.0"

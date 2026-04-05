@@ -1,4 +1,4 @@
-import { ConnectionsView } from "@deck-ui/connections";
+import { ConnectionsView } from "@houston-ai/connections";
 import { CodeBlock } from "../../components/code-block";
 import { PropsTable } from "../../components/props-table";
 import {
@@ -21,7 +21,7 @@ export function ConnectionsViewPage() {
       <div>
         <h1 className="text-xl font-semibold mb-1">ConnectionsView</h1>
         <p className="inline-block text-xs font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded mb-3">
-          @deck-ui/connections
+          @houston-ai/connections
         </p>
         <p className="text-sm text-muted-foreground leading-relaxed mb-4">
           Full-page view for managing connected apps and channel integrations.

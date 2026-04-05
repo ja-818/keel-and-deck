@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { ConnectionsResult } from "@deck-ui/connections";
+import type { ConnectionsResult } from "@houston-ai/connections";
 import type {
   Agent,
   SkillSummary,

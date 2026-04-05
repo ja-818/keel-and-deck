@@ -1,9 +1,9 @@
 use crate::workspace;
 use crate::WorkspaceRoot;
-use keel_tauri::agent_sessions::AgentSessionMap;
-use keel_tauri::paths::expand_tilde;
-use keel_tauri::session_runner::PersistOptions;
-use keel_tauri::state::AppState;
+use houston_tauri::agent_sessions::AgentSessionMap;
+use houston_tauri::paths::expand_tilde;
+use houston_tauri::session_runner::PersistOptions;
+use houston_tauri::state::AppState;
 use serde::Serialize;
 use std::path::PathBuf;
 use tauri::State;
@@ -117,7 +117,7 @@ pub async fn send_message(
         )
         .await;
 
-    keel_tauri::session_runner::spawn_and_monitor(
+    houston_tauri::session_runner::spawn_and_monitor(
         &app_handle,
         session_key.clone(),
         prompt,

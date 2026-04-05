@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useFeedStore } from "../stores/feeds";
-import type { KeelEvent } from "../lib/types";
+import type { HoustonEvent } from "../lib/types";
 
 export function useSessionEvents() {
   const pushFeedItem = useFeedStore((s) => s.pushFeedItem);
@@ -9,7 +9,7 @@ export function useSessionEvents() {
   handlerRef.current = pushFeedItem;
 
   useEffect(() => {
-    const unlisten = listen<KeelEvent>("keel-event", (event) => {
+    const unlisten = listen<HoustonEvent>("houston-event", (event) => {
       const payload = event.payload;
 
       switch (payload.type) {

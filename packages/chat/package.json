@@ -1,5 +1,5 @@
 {
-  "name": "@deck-ui/chat",
+  "name": "@houston-ai/chat",
   "version": "0.6.0",
   "type": "module",
   "main": "src/index.ts",
@@ -10,7 +10,7 @@
   "peerDependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "@deck-ui/core": ">=0.1.0"
+    "@houston-ai/core": "workspace:*"
   },
   "dependencies": {
     "ai": "^6.0.116",

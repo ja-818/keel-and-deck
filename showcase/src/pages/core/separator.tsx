@@ -1,4 +1,4 @@
-import { Separator } from "@deck-ui/core";
+import { Separator } from "@houston-ai/core";
 import { CodeBlock } from "../../components/code-block";
 import { PropsTable } from "../../components/props-table";
 import {
@@ -15,7 +15,7 @@ export function SeparatorPage() {
       <div>
         <h1 className="text-xl font-semibold mb-1">Separator</h1>
         <p className="inline-block text-xs font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded mb-3">
-          @deck-ui/core
+          @houston-ai/core
         </p>
         <p className="text-sm text-muted-foreground leading-relaxed mb-4">
           Visual divider between content sections. Built on Radix UI Separator

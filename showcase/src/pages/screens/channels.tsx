@@ -2,8 +2,8 @@ import {
   ChannelConnectionCard,
   ChannelsSection,
   type ChannelConnection,
-} from "@deck-ui/connections";
-import { ChannelAvatar } from "@deck-ui/chat";
+} from "@houston-ai/connections";
+import { ChannelAvatar } from "@houston-ai/chat";
 import { ChannelSetupFormPage } from "../connections/channel-setup-form";
 import { SAMPLE_CHANNELS } from "./channels-data";
 

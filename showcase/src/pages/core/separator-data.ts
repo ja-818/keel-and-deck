@@ -2,7 +2,7 @@ import type { PropDef } from "../../components/props-table";
 
 /* ── Code examples ───────────────────────────────────────────── */
 
-export const QUICK_START_CODE = `import { Separator } from "@deck-ui/core"
+export const QUICK_START_CODE = `import { Separator } from "@houston-ai/core"
 
 function ContentDivider() {
   return (
@@ -14,7 +14,7 @@ function ContentDivider() {
   )
 }`;
 
-export const VERTICAL_CODE = `import { Separator } from "@deck-ui/core"
+export const VERTICAL_CODE = `import { Separator } from "@houston-ai/core"
 
 <div className="flex items-center gap-4 h-8">
   <span>Home</span>
@@ -24,7 +24,7 @@ export const VERTICAL_CODE = `import { Separator } from "@deck-ui/core"
   <span>Profile</span>
 </div>`;
 
-export const IN_CARD_CODE = `import { Separator } from "@deck-ui/core"
+export const IN_CARD_CODE = `import { Separator } from "@houston-ai/core"
 
 <div className="rounded-xl border p-4">
   <h3 className="font-semibold">Title</h3>

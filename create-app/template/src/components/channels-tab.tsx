@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { ChannelsView } from "@deck-ui/connections";
-import type { ChannelConnection, ChannelType } from "@deck-ui/connections";
+import { ChannelsView } from "@houston-ai/connections";
+import type { ChannelConnection, ChannelType } from "@houston-ai/connections";
 import { tauriChannels } from "../lib/tauri";
 import type { ChannelEntry } from "../lib/types";
 

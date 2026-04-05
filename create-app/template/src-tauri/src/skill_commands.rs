@@ -1,4 +1,4 @@
-use keel_tauri::paths::expand_tilde;
+use houston_tauri::paths::expand_tilde;
 use serde::Serialize;
 use std::path::PathBuf;
 
@@ -21,13 +21,13 @@ pub struct SkillDetailResponse {
 }
 
 fn skills_dir(workspace_path: &str) -> PathBuf {
-    expand_tilde(&PathBuf::from(workspace_path)).join(".keel/skills")
+    expand_tilde(&PathBuf::from(workspace_path)).join(".houston/skills")
 }
 
 #[tauri::command]
 pub async fn list_skills(workspace_path: String) -> Result<Vec<SkillSummaryResponse>, String> {
     let dir = skills_dir(&workspace_path);
-    let summaries = keel_skills::list_skills(&dir).map_err(|e| e.to_string())?;
+    let summaries = houston_skills::list_skills(&dir).map_err(|e| e.to_string())?;
     Ok(summaries
         .into_iter()
         .map(|s| SkillSummaryResponse {
@@ -47,7 +47,7 @@ pub async fn load_skill(
     name: String,
 ) -> Result<SkillDetailResponse, String> {
     let dir = skills_dir(&workspace_path);
-    let skill = keel_skills::load_skill(&dir, &name).map_err(|e| e.to_string())?;
+    let skill = houston_skills::load_skill(&dir, &name).map_err(|e| e.to_string())?;
     Ok(SkillDetailResponse {
         name: skill.summary.name,
         description: skill.summary.description,
@@ -65,9 +65,9 @@ pub async fn create_skill(
 ) -> Result<(), String> {
     let dir = skills_dir(&workspace_path);
     std::fs::create_dir_all(&dir).map_err(|e| format!("Failed to create skills dir: {e}"))?;
-    keel_skills::create_skill(
+    houston_skills::create_skill(
         &dir,
-        keel_skills::CreateSkillInput {
+        houston_skills::CreateSkillInput {
             name,
             description,
             content,
@@ -80,7 +80,7 @@ pub async fn create_skill(
 #[tauri::command]
 pub async fn delete_skill(workspace_path: String, name: String) -> Result<(), String> {
     let dir = skills_dir(&workspace_path);
-    keel_skills::delete_skill(&dir, &name).map_err(|e| e.to_string())
+    houston_skills::delete_skill(&dir, &name).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -90,7 +90,7 @@ pub async fn save_skill(
     content: String,
 ) -> Result<(), String> {
     let dir = skills_dir(&workspace_path);
-    keel_skills::edit_skill(&dir, &name, &content).map_err(|e| e.to_string())
+    houston_skills::edit_skill(&dir, &name, &content).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -99,7 +99,7 @@ pub async fn install_skills_from_repo(
     source: String,
 ) -> Result<Vec<String>, String> {
     let dir = skills_dir(&workspace_path);
-    keel_skills::remote::install_from_repo(&dir, &source)
+    houston_skills::remote::install_from_repo(&dir, &source)
         .await
         .map_err(|e| e.to_string())
 }
@@ -107,8 +107,8 @@ pub async fn install_skills_from_repo(
 #[tauri::command]
 pub async fn search_community_skills(
     query: String,
-) -> Result<Vec<keel_skills::remote::CommunitySkill>, String> {
-    keel_skills::remote::search_skills(&query)
+) -> Result<Vec<houston_skills::remote::CommunitySkill>, String> {
+    houston_skills::remote::search_skills(&query)
         .await
         .map_err(|e| e.to_string())
 }
@@ -120,7 +120,7 @@ pub async fn install_community_skill(
     skill_id: String,
 ) -> Result<String, String> {
     let dir = skills_dir(&workspace_path);
-    keel_skills::remote::install_skill(&dir, &source, &skill_id)
+    houston_skills::remote::install_skill(&dir, &source, &skill_id)
         .await
         .map_err(|e| e.to_string())
 }

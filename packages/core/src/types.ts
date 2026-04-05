@@ -1,10 +1,10 @@
 /**
- * Events emitted from the Rust backend via keel-tauri.
+ * Events emitted from the Rust backend via houston-tauri.
  *
- * Mirrors the Rust `KeelEvent` enum in `keel-tauri/src/events.rs`.
+ * Mirrors the Rust `HoustonEvent` enum in `houston-tauri/src/events.rs`.
  * Apps can extend this with app-specific event types.
  */
-export type KeelEvent =
+export type HoustonEvent =
   | {
       type: "FeedItem";
       data: { session_key: string; item: { feed_type: string; data: unknown } };

@@ -12,7 +12,7 @@ export const SAMPLE_TABS = [
 /* ── Code examples ───────────────────────────────────────────── */
 
 export const QUICK_START_CODE = `import { useState } from "react"
-import { TabBar } from "@deck-ui/layout"
+import { TabBar } from "@houston-ai/layout"
 
 const tabs = [
   { id: "chat", label: "Chat", badge: 2 },
@@ -33,7 +33,7 @@ function MyLayout() {
   )
 }`;
 
-export const ACTIONS_CODE = `import { Button } from "@deck-ui/core"
+export const ACTIONS_CODE = `import { Button } from "@houston-ai/core"
 import { Settings, Plus } from "lucide-react"
 
 <TabBar

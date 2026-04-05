@@ -5,7 +5,7 @@
 import { useMemo } from "react"
 import {
   Empty, EmptyHeader, EmptyTitle, EmptyDescription,
-} from "@deck-ui/core"
+} from "@houston-ai/core"
 import type { Routine } from "./types"
 import { RoutineCard } from "./routine-card"
 

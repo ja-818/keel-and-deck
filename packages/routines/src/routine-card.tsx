@@ -1,6 +1,6 @@
 import type { Routine } from "./types"
 import { TRIGGER_LABELS } from "./types"
-import { cn } from "@deck-ui/core"
+import { cn } from "@houston-ai/core"
 import { Clock } from "lucide-react"
 
 export interface RoutineCardProps {
