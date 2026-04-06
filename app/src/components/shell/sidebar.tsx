@@ -1,6 +1,12 @@
 import type { ReactNode } from "react";
-import { LayoutDashboard, Link2, Plus } from "lucide-react";
-import { Button, ScrollArea } from "@houston-ai/core";
+import { LayoutDashboard, Link2, Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import {
+  ScrollArea,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@houston-ai/core";
 import { useSpaceStore } from "../../stores/spaces";
 import { useWorkspaceStore } from "../../stores/workspaces";
 import { useExperienceStore } from "../../stores/experiences";
@@ -53,6 +59,22 @@ export function Sidebar({ children }: { children: ReactNode }) {
     setViewMode(exp?.manifest.defaultTab ?? "chat");
   };
 
+  const renameWs = useWorkspaceStore((s) => s.rename);
+  const deleteWs = useWorkspaceStore((s) => s.delete);
+
+  const handleRename = async (wsId: string, currentName: string) => {
+    const newName = window.prompt("Rename workspace", currentName);
+    if (!newName?.trim() || newName.trim() === currentName) return;
+    if (!currentSpace) return;
+    await renameWs(currentSpace.id, wsId, newName.trim());
+  };
+
+  const handleDelete = async (wsId: string) => {
+    if (!currentSpace) return;
+    if (!window.confirm("Delete this workspace? This cannot be undone.")) return;
+    await deleteWs(currentSpace.id, wsId);
+  };
+
   const isTopLevel = viewMode === "dashboard" || viewMode === "connections";
 
   return (
@@ -81,46 +103,66 @@ export function Sidebar({ children }: { children: ReactNode }) {
           />
         </nav>
 
-        <div className="border-t border-border mx-2 my-1" />
-
-        <div className="px-3 pt-2 pb-1">
+        <div className="px-3 pt-3 pb-1 flex items-center justify-between">
           <span className="text-xs font-medium text-muted-foreground">
             Your AI Workspaces
           </span>
+          <button
+            onClick={() => setDialogOpen(true)}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
         </div>
 
         <ScrollArea className="flex-1 px-2">
           <div className="space-y-0.5 pb-2">
-            {sorted.map((ws) => (
-              <button
-                key={ws.id}
-                onClick={() => handleSelectWorkspace(ws.id)}
-                className={`w-full text-left text-sm py-1.5 px-2.5 rounded-lg transition-colors truncate ${
-                  !isTopLevel && current?.id === ws.id
-                    ? "bg-accent font-medium text-foreground"
-                    : "text-foreground hover:bg-accent"
-                }`}
-              >
-                {ws.name}
-              </button>
-            ))}
+            {sorted.map((ws) => {
+              const isSelected = !isTopLevel && current?.id === ws.id;
+              return (
+                <div
+                  key={ws.id}
+                  className={`group flex items-center rounded-lg transition-colors ${
+                    isSelected
+                      ? "bg-accent font-medium text-foreground"
+                      : "text-foreground hover:bg-accent"
+                  }`}
+                >
+                  <button
+                    onClick={() => handleSelectWorkspace(ws.id)}
+                    className="flex-1 text-left text-sm py-1.5 px-2.5 truncate"
+                  >
+                    {ws.name}
+                  </button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="p-1 mr-1 rounded opacity-0 group-hover:opacity-100 hover:bg-black/5 transition-opacity">
+                        <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" side="bottom">
+                      <DropdownMenuItem onClick={() => handleRename(ws.id, ws.name)}>
+                        <Pencil className="h-3.5 w-3.5 mr-2" />
+                        Rename
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleDelete(ws.id)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              );
+            })}
           </div>
         </ScrollArea>
 
-        <div className="px-2 pb-3 pt-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start gap-2 text-muted-foreground rounded-lg"
-            onClick={() => setDialogOpen(true)}
-          >
-            <Plus className="h-4 w-4" />
-            New AI Workspace
-          </Button>
-        </div>
       </aside>
 
-      <div className="flex-1 min-w-0">{children}</div>
+      <div className="flex-1 min-w-0 h-full overflow-hidden flex flex-col">{children}</div>
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { FilesBrowser } from "@houston-ai/workspace";
 import type { FileEntry } from "@houston-ai/workspace";
-import { ContentArea } from "../shell/content-area";
 import { tauriFiles } from "../../lib/tauri";
 import type { TabProps } from "../../lib/types";
 
@@ -27,7 +26,7 @@ export default function FilesTab({ workspace }: TabProps) {
   }, [loadFiles]);
 
   return (
-    <ContentArea>
+    <div className="h-full overflow-auto">
       <FilesBrowser
         files={files}
         loading={loading}
@@ -48,6 +47,6 @@ export default function FilesTab({ workspace }: TabProps) {
         emptyTitle="No files yet"
         emptyDescription="Files created by your assistant will appear here."
       />
-    </ContentArea>
+    </div>
   );
 }

@@ -7,7 +7,6 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from "@houston-ai/core";
-import { ContentArea } from "../shell/content-area";
 import { ChatSidebar } from "./chat-sidebar";
 import { useFeedStore } from "../../stores/feeds";
 import { tauriChat } from "../../lib/tauri";
@@ -56,27 +55,25 @@ export default function ChatTab({ workspace }: TabProps) {
   );
 
   return (
-    <div className="h-full flex">
-      <div className="flex-1 flex flex-col min-w-0">
-        <ContentArea centered>
-          <ChatPanel
-            sessionKey={SESSION_KEY}
-            feedItems={feedItems ?? []}
-            isLoading={isLoading}
-            onSend={handleSend}
-            placeholder="Ask anything..."
-            emptyState={
-              <Empty className="border-0">
-                <EmptyHeader>
-                  <EmptyTitle>Start a conversation</EmptyTitle>
-                  <EmptyDescription>
-                    Type a message to talk to your assistant.
-                  </EmptyDescription>
-                </EmptyHeader>
-              </Empty>
-            }
-          />
-        </ContentArea>
+    <div className="h-full w-full flex overflow-hidden">
+      <div className="h-full flex flex-col flex-1 min-w-0">
+        <ChatPanel
+          sessionKey={SESSION_KEY}
+          feedItems={feedItems ?? []}
+          isLoading={isLoading}
+          onSend={handleSend}
+          placeholder="Ask anything..."
+          emptyState={
+            <Empty className="border-0">
+              <EmptyHeader>
+                <EmptyTitle>Start a conversation</EmptyTitle>
+                <EmptyDescription>
+                  Type a message to talk to your assistant.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          }
+        />
       </div>
       <ChatSidebar workspace={workspace} sessionKey={SESSION_KEY} />
     </div>

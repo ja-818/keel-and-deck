@@ -17,14 +17,14 @@ export function ExperienceRenderer({
   activeTabId,
 }: ExperienceRendererProps) {
   return (
-    <div className="h-full relative">
+    <div className="h-full w-full relative">
       {tabs.map((tab) => {
         const TabComponent = resolveTabComponent(tab, experience);
         const isActive = tab.id === activeTabId;
         return (
           <div
             key={tab.id}
-            className={isActive ? "h-full" : "hidden"}
+            className={isActive ? "h-full w-full" : "hidden"}
           >
             <Suspense
               fallback={

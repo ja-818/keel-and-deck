@@ -11,7 +11,6 @@ import {
   EmptyDescription,
   Button,
 } from "@houston-ai/core";
-import { ContentArea } from "./shell/content-area";
 import { useWorkspaceStore } from "../stores/workspaces";
 import { useExperienceStore } from "../stores/experiences";
 import { useUIStore } from "../stores/ui";
@@ -33,30 +32,28 @@ export function Dashboard() {
 
   if (workspaces.length === 0) {
     return (
-      <ContentArea centered>
-        <div className="flex-1 flex items-center justify-center">
-          <Empty className="border-0">
-            <EmptyHeader>
-              <EmptyTitle>No AI Workspaces yet</EmptyTitle>
-              <EmptyDescription>
-                Create your first AI Workspace to get started.
-              </EmptyDescription>
-            </EmptyHeader>
-            <Button
-              className="mt-4 rounded-full"
-              onClick={() => setDialogOpen(true)}
-            >
-              Create your first AI Workspace
-            </Button>
-          </Empty>
-        </div>
-      </ContentArea>
+      <div className="h-full flex items-center justify-center">
+        <Empty className="border-0">
+          <EmptyHeader>
+            <EmptyTitle>No AI Workspaces yet</EmptyTitle>
+            <EmptyDescription>
+              Create your first AI Workspace to get started.
+            </EmptyDescription>
+          </EmptyHeader>
+          <Button
+            className="mt-4 rounded-full"
+            onClick={() => setDialogOpen(true)}
+          >
+            Create your first AI Workspace
+          </Button>
+        </Empty>
+      </div>
     );
   }
 
   return (
-    <ContentArea centered maxWidth="max-w-5xl">
-      <div className="flex-1 overflow-auto p-8">
+    <div className="h-full overflow-auto">
+      <div className="max-w-5xl mx-auto w-full px-6 py-8">
         <h1 className="text-[28px] font-normal text-foreground mb-6">
           Dashboard
         </h1>
@@ -90,6 +87,6 @@ export function Dashboard() {
           })}
         </div>
       </div>
-    </ContentArea>
+    </div>
   );
 }

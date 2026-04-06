@@ -27,7 +27,7 @@ export function ChatSidebar({ workspace, sessionKey }: ChatSidebarProps) {
   const feedItems = useFeedStore((s) => s.items[sessionKey]) ?? [];
 
   return (
-    <div className="w-[280px] shrink-0 border-l border-border bg-secondary flex flex-col h-full">
+    <div className="w-[240px] shrink-0 border-l border-border bg-secondary flex flex-col h-full">
       <ScrollArea className="flex-1">
         <ProgressSection feedItems={feedItems} />
         <ChannelsSection workspace={workspace} />

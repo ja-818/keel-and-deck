@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { LearningsPanel } from "@houston-ai/memory";
 import type { LearningEntry } from "@houston-ai/memory";
-import { ContentArea } from "../shell/content-area";
 import { tauriLearnings } from "../../lib/tauri";
 import type { TabProps } from "../../lib/types";
 
@@ -41,12 +40,14 @@ export default function LearningsTab({ workspace }: TabProps) {
   };
 
   return (
-    <ContentArea centered>
-      <LearningsPanel
-        entries={entries}
-        onAdd={handleAdd}
-        onRemove={handleRemove}
-      />
-    </ContentArea>
+    <div className="h-full overflow-auto">
+      <div className="max-w-3xl mx-auto w-full px-6 py-6">
+        <LearningsPanel
+          entries={entries}
+          onAdd={handleAdd}
+          onRemove={handleRemove}
+        />
+      </div>
+    </div>
   );
 }

@@ -73,7 +73,7 @@ export default function App() {
   return (
     <div className="flex h-screen bg-background text-foreground">
       <Sidebar>
-        <main className="flex-1 flex flex-col min-w-0">
+        <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {viewMode === "dashboard" ? (
             <Dashboard />
           ) : viewMode === "connections" ? (
@@ -86,7 +86,7 @@ export default function App() {
                 activeTab={viewMode}
                 onTabChange={setViewMode}
               />
-              <main className="flex-1 min-h-0">
+              <main className="flex-1 min-h-0 overflow-hidden">
                 <ExperienceRenderer
                   experience={experience}
                   workspace={current}

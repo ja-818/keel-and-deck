@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { ConnectionsView } from "@houston-ai/connections";
 import type { ConnectionsResult } from "@houston-ai/connections";
 import { invoke } from "@tauri-apps/api/core";
-import { ContentArea } from "../shell/content-area";
 import { tauriConnections } from "../../lib/tauri";
 import type { TabProps } from "../../lib/types";
 
@@ -46,14 +45,16 @@ export default function ConnectionsTab(_props: TabProps) {
   }, [fetchConnections]);
 
   return (
-    <ContentArea centered>
-      <ConnectionsView
-        result={result}
-        loading={loading}
-        onRetry={fetchConnections}
-        onManage={handleManage}
-        onAuth={handleAuth}
-      />
-    </ContentArea>
+    <div className="h-full overflow-auto">
+      <div className="max-w-3xl mx-auto w-full px-6 py-6">
+        <ConnectionsView
+          result={result}
+          loading={loading}
+          onRetry={fetchConnections}
+          onManage={handleManage}
+          onAuth={handleAuth}
+        />
+      </div>
+    </div>
   );
 }

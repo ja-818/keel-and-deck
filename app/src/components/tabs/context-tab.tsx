@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { InstructionsPanel } from "@houston-ai/workspace";
 import type { InstructionFile } from "@houston-ai/workspace";
-import { ContentArea } from "../shell/content-area";
 import { tauriWorkspace } from "../../lib/tauri";
 import type { TabProps } from "../../lib/types";
 
@@ -39,13 +38,15 @@ export default function ContextTab({ workspace }: TabProps) {
   };
 
   return (
-    <ContentArea centered>
-      <InstructionsPanel
-        files={files}
-        onSave={handleSave}
-        emptyTitle="No prompt files found"
-        emptyDescription="Prompt files will be created when the workspace initializes."
-      />
-    </ContentArea>
+    <div className="h-full overflow-auto">
+      <div className="max-w-3xl mx-auto w-full px-6 py-6">
+        <InstructionsPanel
+          files={files}
+          onSave={handleSave}
+          emptyTitle="No prompt files found"
+          emptyDescription="Prompt files will be created when the workspace initializes."
+        />
+      </div>
+    </div>
   );
 }
