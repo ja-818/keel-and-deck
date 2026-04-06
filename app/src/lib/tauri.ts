@@ -18,7 +18,7 @@ export const tauriSpaces = {
   delete: (id: string) =>
     invoke<void>("delete_space", { id }),
   rename: (id: string, newName: string) =>
-    invoke<void>("rename_space", { id, newName }),
+    invoke<void>("rename_space", { id, new_name: newName }),
 };
 
 export const tauriWorkspaces = {
@@ -34,53 +34,53 @@ export const tauriWorkspaces = {
 
 export const tauriChat = {
   send: (workspacePath: string, prompt: string, sessionKey?: string) =>
-    invoke<string>("send_message", { workspacePath, prompt, sessionKey }),
+    invoke<string>("send_message", { workspace_path: workspacePath, prompt, session_key: sessionKey }),
   loadHistory: (workspacePath: string) =>
     invoke<Array<{ feed_type: string; data: unknown }>>(
       "load_chat_history",
-      { workspacePath },
+      { workspace_path: workspacePath },
     ),
 };
 
 export const tauriWorkspace = {
   readFile: (workspacePath: string, name: string) =>
-    invoke<string>("read_workspace_file", { workspacePath, name }),
+    invoke<string>("read_workspace_file", { workspace_path: workspacePath, name }),
   writeFile: (workspacePath: string, name: string, content: string) =>
-    invoke<void>("write_workspace_file", { workspacePath, name, content }),
+    invoke<void>("write_workspace_file", { workspace_path: workspacePath, name, content }),
 };
 
 export const tauriSkills = {
   list: (workspacePath: string) =>
-    invoke<SkillSummary[]>("list_skills", { workspacePath }),
+    invoke<SkillSummary[]>("list_skills", { workspace_path: workspacePath }),
   load: (workspacePath: string, name: string) =>
-    invoke<SkillDetail>("load_skill", { workspacePath, name }),
+    invoke<SkillDetail>("load_skill", { workspace_path: workspacePath, name }),
   create: (
     workspacePath: string,
     name: string,
     description: string,
     content: string,
-  ) => invoke<void>("create_skill", { workspacePath, name, description, content }),
+  ) => invoke<void>("create_skill", { workspace_path: workspacePath, name, description, content }),
   delete: (workspacePath: string, name: string) =>
-    invoke<void>("delete_skill", { workspacePath, name }),
+    invoke<void>("delete_skill", { workspace_path: workspacePath, name }),
   save: (workspacePath: string, name: string, content: string) =>
-    invoke<void>("save_skill", { workspacePath, name, content }),
+    invoke<void>("save_skill", { workspace_path: workspacePath, name, content }),
   installFromRepo: (workspacePath: string, source: string) =>
-    invoke<string[]>("install_skills_from_repo", { workspacePath, source }),
+    invoke<string[]>("install_skills_from_repo", { workspace_path: workspacePath, source }),
   searchCommunity: (query: string) =>
     invoke<CommunitySkillResult[]>("search_community_skills", { query }),
   installCommunity: (workspacePath: string, source: string, skillId: string) =>
-    invoke<string>("install_community_skill", { workspacePath, source, skillId }),
+    invoke<string>("install_community_skill", { workspace_path: workspacePath, source, skill_id: skillId }),
 };
 
 export const tauriLearnings = {
   load: (workspacePath: string) =>
-    invoke<LearningsData>("load_learnings", { workspacePath }),
+    invoke<LearningsData>("load_learnings", { workspace_path: workspacePath }),
   add: (workspacePath: string, text: string) =>
-    invoke<void>("add_learning", { workspacePath, text }),
+    invoke<void>("add_learning", { workspace_path: workspacePath, text }),
   replace: (workspacePath: string, index: number, text: string) =>
-    invoke<void>("replace_learning", { workspacePath, index, text }),
+    invoke<void>("replace_learning", { workspace_path: workspacePath, index, text }),
   remove: (workspacePath: string, index: number) =>
-    invoke<void>("remove_learning", { workspacePath, index }),
+    invoke<void>("remove_learning", { workspace_path: workspacePath, index }),
 };
 
 export const tauriConnections = {
@@ -89,30 +89,30 @@ export const tauriConnections = {
 
 export const tauriChannels = {
   list: (workspacePath: string) =>
-    invoke<ChannelEntry[]>("list_channels_config", { workspacePath }),
+    invoke<ChannelEntry[]>("list_channels_config", { workspace_path: workspacePath }),
   add: (
     workspacePath: string,
     input: { channel_type: string; name: string; token: string },
-  ) => invoke<ChannelEntry>("add_channel_config", { workspacePath, input }),
+  ) => invoke<ChannelEntry>("add_channel_config", { workspace_path: workspacePath, input }),
   remove: (workspacePath: string, channelId: string) =>
-    invoke<void>("remove_channel_config", { workspacePath, channelId }),
+    invoke<void>("remove_channel_config", { workspace_path: workspacePath, channel_id: channelId }),
 };
 
 export const tauriFiles = {
   list: (workspacePath: string) =>
-    invoke<FileEntry[]>("list_project_files", { workspacePath }),
+    invoke<FileEntry[]>("list_project_files", { workspace_path: workspacePath }),
   open: (workspacePath: string, relativePath: string) =>
-    invoke<void>("open_file", { workspacePath, relativePath }),
+    invoke<void>("open_file", { workspace_path: workspacePath, relative_path: relativePath }),
   reveal: (workspacePath: string, relativePath: string) =>
-    invoke<void>("reveal_file", { workspacePath, relativePath }),
+    invoke<void>("reveal_file", { workspace_path: workspacePath, relative_path: relativePath }),
   delete: (workspacePath: string, relativePath: string) =>
-    invoke<void>("delete_file", { workspacePath, relativePath }),
+    invoke<void>("delete_file", { workspace_path: workspacePath, relative_path: relativePath }),
   rename: (workspacePath: string, relativePath: string, newName: string) =>
-    invoke<void>("rename_file", { workspacePath, relativePath, newName }),
+    invoke<void>("rename_file", { workspace_path: workspacePath, relative_path: relativePath, new_name: newName }),
   createFolder: (workspacePath: string, name: string) =>
-    invoke<void>("create_workspace_folder", { workspacePath, folderName: name }),
+    invoke<void>("create_workspace_folder", { workspace_path: workspacePath, folder_name: name }),
   revealWorkspace: (workspacePath: string) =>
-    invoke<void>("reveal_workspace", { workspacePath }),
+    invoke<void>("reveal_workspace", { workspace_path: workspacePath }),
 };
 
 export const tauriExperiences = {
@@ -126,25 +126,25 @@ export const tauriTasks = {
   list: (workspacePath: string) =>
     invoke<Array<{ id: string; title: string; description?: string; status: string }>>(
       "list_tasks",
-      { workspacePath },
+      { workspace_path: workspacePath },
     ),
   create: (workspacePath: string, title: string, description?: string) =>
     invoke<{ id: string; title: string; status: string }>(
       "create_task",
-      { workspacePath, title, description },
+      { workspace_path: workspacePath, title, description },
     ),
   update: (
     workspacePath: string,
     taskId: string,
     update: { status?: string; title?: string; description?: string },
-  ) => invoke<void>("update_task", { workspacePath, taskId, update }),
+  ) => invoke<void>("update_task", { workspace_path: workspacePath, task_id: taskId, update }),
   delete: (workspacePath: string, taskId: string) =>
-    invoke<void>("delete_task", { workspacePath, taskId }),
+    invoke<void>("delete_task", { workspace_path: workspacePath, task_id: taskId }),
 };
 
 export const tauriConfig = {
   read: (workspacePath: string) =>
-    invoke<Record<string, unknown>>("read_config", { workspacePath }),
+    invoke<Record<string, unknown>>("read_config", { workspace_path: workspacePath }),
   write: (workspacePath: string, config: Record<string, unknown>) =>
-    invoke<void>("write_config", { workspacePath, config }),
+    invoke<void>("write_config", { workspace_path: workspacePath, config }),
 };
