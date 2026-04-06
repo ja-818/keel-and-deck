@@ -40,12 +40,34 @@ pub fn run() {
             commands::workspaces::delete_workspace,
             commands::workspaces::rename_workspace,
             commands::workspaces::update_workspace_opened,
+            // Preferences
+            commands::preferences::get_preference,
+            commands::preferences::set_preference,
             // Experiences
             commands::experiences::list_installed_experiences,
-            // Sessions
-            commands::sessions::start_session,
-            commands::sessions::stop_session,
-            commands::sessions::load_chat_history,
+            // Agent commands (send_message, list_agents, etc.)
+            commands::agent::list_agents,
+            commands::agent::create_agent,
+            commands::agent::rename_agent,
+            commands::agent::delete_agent,
+            commands::agent::send_message,
+            commands::agent::load_chat_history,
+            commands::agent::read_workspace_file,
+            commands::agent::write_workspace_file,
+            // Learnings
+            commands::memory::load_learnings,
+            commands::memory::add_learning,
+            commands::memory::replace_learning,
+            commands::memory::remove_learning,
+            // Skills
+            commands::skills::list_skills,
+            commands::skills::load_skill,
+            commands::skills::create_skill,
+            commands::skills::save_skill,
+            commands::skills::delete_skill,
+            commands::skills::install_skills_from_repo,
+            commands::skills::search_community_skills,
+            commands::skills::install_community_skill,
             // Workspace store — tasks, routines, goals, channels, skills, log, config
             houston_tauri::workspace_store::commands::list_tasks,
             houston_tauri::workspace_store::commands::create_task,
@@ -62,10 +84,7 @@ pub fn run() {
             houston_tauri::workspace_store::commands::list_channels_config,
             houston_tauri::workspace_store::commands::add_channel_config,
             houston_tauri::workspace_store::commands::remove_channel_config,
-            houston_tauri::workspace_store::commands::list_skills,
-            houston_tauri::workspace_store::commands::read_skill,
-            houston_tauri::workspace_store::commands::write_skill,
-            houston_tauri::workspace_store::commands::delete_skill,
+            // Note: skills handled by commands::skills (uses houston-skills crate directly)
             houston_tauri::workspace_store::commands::append_log,
             houston_tauri::workspace_store::commands::read_log,
             houston_tauri::workspace_store::commands::read_config,

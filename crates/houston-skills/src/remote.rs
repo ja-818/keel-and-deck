@@ -41,6 +41,7 @@ struct GithubEntry {
 
 // ── Parsed SKILL.md ───────────────────────────────────────────────
 
+#[allow(dead_code)]
 struct ParsedSkillMd {
     name: String,
     description: String,

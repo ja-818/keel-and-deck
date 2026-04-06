@@ -14,6 +14,7 @@ pub struct WorkspaceMeta {
 
 /// Workspace returned to the frontend (metadata + folder info).
 #[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Workspace {
     pub id: String,
     pub name: String,

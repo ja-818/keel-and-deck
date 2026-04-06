@@ -6,25 +6,38 @@ import type { Experience, Workspace, ExperienceTab } from "../../lib/types";
 interface ExperienceRendererProps {
   experience: Experience;
   workspace: Workspace;
-  activeTab: ExperienceTab;
+  tabs: ExperienceTab[];
+  activeTabId: string;
 }
 
 export function ExperienceRenderer({
   experience,
   workspace,
-  activeTab,
+  tabs,
+  activeTabId,
 }: ExperienceRendererProps) {
-  const TabComponent = resolveTabComponent(activeTab, experience);
-
   return (
-    <Suspense
-      fallback={
-        <div className="flex-1 flex items-center justify-center">
-          <Spinner className="size-5" />
-        </div>
-      }
-    >
-      <TabComponent workspace={workspace} experience={experience} />
-    </Suspense>
+    <div className="h-full relative">
+      {tabs.map((tab) => {
+        const TabComponent = resolveTabComponent(tab, experience);
+        const isActive = tab.id === activeTabId;
+        return (
+          <div
+            key={tab.id}
+            className={isActive ? "h-full" : "hidden"}
+          >
+            <Suspense
+              fallback={
+                <div className="h-full flex items-center justify-center">
+                  <Spinner className="size-5" />
+                </div>
+              }
+            >
+              <TabComponent workspace={workspace} experience={experience} />
+            </Suspense>
+          </div>
+        );
+      })}
+    </div>
   );
 }

@@ -57,7 +57,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   delete: async (id) => {
-    await invoke<void>("delete_workspace", { workspaceId: id });
+    await invoke<void>("delete_workspace", { id });
     set((s) => {
       const workspaces = s.workspaces.filter((w) => w.id !== id);
       const current =
@@ -67,7 +67,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   rename: async (id, newName) => {
-    await invoke<void>("rename_workspace", { workspaceId: id, newName });
+    await invoke<void>("rename_workspace", { id, newName });
     set((s) => ({
       workspaces: s.workspaces.map((w) =>
         w.id === id ? { ...w, name: newName } : w,

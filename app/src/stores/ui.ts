@@ -14,6 +14,7 @@ interface UIState {
   authRequired: boolean;
   toasts: ToastItem[];
   createWorkspaceDialogOpen: boolean;
+  chatDraft: string;
   setViewMode: (mode: string) => void;
   setAssistantPanelOpen: (open: boolean) => void;
   setTaskPanelId: (id: string | null) => void;
@@ -22,6 +23,7 @@ interface UIState {
   addToast: (toast: Omit<ToastItem, "id">) => void;
   dismissToast: (id: string) => void;
   setCreateWorkspaceDialogOpen: (open: boolean) => void;
+  setChatDraft: (draft: string) => void;
 }
 
 let toastCounter = 0;
@@ -34,6 +36,7 @@ export const useUIStore = create<UIState>((set) => ({
   authRequired: false,
   toasts: [],
   createWorkspaceDialogOpen: false,
+  chatDraft: "",
 
   setViewMode: (viewMode) => set({ viewMode }),
   setAssistantPanelOpen: (assistantPanelOpen) => set({ assistantPanelOpen }),
@@ -54,4 +57,6 @@ export const useUIStore = create<UIState>((set) => ({
 
   setCreateWorkspaceDialogOpen: (createWorkspaceDialogOpen) =>
     set({ createWorkspaceDialogOpen }),
+
+  setChatDraft: (chatDraft) => set({ chatDraft }),
 }));

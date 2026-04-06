@@ -20,9 +20,12 @@ export default function ChatTab({ workspace }: TabProps) {
   const clearFeed = useFeedStore((s) => s.clearFeed);
   const [isLoading, setIsLoading] = useState(false);
   const sendingRef = useRef(false);
+  const loadedRef = useRef<string | null>(null);
 
-  // Load chat history when workspace changes
+  // Load chat history only when workspace changes, not on every mount
   useEffect(() => {
+    if (loadedRef.current === workspace.id) return;
+    loadedRef.current = workspace.id;
     clearFeed(SESSION_KEY);
     tauriChat.loadHistory(workspace.folderPath).then((rows) => {
       if (rows.length > 0) setFeed(SESSION_KEY, rows as FeedItem[]);

@@ -1,3 +1,6 @@
+pub mod agent;
 pub mod experiences;
-pub mod sessions;
+pub mod memory;
+pub mod preferences;
+pub mod skills;
 pub mod workspaces;
