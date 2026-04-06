@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion"
+import { Plus } from "lucide-react"
 import type { KanbanItem } from "./types"
 import { KanbanCard } from "./kanban-card"
 
@@ -6,6 +7,7 @@ export interface KanbanColumnProps {
   label: string
   items: KanbanItem[]
   selectedId?: string | null
+  onAdd?: () => void
   onSelect: (item: KanbanItem) => void
   onDelete?: (item: KanbanItem) => void
   onApprove?: (item: KanbanItem) => void
@@ -19,6 +21,7 @@ export interface KanbanColumnProps {
 export function KanbanColumn({
   label,
   items,
+  onAdd,
   onSelect,
   onDelete,
   onApprove,
@@ -31,7 +34,7 @@ export function KanbanColumn({
   return (
     <div className="min-w-[180px] flex-1 flex flex-col h-full min-h-0 rounded-xl bg-secondary">
       {/* Column header */}
-      <div className="px-3 py-2.5 flex items-center justify-center shrink-0">
+      <div className="px-3 py-2.5 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-1.5">
           <h3 className="text-sm font-medium text-foreground">{label}</h3>
           {items.length > 0 && (
@@ -40,6 +43,14 @@ export function KanbanColumn({
             </span>
           )}
         </div>
+        {onAdd && (
+          <button
+            onClick={onAdd}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {/* Cards */}

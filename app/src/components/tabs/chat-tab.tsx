@@ -53,8 +53,8 @@ export default function ChatTab({ workspace }: TabProps) {
   );
 
   return (
-    <div className="h-full w-full flex overflow-hidden">
-      <div className="h-full flex flex-col flex-1 min-w-0">
+    <div className="h-full w-full relative overflow-hidden">
+      <div className="h-full flex flex-col">
         <ChatPanel
           sessionKey={SESSION_KEY}
           feedItems={feedItems ?? []}
@@ -73,7 +73,9 @@ export default function ChatTab({ workspace }: TabProps) {
           }
         />
       </div>
-      <ChatSidebar feedItems={feedItems ?? []} />
+      <div className="absolute top-3 right-3 z-10">
+        <ChatSidebar feedItems={feedItems ?? []} />
+      </div>
     </div>
   );
 }

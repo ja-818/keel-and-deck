@@ -39,12 +39,7 @@ export function ChatSidebar({
   className,
 }: ChatSidebarProps) {
   return (
-    <div
-      className={cn(
-        "w-[260px] shrink-0 h-full p-3 flex flex-col gap-3 overflow-auto",
-        className,
-      )}
-    >
+    <div className={cn("w-[260px] flex flex-col gap-3", className)}>
       <ProgressCard progressSteps={progressSteps} feedItems={feedItems} />
     </div>
   );

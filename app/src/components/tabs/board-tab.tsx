@@ -14,21 +14,23 @@ import { SplitView } from "@houston-ai/layout";
 import { Plus } from "lucide-react";
 import { tauriTasks } from "../../lib/tauri";
 import type { TabProps } from "../../lib/types";
-import { NewConversationDialog } from "./new-conversation-dialog";
 import { BoardDetail } from "./board-detail";
+import { NewConversationPanel } from "./new-conversation-panel";
 
-const COLUMNS = [
-  { id: "queue", label: "Queue", statuses: ["queue"] },
-  { id: "running", label: "Running", statuses: ["running"] },
-  { id: "needs_you", label: "Needs you", statuses: ["needs_you"] },
-  { id: "done", label: "Done", statuses: ["done"] },
-];
+function useColumns(onAdd: () => void) {
+  return [
+    { id: "running", label: "Running", statuses: ["running"], onAdd },
+    { id: "needs_you", label: "Needs you", statuses: ["needs_you"] },
+    { id: "done", label: "Done", statuses: ["done"] },
+  ];
+}
 
 export default function BoardTab({ workspace }: TabProps) {
   const [items, setItems] = useState<KanbanItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
   const path = workspace.folderPath;
+  const columns = useColumns(() => setPanelOpen(true));
 
   const loadTasks = useCallback(async () => {
     try {
@@ -66,14 +68,6 @@ export default function BoardTab({ workspace }: TabProps) {
   );
   useHoustonEvent<HoustonEvent>("houston-event", handleEvent);
 
-  const handleCreate = useCallback(
-    async (title: string, description: string) => {
-      await tauriTasks.create(path, title, description || undefined);
-      await loadTasks();
-    },
-    [path, loadTasks],
-  );
-
   const handleDelete = useCallback(
     async (item: KanbanItem) => {
       await tauriTasks.delete(path, item.id);
@@ -93,17 +87,6 @@ export default function BoardTab({ workspace }: TabProps) {
 
   const selectedItem = items.find((i) => i.id === selectedId) ?? null;
 
-  const newButton = (
-    <Button
-      onClick={() => setDialogOpen(true)}
-      className="rounded-full gap-1.5"
-      size="sm"
-    >
-      <Plus className="size-4" />
-      New conversation
-    </Button>
-  );
-
   const emptyState = (
     <Empty className="border-0">
       <EmptyHeader>
@@ -112,19 +95,21 @@ export default function BoardTab({ workspace }: TabProps) {
           Start one to delegate work to your AI agent.
         </EmptyDescription>
       </EmptyHeader>
-      <div className="mt-4">{newButton}</div>
+      <Button
+        onClick={() => setPanelOpen(true)}
+        className="mt-4 rounded-full gap-1.5"
+        size="sm"
+      >
+        <Plus className="size-4" />
+        New conversation
+      </Button>
     </Empty>
   );
 
   const board = (
     <div className="flex flex-col h-full">
-      {items.length > 0 && (
-        <div className="shrink-0 flex items-center justify-between px-3 pt-3">
-          {newButton}
-        </div>
-      )}
       <KanbanBoard
-        columns={COLUMNS}
+        columns={columns}
         items={items}
         selectedId={selectedId}
         runningStatuses={["running"]}
@@ -137,31 +122,34 @@ export default function BoardTab({ workspace }: TabProps) {
     </div>
   );
 
-  const content = selectedItem ? (
-    <SplitView
-      left={board}
-      right={
-        <BoardDetail
-          key={selectedItem.id}
-          item={selectedItem}
-          workspacePath={path}
-          onClose={() => setSelectedId(null)}
-          onTaskUpdated={loadTasks}
-        />
-      }
+  const showNewPanel = panelOpen && !selectedItem;
+
+  const rightPanel = selectedItem ? (
+    <BoardDetail
+      key={selectedItem.id}
+      item={selectedItem}
+      workspacePath={path}
+      onClose={() => setSelectedId(null)}
     />
-  ) : (
-    board
-  );
+  ) : showNewPanel ? (
+    <NewConversationPanel
+      workspacePath={path}
+      onClose={() => setPanelOpen(false)}
+      onCreated={(taskId) => {
+        setPanelOpen(false);
+        loadTasks();
+        setSelectedId(taskId);
+      }}
+    />
+  ) : null;
 
   return (
     <div className="h-full overflow-hidden">
-      {content}
-      <NewConversationDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onCreate={handleCreate}
-      />
+      {rightPanel ? (
+        <SplitView left={board} right={rightPanel} />
+      ) : (
+        board
+      )}
     </div>
   );
 }

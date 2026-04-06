@@ -58,6 +58,7 @@ export function KanbanBoard({
           key={col.id}
           label={col.label}
           items={col.items}
+          onAdd={col.onAdd}
           onSelect={onSelect ?? (() => {})}
           onDelete={onDelete}
           onApprove={onApprove}
