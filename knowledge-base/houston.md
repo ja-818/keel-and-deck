@@ -123,6 +123,7 @@ The hero package. Drop-in chat experience for Claude Code / Codex sessions.
 | `Suggestion` | Horizontal scrollable suggestion pills |
 | `PromptInput` | Complex input system with file upload, screenshots, attachments |
 | `Typewriter` | Character-by-character text reveal animation |
+| `ChatSidebar` | Props-driven sidebar showing progress steps + channels list (pairs with ChatPanel) |
 
 **Progress tracking:**
 - `useProgressSteps()` hook — manages multi-step progress state. Returns `{ steps, addStep, updateStep, clearSteps }`.
@@ -140,6 +141,16 @@ The hero package. Drop-in chat experience for Claude Code / Codex sessions.
   }
 />
 ```
+
+**ChatSidebar is fully props-driven:**
+```tsx
+<ChatSidebar
+  feedItems={feedItems}
+  channels={[{ id: "1", name: "Main", type: "telegram", status: "connected" }]}
+  onAddChannel={() => openChannelDialog()}
+/>
+```
+Types: `ChatSidebarChannel` (id, name, type, status?). Auto-extracts progress from feed items via `useProgressSteps` + tool-step fallback. Accepts optional `progressSteps` prop for explicit control.
 
 **Channel-aware messaging:** `ChatMessage.source` is auto-extracted from `[ChannelName]` prefixes in user messages. `ChannelAvatar` supports `"telegram"`, `"slack"`, and any custom string source.
 

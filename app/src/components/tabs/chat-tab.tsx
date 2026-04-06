@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useRef, useState } from "react";
-import { ChatPanel } from "@houston-ai/chat";
+import { ChatPanel, ChatSidebar } from "@houston-ai/chat";
 import type { FeedItem } from "@houston-ai/chat";
 import {
   Empty,
@@ -7,7 +7,6 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from "@houston-ai/core";
-import { ChatSidebar } from "./chat-sidebar";
 import { useFeedStore } from "../../stores/feeds";
 import { tauriChat } from "../../lib/tauri";
 import type { TabProps } from "../../lib/types";
@@ -23,7 +22,6 @@ export default function ChatTab({ workspace }: TabProps) {
   const sendingRef = useRef(false);
   const loadedRef = useRef<string | null>(null);
 
-  // Load chat history only when workspace changes, not on every mount
   useEffect(() => {
     if (loadedRef.current === workspace.id) return;
     loadedRef.current = workspace.id;
@@ -75,7 +73,7 @@ export default function ChatTab({ workspace }: TabProps) {
           }
         />
       </div>
-      <ChatSidebar workspace={workspace} sessionKey={SESSION_KEY} />
+      <ChatSidebar feedItems={feedItems ?? []} />
     </div>
   );
 }

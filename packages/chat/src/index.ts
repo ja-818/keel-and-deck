@@ -178,3 +178,6 @@ export { Typewriter } from "./typewriter";
 export { mergeFeedItem } from "./feed-merge";
 export { ChannelAvatar } from "./channel-avatar";
 export type { ChannelSource } from "./channel-avatar";
+
+export { ChatSidebar } from "./chat-sidebar";
+export type { ChatSidebarProps } from "./chat-sidebar";

@@ -1,5 +1,11 @@
 export { AppSidebar } from "./sidebar";
-export type { SidebarProps } from "./sidebar";
+export type { SidebarProps, SidebarItem, SidebarNavItemEntry } from "./sidebar";
+
+export { SidebarNavItem } from "./sidebar-nav";
+export type { SidebarNavItemProps } from "./sidebar-nav";
+
+export { SpaceSwitcher } from "./space-switcher";
+export type { SpaceSwitcherProps } from "./space-switcher";
 
 export { TabBar } from "./tab-bar";
 export type { TabBarProps } from "./tab-bar";

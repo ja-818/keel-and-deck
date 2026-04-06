@@ -1,17 +1,11 @@
 import type { ReactNode } from "react";
-import { LayoutDashboard, Link2, Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
-import {
-  ScrollArea,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@houston-ai/core";
+import { LayoutDashboard, Link2, Settings } from "lucide-react";
+import { Button } from "@houston-ai/core";
+import { AppSidebar, SpaceSwitcher } from "@houston-ai/layout";
 import { useSpaceStore } from "../../stores/spaces";
 import { useWorkspaceStore } from "../../stores/workspaces";
 import { useExperienceStore } from "../../stores/experiences";
 import { useUIStore } from "../../stores/ui";
-import { SpaceSwitcher, SidebarNavItem } from "./sidebar-parts";
 
 export function Sidebar({ children }: { children: ReactNode }) {
   const spaces = useSpaceStore((s) => s.spaces);
@@ -23,6 +17,8 @@ export function Sidebar({ children }: { children: ReactNode }) {
   const current = useWorkspaceStore((s) => s.current);
   const setCurrent = useWorkspaceStore((s) => s.setCurrent);
   const loadWorkspaces = useWorkspaceStore((s) => s.loadWorkspaces);
+  const renameWs = useWorkspaceStore((s) => s.rename);
+  const deleteWs = useWorkspaceStore((s) => s.delete);
 
   const getById = useExperienceStore((s) => s.getById);
   const viewMode = useUIStore((s) => s.viewMode);
@@ -34,6 +30,9 @@ export function Sidebar({ children }: { children: ReactNode }) {
     const bTime = b.lastOpenedAt ?? b.createdAt;
     return bTime.localeCompare(aTime);
   });
+
+  const items = sorted.map((ws) => ({ id: ws.id, name: ws.name }));
+  const isTopLevel = viewMode === "dashboard" || viewMode === "connections";
 
   const handleSpaceSwitch = async (spaceId: string) => {
     if (spaceId === currentSpace?.id) return;
@@ -59,14 +58,9 @@ export function Sidebar({ children }: { children: ReactNode }) {
     setViewMode(exp?.manifest.defaultTab ?? "chat");
   };
 
-  const renameWs = useWorkspaceStore((s) => s.rename);
-  const deleteWs = useWorkspaceStore((s) => s.delete);
-
-  const handleRename = async (wsId: string, currentName: string) => {
-    const newName = window.prompt("Rename workspace", currentName);
-    if (!newName?.trim() || newName.trim() === currentName) return;
+  const handleRename = async (wsId: string, newName: string) => {
     if (!currentSpace) return;
-    await renameWs(currentSpace.id, wsId, newName.trim());
+    await renameWs(currentSpace.id, wsId, newName);
   };
 
   const handleDelete = async (wsId: string) => {
@@ -75,94 +69,54 @@ export function Sidebar({ children }: { children: ReactNode }) {
     await deleteWs(currentSpace.id, wsId);
   };
 
-  const isTopLevel = viewMode === "dashboard" || viewMode === "connections";
-
   return (
-    <div className="flex h-full">
-      <aside className="w-[200px] flex-shrink-0 bg-secondary border-r border-border flex flex-col">
-        <SpaceSwitcher
-          spaces={spaces}
-          currentId={currentSpace?.id ?? null}
-          currentName={currentSpace?.name ?? "Select space"}
-          onSwitch={handleSpaceSwitch}
-          onCreate={handleCreateSpace}
-        />
-
-        <nav className="px-2 py-1 space-y-0.5">
-          <SidebarNavItem
-            icon={<LayoutDashboard className="h-4 w-4" />}
-            label="Dashboard"
-            active={viewMode === "dashboard"}
-            onClick={() => setViewMode("dashboard")}
+    <div className="flex h-full flex-1 min-w-0">
+      <AppSidebar
+        header={
+          <SpaceSwitcher
+            spaces={spaces}
+            currentId={currentSpace?.id ?? null}
+            currentName={currentSpace?.name ?? "Select space"}
+            onSwitch={handleSpaceSwitch}
+            onCreate={handleCreateSpace}
+            trailing={
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 flex-shrink-0 rounded-lg"
+              >
+                <Settings className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            }
           />
-          <SidebarNavItem
-            icon={<Link2 className="h-4 w-4" />}
-            label="Connections"
-            active={viewMode === "connections"}
-            onClick={() => setViewMode("connections")}
-          />
-        </nav>
-
-        <div className="px-3 pt-3 pb-1 flex items-center justify-between">
-          <span className="text-xs font-medium text-muted-foreground">
-            Your AI Workspaces
-          </span>
-          <button
-            onClick={() => setDialogOpen(true)}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </button>
+        }
+        navItems={[
+          {
+            id: "dashboard",
+            label: "Dashboard",
+            icon: <LayoutDashboard className="h-4 w-4" />,
+            onClick: () => setViewMode("dashboard"),
+          },
+          {
+            id: "connections",
+            label: "Connections",
+            icon: <Link2 className="h-4 w-4" />,
+            onClick: () => setViewMode("connections"),
+          },
+        ]}
+        activeNavId={isTopLevel ? viewMode : undefined}
+        sectionLabel="Your AI Workspaces"
+        items={items}
+        selectedId={!isTopLevel ? current?.id ?? null : null}
+        onSelect={handleSelectWorkspace}
+        onAdd={() => setDialogOpen(true)}
+        onRename={handleRename}
+        onDelete={handleDelete}
+      >
+        <div className="flex-1 min-w-0 h-full overflow-hidden flex flex-col">
+          {children}
         </div>
-
-        <ScrollArea className="flex-1 px-2">
-          <div className="space-y-0.5 pb-2">
-            {sorted.map((ws) => {
-              const isSelected = !isTopLevel && current?.id === ws.id;
-              return (
-                <div
-                  key={ws.id}
-                  className={`group flex items-center rounded-lg transition-colors ${
-                    isSelected
-                      ? "bg-accent font-medium text-foreground"
-                      : "text-foreground hover:bg-accent"
-                  }`}
-                >
-                  <button
-                    onClick={() => handleSelectWorkspace(ws.id)}
-                    className="flex-1 text-left text-sm py-1.5 px-2.5 truncate"
-                  >
-                    {ws.name}
-                  </button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="p-1 mr-1 rounded opacity-0 group-hover:opacity-100 hover:bg-black/5 transition-opacity">
-                        <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" side="bottom">
-                      <DropdownMenuItem onClick={() => handleRename(ws.id, ws.name)}>
-                        <Pencil className="h-3.5 w-3.5 mr-2" />
-                        Rename
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDelete(ws.id)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="h-3.5 w-3.5 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              );
-            })}
-          </div>
-        </ScrollArea>
-
-      </aside>
-
-      <div className="flex-1 min-w-0 h-full overflow-hidden flex flex-col">{children}</div>
+      </AppSidebar>
     </div>
   );
 }

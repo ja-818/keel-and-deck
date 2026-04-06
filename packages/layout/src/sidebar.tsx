@@ -1,10 +1,31 @@
 import { useState, type KeyboardEvent, type ReactNode } from "react";
-import { Plus, MoreHorizontal } from "lucide-react";
-import { cn, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@houston-ai/core";
+import { Plus } from "lucide-react";
+import { ScrollArea } from "@houston-ai/core";
+import { SidebarNavItem } from "./sidebar-nav";
+import { SidebarItemRow } from "./sidebar-item-row";
+
+export interface SidebarItem {
+  id: string;
+  name: string;
+}
+
+export interface SidebarNavItemEntry {
+  id: string;
+  label: string;
+  icon: ReactNode;
+  active?: boolean;
+  onClick: () => void;
+}
 
 export interface SidebarProps {
   logo?: ReactNode;
-  items: { id: string; name: string }[];
+  /** Header area rendered at the very top (e.g., space/org switcher) */
+  header?: ReactNode;
+  /** Nav items rendered below the header and above the items list */
+  navItems?: SidebarNavItemEntry[];
+  /** ID of the currently active nav item (for highlighting) */
+  activeNavId?: string;
+  items: SidebarItem[];
   selectedId?: string | null;
   onSelect: (id: string) => void;
   onAdd?: () => void;
@@ -16,6 +37,9 @@ export interface SidebarProps {
 
 export function AppSidebar({
   logo,
+  header,
+  navItems,
+  activeNavId,
   items,
   selectedId,
   onSelect,
@@ -47,98 +71,81 @@ export function AppSidebar({
     }
   };
 
+  const showLogo = logo && !header;
+
   return (
     <>
       <aside className="w-[200px] bg-secondary flex flex-col h-full shrink-0 border-r border-border">
-        <div className="flex items-center justify-between px-4 pt-4 pb-2">
-          <div className="flex items-center gap-2">{logo}</div>
-          {onAdd && (
-            <button
-              onClick={onAdd}
-              className="size-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-            >
-              <Plus className="size-4" strokeWidth={2} />
-            </button>
-          )}
-        </div>
+        {/* Header slot (e.g., SpaceSwitcher) */}
+        {header}
 
-        {sectionLabel && (
-          <div className="px-4 pt-3 pb-1.5">
-            <span className="text-[12px] text-muted-foreground">{sectionLabel}</span>
+        {/* Legacy logo area (only when no header) */}
+        {showLogo && (
+          <div className="flex items-center justify-between px-4 pt-4 pb-2">
+            <div className="flex items-center gap-2">{logo}</div>
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto px-2">
-          {items.map((item) => {
-            const isActive = item.id === selectedId;
-            const isEditing = editingId === item.id;
-
-            return (
-              <div
+        {/* Nav items */}
+        {navItems && navItems.length > 0 && (
+          <nav className="px-2 py-1 space-y-0.5">
+            {navItems.map((item) => (
+              <SidebarNavItem
                 key={item.id}
-                className={cn(
-                  "group flex items-center rounded-lg transition-colors duration-100",
-                  isActive ? "bg-accent" : "hover:bg-accent/50",
-                )}
-              >
-                {isEditing ? (
-                  <input
-                    autoFocus
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    onBlur={() => commitRename(item.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") commitRename(item.id);
-                      if (e.key === "Escape") setEditingId(null);
-                    }}
-                    className="flex-1 px-3 py-1.5 text-[13px] bg-background outline-none border border-border rounded-lg focus:border-foreground/30"
-                  />
-                ) : (
-                  <button
-                    onClick={() => onSelect(item.id)}
-                    onKeyDown={(e) => handleKeyDown(e, item.id)}
-                    className={cn(
-                      "flex-1 text-left px-3 py-1.5 text-[13px] truncate min-w-0",
-                      isActive ? "text-foreground" : "text-accent-foreground",
-                    )}
-                  >
-                    {item.name}
-                  </button>
-                )}
+                icon={item.icon}
+                label={item.label}
+                active={
+                  activeNavId !== undefined
+                    ? item.id === activeNavId
+                    : item.active
+                }
+                onClick={item.onClick}
+              />
+            ))}
+          </nav>
+        )}
 
-                {hasMenu && !isEditing && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        className="shrink-0 size-7 flex items-center justify-center rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground hover:bg-accent transition-all mr-1"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreHorizontal className="size-4" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" side="bottom">
-                      {onRename && (
-                        <DropdownMenuItem
-                          onClick={() => startRename(item.id, item.name)}
-                        >
-                          Rename
-                        </DropdownMenuItem>
-                      )}
-                      {onDelete && (
-                        <DropdownMenuItem
-                          onClick={() => onDelete(item.id)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          Delete
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        {/* Section label + add button */}
+        {(sectionLabel || onAdd) && (
+          <div className="px-3 pt-3 pb-1 flex items-center justify-between">
+            {sectionLabel && (
+              <span className="text-xs font-medium text-muted-foreground">
+                {sectionLabel}
+              </span>
+            )}
+            {onAdd && (
+              <button
+                onClick={onAdd}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Items list */}
+        <ScrollArea className="flex-1 px-2">
+          <div className="space-y-0.5 pb-2">
+            {items.map((item) => (
+              <SidebarItemRow
+                key={item.id}
+                item={item}
+                isActive={item.id === selectedId}
+                isEditing={editingId === item.id}
+                editValue={editValue}
+                hasMenu={hasMenu}
+                onSelect={onSelect}
+                onKeyDown={handleKeyDown}
+                onEditChange={setEditValue}
+                onCommitRename={commitRename}
+                onCancelEdit={() => setEditingId(null)}
+                onStartRename={onRename ? startRename : undefined}
+                onDelete={onDelete}
+              />
+            ))}
+          </div>
+        </ScrollArea>
       </aside>
 
       {children}
