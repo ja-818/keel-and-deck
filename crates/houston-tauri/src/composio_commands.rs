@@ -1,13 +1,27 @@
 //! Tauri commands for Composio integration.
 
 use crate::composio::ComposioResult;
+use crate::composio_auth::OAuthStarted;
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn list_composio_connections() -> ComposioResult {
     crate::composio::list_active_connections().await
 }
 
+/// Begin the OAuth flow: opens browser, returns auth URL, spawns background listener.
 #[tauri::command(rename_all = "snake_case")]
-pub async fn start_composio_oauth() -> Result<(), String> {
-    crate::composio_auth::run_oauth_flow().await
+pub async fn start_composio_oauth(app: tauri::AppHandle) -> Result<OAuthStarted, String> {
+    crate::composio_auth::begin_oauth_flow(app).await
+}
+
+/// Re-open the browser for the current pending OAuth flow.
+#[tauri::command(rename_all = "snake_case")]
+pub fn reopen_composio_oauth() -> Result<(), String> {
+    crate::composio_auth::reopen_oauth_browser()
+}
+
+/// Complete OAuth by pasting a callback URL manually.
+#[tauri::command(rename_all = "snake_case")]
+pub async fn submit_composio_callback(callback_url: String) -> Result<(), String> {
+    crate::composio_auth::complete_oauth_from_url(&callback_url).await
 }

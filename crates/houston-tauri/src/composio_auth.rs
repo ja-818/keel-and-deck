@@ -1,32 +1,54 @@
 //! Composio OAuth PKCE flow for desktop apps.
 //!
-//! Reads the OAuth discovery state from the macOS keychain, opens the browser
-//! for authorization, handles the localhost callback, exchanges the code for
-//! an access token, and writes it back to the keychain.
+//! Two-phase flow:
+//! 1. `begin_oauth_flow()` — sets up PKCE, opens browser, spawns background
+//!    listener on a fixed port. Returns the auth URL immediately.
+//! 2. The background listener waits for the callback and exchanges the code.
+//!    Alternatively, `complete_oauth_from_url()` accepts a manually pasted URL.
+//!
+//! Both paths converge on the same code exchange + keychain update logic.
 
 use base64::Engine;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::sync::Mutex;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+/// Fixed port for the OAuth callback listener.
+const CALLBACK_PORT: u16 = 19823;
+
+// -- Shared pending state --
+
+struct PendingOAuth {
+    auth_url: String,
+    verifier: String,
+    client_id: String,
+    redirect_uri: String,
+    token_endpoint: String,
+}
+
+static PENDING: Mutex<Option<PendingOAuth>> = Mutex::new(None);
+
+// -- Public result type --
+
+#[derive(Debug, Clone, Serialize)]
+pub struct OAuthStarted {
+    pub auth_url: String,
+}
 
 // -- Public API --
 
-/// Run the full OAuth PKCE flow. Opens the browser, waits for the callback,
-/// exchanges the code, and stores the token in the keychain.
-pub async fn run_oauth_flow() -> Result<(), String> {
+/// Set up the OAuth flow and open the browser. Returns the auth URL.
+/// Spawns a background listener that will complete the flow when the
+/// browser redirects back. Emits `"composio-auth-result"` on the app handle.
+pub async fn begin_oauth_flow(
+    app_handle: tauri::AppHandle,
+) -> Result<OAuthStarted, String> {
     let config = read_oauth_config()?;
     let metadata = fetch_metadata(&config.auth_server_url, &config.resource_metadata_url).await?;
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
-        .await
-        .map_err(|e| format!("Failed to start callback server: {e}"))?;
-    let port = listener
-        .local_addr()
-        .map_err(|e| e.to_string())?
-        .port();
-    let redirect_uri = format!("http://127.0.0.1:{port}/callback");
+    let redirect_uri = format!("http://127.0.0.1:{CALLBACK_PORT}/callback");
 
-    // Dynamic client registration with our redirect_uri
     let reg_endpoint = metadata
         .registration_endpoint
         .as_deref()
@@ -45,31 +67,59 @@ pub async fn run_oauth_flow() -> Result<(), String> {
         &challenge,
     );
 
+    // Store exchange params for background listener and manual fallback
+    {
+        let mut pending = PENDING.lock().unwrap();
+        *pending = Some(PendingOAuth {
+            auth_url: auth_url.clone(),
+            verifier,
+            client_id: registration.client_id,
+            redirect_uri,
+            token_endpoint: metadata.token_endpoint,
+        });
+    }
+
+    // Open browser
     std::process::Command::new("open")
         .arg(&auth_url)
         .spawn()
         .map_err(|e| format!("Failed to open browser: {e}"))?;
 
-    let code = wait_for_callback(listener).await?;
+    // Spawn background listener
+    tokio::spawn(async move {
+        let result = run_callback_listener().await;
+        emit_auth_result(&app_handle, result);
+    });
 
-    let token = exchange_code(
-        &metadata.token_endpoint,
-        &code,
-        &registration.client_id,
-        &redirect_uri,
-        &verifier,
-    )
-    .await?;
+    Ok(OAuthStarted { auth_url })
+}
 
-    update_keychain_token(&token.access_token, token.expires_in, token.refresh_token.as_deref())?;
-
-    eprintln!("[composio] OAuth flow completed successfully");
+/// Re-open the browser with the pending auth URL.
+pub fn reopen_oauth_browser() -> Result<(), String> {
+    let pending = PENDING.lock().unwrap();
+    let p = pending.as_ref().ok_or("No pending OAuth flow")?;
+    std::process::Command::new("open")
+        .arg(&p.auth_url)
+        .spawn()
+        .map_err(|e| format!("Failed to open browser: {e}"))?;
     Ok(())
 }
 
+/// Complete the OAuth flow from a manually pasted callback URL.
+/// Extracts the authorization code and exchanges it for tokens.
+pub async fn complete_oauth_from_url(callback_url: &str) -> Result<(), String> {
+    let code = extract_param(callback_url, "code")
+        .ok_or("No authorization code found in the pasted URL")?;
+
+    if let Some(err) = extract_param(callback_url, "error") {
+        let desc = extract_param(callback_url, "error_description").unwrap_or(err);
+        return Err(format!("OAuth error: {desc}"));
+    }
+
+    exchange_and_store(&code).await
+}
+
 /// Silently refresh the access token using a stored refresh token.
-/// Returns the new access token on success, or an error if no refresh token
-/// is available or the refresh fails.
 pub async fn refresh_access_token() -> Result<String, String> {
     let config = read_oauth_config()?;
     let refresh_token = read_refresh_token()
@@ -109,6 +159,79 @@ pub async fn refresh_access_token() -> Result<String, String> {
     Ok(token.access_token)
 }
 
+// -- Background listener --
+
+async fn run_callback_listener() -> Result<(), String> {
+    let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{CALLBACK_PORT}"))
+        .await
+        .map_err(|e| format!("Failed to bind port {CALLBACK_PORT}: {e}"))?;
+
+    let (mut stream, _) = tokio::time::timeout(
+        std::time::Duration::from_secs(300),
+        listener.accept(),
+    )
+    .await
+    .map_err(|_| "OAuth timed out — no response within 5 minutes".to_string())?
+    .map_err(|e| format!("Failed to accept callback: {e}"))?;
+
+    let mut buf = vec![0u8; 8192];
+    let n = stream.read(&mut buf).await.map_err(|e| e.to_string())?;
+    let request = String::from_utf8_lossy(&buf[..n]);
+    let first_line = request.lines().next().unwrap_or("");
+    let path = first_line.split_whitespace().nth(1).unwrap_or("");
+
+    if let Some(err) = extract_param(path, "error") {
+        let desc = extract_param(path, "error_description").unwrap_or_else(|| err.clone());
+        send_response(&mut stream, "Authorization failed", &desc).await;
+        return Err(format!("OAuth error: {desc}"));
+    }
+
+    let code = extract_param(path, "code")
+        .ok_or("No authorization code in callback")?;
+
+    send_response(
+        &mut stream,
+        "Connected!",
+        "You can close this window and return to the app.",
+    )
+    .await;
+
+    exchange_and_store(&code).await
+}
+
+fn emit_auth_result(app: &tauri::AppHandle, result: Result<(), String>) {
+    use tauri::Emitter;
+    let payload = match &result {
+        Ok(()) => serde_json::json!({ "success": true }),
+        Err(e) => serde_json::json!({ "success": false, "error": e }),
+    };
+    let _ = app.emit("composio-auth-result", payload);
+}
+
+// -- Shared exchange logic --
+
+async fn exchange_and_store(code: &str) -> Result<(), String> {
+    let (verifier, client_id, redirect_uri, token_endpoint) = {
+        let pending = PENDING.lock().unwrap();
+        let p = pending.as_ref().ok_or("No pending OAuth flow to complete")?;
+        (
+            p.verifier.clone(),
+            p.client_id.clone(),
+            p.redirect_uri.clone(),
+            p.token_endpoint.clone(),
+        )
+    };
+
+    let token = exchange_code(&token_endpoint, code, &client_id, &redirect_uri, &verifier).await?;
+    update_keychain_token(&token.access_token, token.expires_in, token.refresh_token.as_deref())?;
+
+    // Clear pending state
+    { *PENDING.lock().unwrap() = None; }
+
+    eprintln!("[composio] OAuth flow completed successfully");
+    Ok(())
+}
+
 // -- Internal types --
 
 struct OAuthConfig {
@@ -128,7 +251,6 @@ struct OAuthMetadata {
 #[derive(Deserialize)]
 struct ClientRegistration {
     client_id: String,
-    /// Present in OAuth response but unused — we use PKCE (no client secret needed).
     #[allow(dead_code)]
     client_secret: Option<String>,
 }
@@ -202,18 +324,16 @@ fn read_refresh_token() -> Option<String> {
 
 // -- Fetch OAuth metadata --
 
-async fn fetch_metadata(auth_server_url: &str, resource_metadata_url: &str) -> Result<OAuthMetadata, String> {
+async fn fetch_metadata(
+    auth_server_url: &str,
+    resource_metadata_url: &str,
+) -> Result<OAuthMetadata, String> {
     let client = reqwest::Client::new();
 
-    // Try well-known paths in order of likelihood
     let candidates = [
-        // 1. MCP resource metadata → extract AS URL
         resource_metadata_url.to_string(),
-        // 2. Root-level OAuth AS metadata
         format!("{}/.well-known/oauth-authorization-server", root_url(auth_server_url)),
-        // 3. Path-based OAuth AS metadata
         format!("{}/.well-known/oauth-authorization-server", auth_server_url),
-        // 4. Root-level OIDC
         format!("{}/.well-known/openid-configuration", root_url(auth_server_url)),
     ];
 
@@ -230,16 +350,13 @@ async fn fetch_metadata(auth_server_url: &str, resource_metadata_url: &str) -> R
         let body = resp.text().await.unwrap_or_default();
         eprintln!("[composio:auth]   → 200, body: {}", &body[..body.len().min(300)]);
 
-        // Try parsing as OAuth metadata directly
         if let Ok(meta) = serde_json::from_str::<OAuthMetadata>(&body) {
             return Ok(meta);
         }
-        // Try parsing as resource metadata (contains authorization_servers array)
         if let Ok(res) = serde_json::from_str::<serde_json::Value>(&body) {
             if let Some(servers) = res.get("authorization_servers").and_then(|s| s.as_array()) {
                 for server_url in servers.iter().filter_map(|s| s.as_str()) {
                     eprintln!("[composio:auth] Found AS: {server_url}");
-                    // Recursively fetch the AS metadata
                     let as_url = format!("{}/.well-known/oauth-authorization-server", server_url);
                     if let Ok(as_resp) = client.get(&as_url).send().await {
                         if as_resp.status().is_success() {
@@ -248,7 +365,6 @@ async fn fetch_metadata(auth_server_url: &str, resource_metadata_url: &str) -> R
                             }
                         }
                     }
-                    // Also try OIDC at the AS URL
                     let oidc_url = format!("{}/.well-known/openid-configuration", server_url);
                     if let Ok(oidc_resp) = client.get(&oidc_url).send().await {
                         if oidc_resp.status().is_success() {
@@ -266,7 +382,6 @@ async fn fetch_metadata(auth_server_url: &str, resource_metadata_url: &str) -> R
 }
 
 fn root_url(url: &str) -> String {
-    // Extract scheme + host from a URL like https://connect.composio.dev/api/v3/auth/dash
     if let Some(idx) = url.find("://") {
         let after_scheme = &url[idx + 3..];
         if let Some(slash) = after_scheme.find('/') {
@@ -357,53 +472,11 @@ fn pct_encode(s: &str) -> String {
         .collect()
 }
 
-// -- Wait for OAuth callback --
+// -- URL parameter extraction --
 
-async fn wait_for_callback(
-    listener: tokio::net::TcpListener,
-) -> Result<String, String> {
-    let (mut stream, _) = tokio::time::timeout(
-        std::time::Duration::from_secs(300),
-        listener.accept(),
-    )
-    .await
-    .map_err(|_| "OAuth timed out — no response within 5 minutes".to_string())?
-    .map_err(|e| format!("Failed to accept callback: {e}"))?;
-
-    let mut buf = vec![0u8; 8192];
-    let n = stream
-        .read(&mut buf)
-        .await
-        .map_err(|e| e.to_string())?;
-    let request = String::from_utf8_lossy(&buf[..n]);
-
-    let first_line = request.lines().next().unwrap_or("");
-    let path = first_line.split_whitespace().nth(1).unwrap_or("");
-
-    // Check for error
-    if let Some(err) = extract_param(path, "error") {
-        let desc = extract_param(path, "error_description")
-            .unwrap_or_else(|| err.clone());
-        send_response(&mut stream, "Authorization failed", &desc).await;
-        return Err(format!("OAuth error: {desc}"));
-    }
-
-    let code = extract_param(path, "code")
-        .ok_or("No authorization code in callback")?;
-
-    send_response(
-        &mut stream,
-        "Connected!",
-        "You can close this window and return to the app.",
-    )
-    .await;
-
-    Ok(code)
-}
-
-fn extract_param(path: &str, key: &str) -> Option<String> {
-    path.split('?')
-        .nth(1)?
+fn extract_param(url: &str, key: &str) -> Option<String> {
+    let query = url.split('?').nth(1)?;
+    query
         .split('&')
         .find(|p| p.starts_with(&format!("{key}=")))?
         .strip_prefix(&format!("{key}="))
@@ -426,6 +499,8 @@ fn pct_decode(s: &str) -> String {
     }
     result
 }
+
+// -- HTTP response to browser --
 
 async fn send_response(
     stream: &mut tokio::net::TcpStream,

@@ -3,6 +3,8 @@ import { ConnectionsView } from "@houston-ai/connections";
 import type { ConnectionsResult } from "@houston-ai/connections";
 import { invoke } from "@tauri-apps/api/core";
 import { tauriConnections } from "../lib/tauri";
+import { useComposioAuth } from "../hooks/use-composio-auth";
+import { ComposioAuthDialog } from "./composio-auth-dialog";
 
 const COMPOSIO_DASHBOARD_URL = "https://dashboard.composio.dev";
 
@@ -31,17 +33,7 @@ export function SpaceConnections() {
     invoke("open_url", { url: COMPOSIO_DASHBOARD_URL });
   }, []);
 
-  const handleAuth = useCallback(async () => {
-    setLoading(true);
-    try {
-      await invoke("start_composio_oauth");
-      await fetchConnections();
-    } catch (e) {
-      console.error("[connections] OAuth failed:", e);
-      setResult({ status: "error", message: String(e) });
-      setLoading(false);
-    }
-  }, [fetchConnections]);
+  const auth = useComposioAuth(fetchConnections);
 
   return (
     <div className="h-full overflow-auto">
@@ -54,9 +46,18 @@ export function SpaceConnections() {
           loading={loading}
           onRetry={fetchConnections}
           onManage={handleManage}
-          onAuth={handleAuth}
+          onAuth={auth.startAuth}
         />
       </div>
+
+      <ComposioAuthDialog
+        state={auth.state}
+        onClose={auth.close}
+        onReopen={auth.reopen}
+        onTogglePaste={auth.togglePaste}
+        onPasteChange={auth.setPasteValue}
+        onPasteSubmit={auth.submitPaste}
+      />
     </div>
   );
 }

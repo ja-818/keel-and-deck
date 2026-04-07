@@ -112,6 +112,8 @@ pub fn run() {
             // Composio integrations
             houston_tauri::composio_commands::list_composio_connections,
             houston_tauri::composio_commands::start_composio_oauth,
+            houston_tauri::composio_commands::reopen_composio_oauth,
+            houston_tauri::composio_commands::submit_composio_callback,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

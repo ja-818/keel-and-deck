@@ -70,9 +70,20 @@ export default function App() {
           <Button
             className="mt-4 rounded-full"
             onClick={async () => {
-              const space = await createSpace("Personal");
-              setCurrentSpace(space);
-              await loadWorkspaces(space.id);
+              try {
+                const space = await createSpace("Personal");
+                setCurrentSpace(space);
+                await loadWorkspaces(space.id);
+              } catch {
+                // Space might already exist from a previous session — just reload
+                const loadSpaces = useSpaceStore.getState().loadSpaces;
+                await loadSpaces();
+                const reloaded = useSpaceStore.getState().spaces;
+                if (reloaded.length > 0) {
+                  setCurrentSpace(reloaded[0]);
+                  await loadWorkspaces(reloaded[0].id);
+                }
+              }
             }}
           >
             Create your first space

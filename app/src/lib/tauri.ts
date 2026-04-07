@@ -121,6 +121,10 @@ export const tauriLearnings = {
 
 export const tauriConnections = {
   list: () => invoke<ConnectionsResult>("list_composio_connections"),
+  startOAuth: () => invoke<{ auth_url: string }>("start_composio_oauth"),
+  reopenOAuth: () => invoke<void>("reopen_composio_oauth"),
+  submitCallback: (callbackUrl: string) =>
+    invoke<void>("submit_composio_callback", { callback_url: callbackUrl }),
 };
 
 export const tauriChannels = {
