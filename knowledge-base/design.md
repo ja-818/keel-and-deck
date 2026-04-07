@@ -249,29 +249,14 @@ No bubble. Plain text/markdown, left-aligned, transparent background.
 
 ---
 
-## Sidebar
+## Sidebar Styles
 
-The app sidebar follows a two-tier navigation pattern:
+Design tokens for the sidebar — see `knowledge-base/houston.md` for the navigation structure.
 
-```
-+---------------------------+
-| [SpaceSwitcher] [Settings]|  Select/create spaces
-|---------------------------|
-| Dashboard                 |  Global nav items
-| Connections               |
-|---------------------------|
-| Your AI Workspaces        |  Section header
-|   Research Agent          |  Workspace items (sorted by recency)
-|   Project Manager         |
-|   + New Workspace         |  Create action
-+---------------------------+
-```
-
-- **Width:** 200px fixed, `#f5f5f5` bg
 - **Items:** `text-sm`, `py-1.5 px-2.5`, `rounded-lg` on hover
-- **Active state:** `bg-gray-200` background
-- **Section headers:** `text-xs font-medium text-muted-foreground`, uppercase
-- **SpaceSwitcher:** dropdown in the sidebar header, shows current space name + chevron
+- **Active state:** `bg-gray-200` background, `font-medium`
+- **Section headers:** `text-xs font-medium text-muted-foreground`
+- **SpaceSwitcher:** dropdown trigger — current space name + chevron, same item padding
 
 ---
 

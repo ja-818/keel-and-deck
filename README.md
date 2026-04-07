@@ -37,7 +37,7 @@ pnpm install
 cd app && pnpm tauri dev
 ```
 
-The app launches with a default "Personal" space. Create a workspace, pick an experience (Project Manager, Research Agent, Code Reviewer, etc.), and start chatting with Claude.
+On first launch, create a space and workspace. Pick an experience (Project Manager, Research Agent, Code Reviewer, etc.) and start chatting with Claude.
 
 ### Build Your Own Experience
 
@@ -172,6 +172,7 @@ Drop-in chat experience for Claude sessions. One component does streaming markdo
 | `Message` | Role-aware message bubble with branching |
 | `Reasoning` | Collapsible thinking block |
 | `PromptInput` | Complex input system with file upload, screenshots, tabs, commands |
+| `ChatSidebar` | Progress tracking sidebar with step checklist + channels list |
 | `Shimmer` | Animated gradient loading text |
 | `Suggestion` | Horizontal scrollable suggestion pills |
 

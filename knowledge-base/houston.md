@@ -74,7 +74,7 @@ interface Space {
 ```
 
 - **Storage:** `~/Documents/Houston/spaces.json` (index) + one directory per space (`~/Documents/Houston/{SpaceName}/`)
-- **Default space:** "Personal" is auto-created on first launch
+- **First launch:** welcome screen prompts user to create their first space
 - **Hierarchy:** Space > Workspace (many workspaces per space)
 - **Rust commands:** `list_spaces`, `create_space`, `rename_space`, `delete_space` (in `app/src-tauri/src/commands/spaces.rs`)
 - **Store:** `useSpaceStore` — `loadSpaces()`, `setCurrent()`, `create()`, `rename()`, `delete()`
@@ -144,7 +144,9 @@ interface ExperienceTab {
 
 **Built-in experiences** (9): Default, Project Manager, Meeting Assistant, Research Agent, Data Analyst, Code Reviewer, DevOps, Content Writer, Customer Support. Located in `app/src/experiences/builtin/`.
 
-**Installed experiences:** loaded from `~/.houston/experiences/{id}/manifest.json`.
+**Installed experiences:** loaded from `~/.houston/experiences/{id}/manifest.json`. Installed experiences with the same ID as a builtin override the builtin (deduplication in `loader.ts`).
+
+**Workspace creation** seeds CLAUDE.md from the experience's `claudeMd` field. If `claudeMd` is not set, a generic template is used.
 
 ### Tasks / Board Tab
 

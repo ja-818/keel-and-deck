@@ -15,9 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Kanban column `onAdd` button** — "+" button in column headers for creating tasks directly from the board
 - **New conversation panel** — dedicated panel for starting conversations on tasks
 - **ChatSidebar** — progress tracking sidebar showing step checklist + channels list, moved to `@houston-ai/chat`
-- **Floating progress card** — `ProgressPanel` alongside chat for real-time agent progress
+- **ProgressPanel** — step-by-step agent progress checklist alongside chat
 - **`.houston/prompts/` convention** — editable system prompt components (`system.md`, `self-improvement.md`)
 - **Context tab** — editable CLAUDE.md + prompt files in the workspace
+- **Welcome screen** — first-launch onboarding to create initial space
 
 ### Changed
 - Renamed "Organization" to "Space" across app, stores, and Rust commands
@@ -35,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Preference commands (serde camelCase alignment)
 - ContentArea wrapper removed — tab layouts and centering fixed
 - Compiler warnings cleaned up
+- First launch with existing space directory handled gracefully
 
 ## [0.1.0] — 2026-04-05
 
