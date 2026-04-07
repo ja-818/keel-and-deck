@@ -1,5 +1,7 @@
 import { StrictMode, Component, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./lib/query-client";
 import App from "./App";
 import "./styles/globals.css";
 import { useUIStore } from "./stores/ui";
@@ -48,8 +50,10 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </QueryClientProvider>
   </StrictMode>,
 );

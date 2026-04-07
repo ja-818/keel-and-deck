@@ -34,7 +34,7 @@ export function KanbanColumn({
   return (
     <div className="min-w-[180px] flex-1 flex flex-col h-full min-h-0 rounded-xl bg-secondary">
       {/* Column header */}
-      <div className="px-3 py-2.5 flex items-center justify-between shrink-0">
+      <div className="px-3 py-2.5 flex items-center justify-center relative shrink-0">
         <div className="flex items-center gap-1.5">
           <h3 className="text-sm font-medium text-foreground">{label}</h3>
           {items.length > 0 && (
@@ -46,7 +46,7 @@ export function KanbanColumn({
         {onAdd && (
           <button
             onClick={onAdd}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="absolute right-3 text-muted-foreground hover:text-foreground transition-colors"
           >
             <Plus className="h-4 w-4" />
           </button>

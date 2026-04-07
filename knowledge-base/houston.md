@@ -225,6 +225,21 @@ Every Houston app project stores agent-visible data in a `.houston/` folder alon
 - **All write operations use atomic temp-file + rename** to prevent corruption.
 - **SQLite is minimal** — only `chat_feed` (conversation replay) and `preferences` (app settings) remain as permanent tables.
 
+### AI-Native Reactivity
+
+Houston is an AI-native workspace. **Users and LLMs are equal participants** — both can read and write all workspace data, and all changes from either must be immediately visible to both.
+
+**Two writers to `.houston/` files:**
+1. **The frontend** (via Tauri commands) — user clicks "Create Task" → Tauri command → Rust writes file
+2. **Claude CLI agents** (direct file writes) — agent decides to install a skill → writes directly to `.houston/skills/`
+
+**Three-layer reactivity stack:**
+1. **TanStack Query (frontend)** — all `.houston/` data fetching uses `useQuery` with query keys like `["tasks", workspacePath]`. Automatic dedup, background refresh, stale-while-revalidate.
+2. **Event emission on Tauri command writes (Rust)** — `write_skill()` emits `SkillsChanged`, `create_task()` emits `TasksChanged`, etc. A global listener invalidates the matching query key.
+3. **File watcher on `.houston/` (Rust, `notify` crate)** — catches agent writes that bypass Tauri commands. Emits the same events as layer 2. Debounced to avoid noise.
+
+**The rule:** Never build a feature where the agent can change data but the UI won't reflect it until manual refresh. If it's in `.houston/`, it must be reactive.
+
 ---
 
 ## React Packages

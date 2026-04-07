@@ -91,5 +91,33 @@ export type HoustonEvent =
     }
   | {
       type: "ConversationsChanged";
-      data: { project_id: string };
+      data: { project_id: string; workspace_path: string };
+    }
+  | {
+      type: "TasksChanged";
+      data: { workspace_path: string };
+    }
+  | {
+      type: "SkillsChanged";
+      data: { workspace_path: string };
+    }
+  | {
+      type: "LearningsChanged";
+      data: { workspace_path: string };
+    }
+  | {
+      type: "ChannelsConfigChanged";
+      data: { workspace_path: string };
+    }
+  | {
+      type: "FilesChanged";
+      data: { workspace_path: string };
+    }
+  | {
+      type: "ConfigChanged";
+      data: { workspace_path: string };
+    }
+  | {
+      type: "ContextChanged";
+      data: { workspace_path: string };
     };

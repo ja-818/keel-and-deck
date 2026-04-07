@@ -30,6 +30,12 @@ export interface AIBoardProps {
   approveStatuses?: string[]
   /** Load persisted chat history for a session. Called once per session key when selected. */
   onLoadHistory?: (sessionKey: string) => Promise<FeedItem[]>
+  /** Render prop for an action above the kanban board. Receives a callback to open the new-conversation panel. */
+  headerAction?: (onStart: () => void) => ReactNode
+  /** Custom thinking indicator for the chat panel. */
+  thinkingIndicator?: ReactNode
+  /** Avatar element shown in the detail panel header. */
+  panelAvatar?: ReactNode
 }
 
 const DEFAULT_COLUMNS: KanbanColumn[] = [
@@ -56,6 +62,9 @@ export function AIBoard({
   runningStatuses = ["running"],
   approveStatuses = ["needs_you"],
   onLoadHistory,
+  headerAction,
+  thinkingIndicator,
+  panelAvatar,
 }: AIBoardProps) {
   const [internalSelectedId, setInternalSelectedId] = useState<string | null>(null)
   const [newPanelOpen, setNewPanelOpen] = useState(false)
@@ -95,11 +104,7 @@ export function AIBoard({
     setNewPanelOpen(true)
   }, [setSelectedId])
 
-  const resolvedColumns = (columns ?? DEFAULT_COLUMNS).map((col, idx) =>
-    idx === 0 && onCreateConversation
-      ? { ...col, onAdd: openNewPanel }
-      : col,
-  )
+  const resolvedColumns = columns ?? DEFAULT_COLUMNS
 
   const handleDelete = useCallback(
     (item: KanbanItem) => {
@@ -143,6 +148,11 @@ export function AIBoard({
 
   const board = (
     <div className="flex flex-col h-full">
+      {headerAction && (
+        <div className="shrink-0 px-3 pt-3">
+          {headerAction(openNewPanel)}
+        </div>
+      )}
       <KanbanBoard
         columns={resolvedColumns}
         items={items}
@@ -167,6 +177,7 @@ export function AIBoard({
       <KanbanDetailPanel
         title={panelTitle}
         onClose={closePanel}
+        avatar={panelAvatar}
       >
         <div className="flex-1 min-h-0 flex flex-col">
           <ChatPanel
@@ -175,6 +186,7 @@ export function AIBoard({
             isLoading={activeLoading}
             onSend={handleSend}
             placeholder={selectedItem ? "Send a follow-up..." : "What should the agent work on?"}
+            thinkingIndicator={thinkingIndicator}
           />
         </div>
       </KanbanDetailPanel>

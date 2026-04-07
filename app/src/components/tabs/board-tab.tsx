@@ -1,11 +1,38 @@
 import { useState, useEffect, useCallback } from "react";
+import { Rocket } from "lucide-react";
 import { AIBoard } from "@houston-ai/board";
 import type { KanbanItem } from "@houston-ai/board";
 import type { FeedItem } from "@houston-ai/chat";
+import { AgentAvatar } from "@houston-ai/core";
 import { useFeedStore } from "../../stores/feeds";
 import { useUIStore } from "../../stores/ui";
 import { tauriTasks, tauriChat } from "../../lib/tauri";
 import type { TabProps } from "../../lib/types";
+import houstonIcon from "../../assets/houston-icon.png";
+
+function StartMissionButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-2.5 rounded-full bg-gray-950 text-white h-9 px-4 text-sm font-medium hover:bg-gray-800 transition-colors"
+    >
+      <Rocket className="size-4" />
+      Start a Mission
+    </button>
+  );
+}
+
+function ThinkingIndicator() {
+  return (
+    <div className="py-2 flex items-center gap-2">
+      <img
+        src={houstonIcon}
+        alt="Houston"
+        className="size-6 rounded-full animate-pulse"
+      />
+    </div>
+  );
+}
 
 export default function BoardTab({ workspace }: TabProps) {
   const [items, setItems] = useState<KanbanItem[]>([]);
@@ -122,6 +149,11 @@ export default function BoardTab({ workspace }: TabProps) {
       onCreateConversation={handleCreateConversation}
       onSendMessage={handleSendMessage}
       onLoadHistory={loadHistory}
+      headerAction={(onStart) => <StartMissionButton onClick={onStart} />}
+      thinkingIndicator={<ThinkingIndicator />}
+      panelAvatar={
+        <AgentAvatar src={houstonIcon} alt="Houston" size="sm" />
+      }
     />
   );
 }

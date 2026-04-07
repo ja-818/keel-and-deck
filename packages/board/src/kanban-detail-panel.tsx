@@ -18,6 +18,7 @@ export interface KanbanDetailPanelProps {
   onClose: () => void
   children: React.ReactNode
   actions?: React.ReactNode
+  avatar?: React.ReactNode
   runningStatuses?: string[]
   statusLabels?: Record<string, string>
 }
@@ -29,6 +30,7 @@ export function KanbanDetailPanel({
   onClose,
   children,
   actions,
+  avatar,
   runningStatuses = ["running"],
   statusLabels,
 }: KanbanDetailPanelProps) {
@@ -46,6 +48,7 @@ export function KanbanDetailPanel({
           >
             <ArrowLeft className="size-4" strokeWidth={1.75} />
           </button>
+          {avatar}
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-foreground truncate">
               {title}

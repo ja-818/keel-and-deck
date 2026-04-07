@@ -92,5 +92,44 @@ pub enum HoustonEvent {
     /// Routines list changed for a project.
     RoutinesChanged {
         project_id: String,
+        workspace_path: String,
+    },
+
+    // ----- Workspace data changes (AI-native reactivity) -----
+    // Emitted by workspace_store writes AND by the file watcher.
+    // Frontend uses these to invalidate TanStack Query caches.
+
+    /// Tasks list changed (.houston/tasks.json).
+    TasksChanged {
+        workspace_path: String,
+    },
+    /// Skills changed (.houston/skills/).
+    SkillsChanged {
+        workspace_path: String,
+    },
+    /// Learnings changed (.houston/memory/).
+    LearningsChanged {
+        workspace_path: String,
+    },
+    /// Channel config changed (.houston/channels.json).
+    ChannelsConfigChanged {
+        workspace_path: String,
+    },
+    /// Workspace files changed (non-.houston files).
+    FilesChanged {
+        workspace_path: String,
+    },
+    /// Config changed (.houston/config.json).
+    ConfigChanged {
+        workspace_path: String,
+    },
+    /// Context files changed (CLAUDE.md, .houston/prompts/).
+    ContextChanged {
+        workspace_path: String,
+    },
+    /// Conversations list changed.
+    ConversationsChanged {
+        project_id: String,
+        workspace_path: String,
     },
 }

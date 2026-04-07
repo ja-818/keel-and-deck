@@ -22,7 +22,7 @@ async function sendNotification(title: string, body: string) {
       granted = perm === "granted";
     }
     if (granted) {
-      notify({ title, body });
+      notify({ title, body, sound: "Glass" });
     }
   } catch (e) {
     console.error("[notification] Failed:", e);

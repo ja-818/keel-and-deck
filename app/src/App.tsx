@@ -17,6 +17,7 @@ import {
 import { TabBar } from "@houston-ai/layout";
 import { useHoustonInit } from "./hooks/use-houston-init";
 import { useSessionEvents } from "./hooks/use-session-events";
+import { useWorkspaceInvalidation } from "./hooks/use-workspace-invalidation";
 import { useSpaceStore } from "./stores/spaces";
 import { useWorkspaceStore } from "./stores/workspaces";
 import { useExperienceStore } from "./stores/experiences";
@@ -30,6 +31,7 @@ import { SpaceConnections } from "./components/space-connections";
 export default function App() {
   useHoustonInit();
   useSessionEvents();
+  useWorkspaceInvalidation();
 
   const spaceLoading = useSpaceStore((s) => s.loading);
   const spaces = useSpaceStore((s) => s.spaces);

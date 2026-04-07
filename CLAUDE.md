@@ -222,6 +222,17 @@ Never import app/ types into packages/. Use generic types (BoardItem, FeedItem, 
 ### No `@/` path aliases (in packages/)
 Use relative imports within a package. Use package imports (`@houston-ai/core`) between packages. Path aliases break in published libraries.
 
+## AI-Native Reactivity (MANDATORY)
+
+Houston builds **AI-native workspaces**. Users and LLMs are equal participants — both can read and write all workspace data, and **all changes from either must be immediately visible to both.**
+
+### Rules:
+- **Every data surface must react to file changes**, regardless of who made them (user via UI, agent via file write, external edit)
+- **All `.houston/` data fetching uses TanStack Query** with query invalidation via Tauri events + file watcher. Never use manual load-on-mount-only patterns.
+- **Never build a feature where "the agent can do X but the UI won't show it until refresh"** — this violates the core paradigm
+- **Workspace store writes (Rust) must emit events** so the frontend can invalidate queries
+- **The `.houston/` file watcher is architecturally required**, not optional — it catches agent writes that bypass Tauri commands
+
 ## General Rules
 
 ### Think Like a Code Reviewer
