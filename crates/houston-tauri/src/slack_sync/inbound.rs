@@ -92,7 +92,7 @@ async fn handle_thread_reply(
         serde_json::json!({
             "agent_path": agent_path,
             "session_key": session_key,
-            "text": format!("[Slack/{}] {}", msg.sender_name, msg.text),
+            "text": msg.text.clone(),
             "sender_name": msg.sender_name,
         }),
     );
@@ -152,7 +152,7 @@ async fn handle_new_message(
         serde_json::json!({
             "agent_path": agent_path,
             "session_key": session_key,
-            "text": format!("[Slack/{}] {}", msg.sender_name, msg.text),
+            "text": msg.text.clone(),
             "sender_name": msg.sender_name,
         }),
     );
