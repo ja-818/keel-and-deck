@@ -1,9 +1,9 @@
 import "./styles/globals.css";
 import { ToastContainer } from "@houston-ai/core";
 import type { Toast } from "@houston-ai/core";
-import { useState, useEffect, useCallback } from "react";
-import { Check } from "lucide-react";
-import houstonIconBlack from "./assets/houston-icon.svg";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Check, X } from "lucide-react";
+import houstonIconWhite from "./assets/houston-icon-white.svg";
 
 import { tauriSlack } from "./lib/tauri";
 import {
@@ -12,6 +12,7 @@ import {
   EmptyTitle,
   EmptyDescription,
   Button,
+  Spinner,
   Dialog,
   DialogContent,
   DialogHeader,
@@ -117,8 +118,6 @@ export default function App() {
                     )}
                     {onStartMission && (
                       <Button
-                        variant="outline"
-                        className="border-gray-950"
                         onClick={() => {
                           setViewMode("activity");
                           setTimeout(() => {
@@ -126,7 +125,7 @@ export default function App() {
                           }, 50);
                         }}
                       >
-                        <img src={houstonIconBlack} alt="" className="size-4" />
+                        <img src={houstonIconWhite} alt="" className="size-4" />
                         Start a Mission
                       </Button>
                     )}
@@ -166,10 +165,12 @@ export default function App() {
 function SlackButton({ agentPath, agentName }: { agentPath: string; agentName: string }) {
   const [status, setStatus] = useState<"idle" | "connecting" | "connected">("idle");
   const [channelName, setChannelName] = useState<string | null>(null);
+  const abortRef = useRef(false);
 
   useEffect(() => {
     setStatus("idle");
     setChannelName(null);
+    abortRef.current = false;
     tauriSlack.getStatus(agentPath).then((s) => {
       if (s.connected) {
         setStatus("connected");
@@ -179,16 +180,26 @@ function SlackButton({ agentPath, agentName }: { agentPath: string; agentName: s
   }, [agentPath]);
 
   const handleConnect = useCallback(async () => {
+    abortRef.current = false;
     setStatus("connecting");
     try {
       const result = await tauriSlack.connect(agentPath, agentName);
-      setStatus("connected");
-      setChannelName(result.channel_name);
+      if (!abortRef.current) {
+        setStatus("connected");
+        setChannelName(result.channel_name);
+      }
     } catch (e) {
-      console.error("[slack] connect failed:", e);
+      if (!abortRef.current) {
+        console.error("[slack] connect failed:", e);
+      }
       setStatus("idle");
     }
   }, [agentPath, agentName]);
+
+  const handleCancel = useCallback(() => {
+    abortRef.current = true;
+    setStatus("idle");
+  }, []);
 
   const handleDisconnect = useCallback(async () => {
     await tauriSlack.disconnect(agentPath);
@@ -209,13 +220,19 @@ function SlackButton({ agentPath, agentName }: { agentPath: string; agentName: s
     );
   }
 
+  if (status === "connecting") {
+    return (
+      <Button variant="ghost" onClick={handleCancel} className="group">
+        <span className="group-hover:hidden"><Spinner className="size-4" /></span>
+        <X className="size-4 hidden group-hover:block" />
+        Connecting Slack
+      </Button>
+    );
+  }
+
   return (
-    <Button
-      variant="ghost"
-      onClick={handleConnect}
-      disabled={status === "connecting"}
-    >
-      {status === "connecting" ? "Connecting to Slack..." : "Connect Slack"}
+    <Button variant="ghost" onClick={handleConnect}>
+      Connect Slack
     </Button>
   );
 }
