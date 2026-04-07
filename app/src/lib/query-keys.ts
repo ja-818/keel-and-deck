@@ -1,28 +1,35 @@
 /**
  * Centralized query key factory for TanStack Query.
  *
- * Every workspace-scoped query is keyed by [resource, workspacePath].
+ * Every agent-scoped query is keyed by [resource, agentPath].
  * This makes invalidation trivial: on an "ActivityChanged" event for path X,
  * invalidate queryKeys.activity(X).
  */
 export const queryKeys = {
-  // Workspace-scoped (reactive via file watcher + Tauri events)
-  activity: (workspacePath: string) => ["activity", workspacePath] as const,
-  skills: (workspacePath: string) => ["skills", workspacePath] as const,
-  skillDetail: (workspacePath: string, name: string) =>
-    ["skill-detail", workspacePath, name] as const,
-  learnings: (workspacePath: string) => ["learnings", workspacePath] as const,
-  channels: (workspacePath: string) => ["channels", workspacePath] as const,
-  files: (workspacePath: string) => ["files", workspacePath] as const,
-  contextFiles: (workspacePath: string) =>
-    ["context-files", workspacePath] as const,
-  config: (workspacePath: string) => ["config", workspacePath] as const,
-  conversations: (workspacePath: string) =>
-    ["conversations", workspacePath] as const,
-  allConversations: (workspacePaths: string[]) =>
-    ["all-conversations", ...workspacePaths] as const,
-  chatHistory: (workspacePath: string, sessionKey: string) =>
-    ["chat-history", workspacePath, sessionKey] as const,
+  // Agent-scoped (reactive via file watcher + Tauri events)
+  activity: (agentPath: string) => ["activity", agentPath] as const,
+  skills: (agentPath: string) => ["skills", agentPath] as const,
+  skillDetail: (agentPath: string, name: string) =>
+    ["skill-detail", agentPath, name] as const,
+  learnings: (agentPath: string) => ["learnings", agentPath] as const,
+  channels: (agentPath: string) => ["channels", agentPath] as const,
+  files: (agentPath: string) => ["files", agentPath] as const,
+  contextFiles: (agentPath: string) =>
+    ["context-files", agentPath] as const,
+  instructions: (agentPath: string) =>
+    ["instructions", agentPath] as const,
+  config: (agentPath: string) => ["config", agentPath] as const,
+  routines: (agentPath: string) => ["routines", agentPath] as const,
+  routineRuns: (agentPath: string, routineId?: string) =>
+    routineId
+      ? (["routine-runs", agentPath, routineId] as const)
+      : (["routine-runs", agentPath] as const),
+  conversations: (agentPath: string) =>
+    ["conversations", agentPath] as const,
+  allConversations: (agentPaths: string[]) =>
+    ["all-conversations", ...agentPaths] as const,
+  chatHistory: (agentPath: string, sessionKey: string) =>
+    ["chat-history", agentPath, sessionKey] as const,
 
   // App-scoped (less reactive, loaded on init)
   connections: () => ["connections"] as const,

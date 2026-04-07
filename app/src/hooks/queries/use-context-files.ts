@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "../../lib/query-keys";
-import { tauriWorkspace } from "../../lib/tauri";
+import { tauriAgent } from "../../lib/tauri";
 
 interface ContextFiles {
   claudeMd: string;
@@ -14,30 +14,30 @@ const CONTEXT_FILE_NAMES = {
   selfImprovement: ".houston/prompts/self-improvement.md",
 } as const;
 
-async function loadContextFiles(workspacePath: string): Promise<ContextFiles> {
+async function loadContextFiles(agentPath: string): Promise<ContextFiles> {
   const [claudeMd, systemPrompt, selfImprovement] = await Promise.all([
-    tauriWorkspace.readFile(workspacePath, CONTEXT_FILE_NAMES.claudeMd).catch(() => ""),
-    tauriWorkspace.readFile(workspacePath, CONTEXT_FILE_NAMES.systemPrompt).catch(() => ""),
-    tauriWorkspace.readFile(workspacePath, CONTEXT_FILE_NAMES.selfImprovement).catch(() => ""),
+    tauriAgent.readFile(agentPath, CONTEXT_FILE_NAMES.claudeMd).catch(() => ""),
+    tauriAgent.readFile(agentPath, CONTEXT_FILE_NAMES.systemPrompt).catch(() => ""),
+    tauriAgent.readFile(agentPath, CONTEXT_FILE_NAMES.selfImprovement).catch(() => ""),
   ]);
   return { claudeMd, systemPrompt, selfImprovement };
 }
 
-export function useContextFiles(workspacePath: string | undefined) {
+export function useContextFiles(agentPath: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.contextFiles(workspacePath ?? ""),
-    queryFn: () => loadContextFiles(workspacePath!),
-    enabled: !!workspacePath,
+    queryKey: queryKeys.contextFiles(agentPath ?? ""),
+    queryFn: () => loadContextFiles(agentPath!),
+    enabled: !!agentPath,
   });
 }
 
-export function useSaveContextFile(workspacePath: string | undefined) {
+export function useSaveContextFile(agentPath: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ name, content }: { name: string; content: string }) =>
-      tauriWorkspace.writeFile(workspacePath!, name, content),
+      tauriAgent.writeFile(agentPath!, name, content),
     onSuccess: () => {
-      if (workspacePath) qc.invalidateQueries({ queryKey: queryKeys.contextFiles(workspacePath) });
+      if (agentPath) qc.invalidateQueries({ queryKey: queryKeys.contextFiles(agentPath) });
     },
   });
 }

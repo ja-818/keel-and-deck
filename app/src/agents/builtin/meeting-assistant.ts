@@ -1,6 +1,6 @@
-import type { ExperienceManifest } from "../../lib/types";
+import type { AgentConfig } from "../../lib/types";
 
-export const meetingAssistant: ExperienceManifest = {
+export const meetingAssistant: AgentConfig = {
   id: "meeting-assistant",
   name: "Meeting Assistant",
   description: "Summarize meetings, extract action items, draft follow-ups, and keep everyone accountable",

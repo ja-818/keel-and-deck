@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback } from "react";
 import { ChannelsView } from "@houston-ai/connections";
 import type { ChannelConnection, ChannelType } from "@houston-ai/connections";
-import { tauriChannels } from "../../lib/tauri";
+import { useChannels, useAddChannel, useRemoveChannel } from "../../hooks/queries";
 import type { TabProps, ChannelEntry } from "../../lib/types";
 
 function toChannelConnection(entry: ChannelEntry): ChannelConnection {
@@ -22,56 +22,36 @@ function toChannelConnection(entry: ChannelEntry): ChannelConnection {
   };
 }
 
-function generateName(type: ChannelType, existing: ChannelEntry[]): string {
-  const label = type === "slack" ? "Slack" : "Telegram";
-  const count = existing.filter((e) => e.channel_type === type).length;
-  return count === 0 ? label : `${label} ${count + 1}`;
-}
-
-export default function ChannelsTab({ workspace }: TabProps) {
-  const [channels, setChannels] = useState<ChannelEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const path = workspace.folderPath;
-
-  const fetchChannels = useCallback(async () => {
-    setLoading(true);
-    try {
-      const entries = await tauriChannels.list(path);
-      setChannels(entries);
-    } catch (e) {
-      console.error("[channels] Failed to load:", e);
-    } finally {
-      setLoading(false);
-    }
-  }, [path]);
-
-  useEffect(() => {
-    fetchChannels();
-  }, [fetchChannels]);
+export default function ChannelsTab({ agent }: TabProps) {
+  const path = agent.folderPath;
+  const { data: channels, isLoading: loading } = useChannels(path);
+  const addChannel = useAddChannel(path);
+  const removeChannel = useRemoveChannel(path);
 
   const handleAdd = useCallback(
     async (type: ChannelType, config: Record<string, string>) => {
-      const name = generateName(type, channels);
+      const existing = channels ?? [];
+      const label = type === "slack" ? "Slack" : "Telegram";
+      const count = existing.filter((e) => e.channel_type === type).length;
+      const name = count === 0 ? label : `${label} ${count + 1}`;
       const token = JSON.stringify(config);
-      await tauriChannels.add(path, { channel_type: type, name, token });
-      await fetchChannels();
+      await addChannel.mutateAsync({ channel_type: type, name, token });
     },
-    [channels, path, fetchChannels],
+    [channels, addChannel],
   );
 
   const handleDelete = useCallback(
     async (channel: ChannelConnection) => {
-      await tauriChannels.remove(path, channel.id);
-      await fetchChannels();
+      await removeChannel.mutateAsync(channel.id);
     },
-    [path, fetchChannels],
+    [removeChannel],
   );
 
   return (
     <div className="h-full overflow-auto">
       <div className="max-w-3xl mx-auto w-full px-6 py-6">
         <ChannelsView
-          channels={channels.map(toChannelConnection)}
+          channels={(channels ?? []).map(toChannelConnection)}
           loading={loading}
           onAddChannel={handleAdd}
           onDelete={handleDelete}

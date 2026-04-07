@@ -1,34 +1,30 @@
-import { builtinExperiences } from "./builtin";
-import type { Experience, ExperienceManifest } from "../lib/types";
+import { builtinConfigs } from "./builtin";
+import type { AgentDefinition, AgentConfig } from "../lib/types";
 
-export async function loadAllExperiences(): Promise<Experience[]> {
-  // Map by ID so installed experiences override builtins with the same ID
-  const byId = new Map<string, Experience>();
+export async function loadAllConfigs(): Promise<AgentDefinition[]> {
+  const byId = new Map<string, AgentDefinition>();
 
-  // Built-in experiences (inserted first, can be overridden)
-  for (const manifest of builtinExperiences) {
-    byId.set(manifest.id, { manifest, source: "builtin" });
+  for (const cfg of builtinConfigs) {
+    byId.set(cfg.id, { config: cfg, source: "builtin" });
   }
 
-  // Installed experiences (from ~/.houston/experiences/)
   try {
     const { invoke } = await import("@tauri-apps/api/core");
-    const installed = await invoke<Array<{ manifest: ExperienceManifest; path: string }>>(
-      "list_installed_experiences"
+    const installed = await invoke<Array<{ config: AgentConfig; path: string }>>(
+      "list_installed_configs"
     );
     for (const inst of installed) {
-      byId.set(inst.manifest.id, {
-        manifest: inst.manifest,
+      byId.set(inst.config.id, {
+        config: inst.config,
         source: "installed",
         path: inst.path,
-        bundleUrl: inst.manifest.tabs.some(t => t.customComponent)
+        bundleUrl: inst.config.tabs.some(t => t.customComponent)
           ? `asset://localhost/${inst.path}/bundle.js`
           : undefined,
       });
     }
   } catch {
-    // Tauri not available (dev mode) or command not registered yet
-    console.warn("Could not load installed experiences");
+    console.warn("Could not load installed agent configs");
   }
 
   return Array.from(byId.values());

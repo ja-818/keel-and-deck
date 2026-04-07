@@ -83,15 +83,12 @@ pub enum HoustonEvent {
 
     // ----- Routines -----
 
-    /// A routine run changed status.
-    RoutineRunChanged {
-        routine_id: String,
-        run_id: String,
-        status: String,
-    },
-    /// Routines list changed for a project.
+    /// Routines list changed (.houston/routines.json).
     RoutinesChanged {
-        project_id: String,
+        agent_path: String,
+    },
+    /// Routine runs changed (.houston/routine_runs.json).
+    RoutineRunsChanged {
         agent_path: String,
     },
 
@@ -131,5 +128,23 @@ pub enum HoustonEvent {
     ConversationsChanged {
         project_id: String,
         agent_path: String,
+    },
+
+    // ----- Slack Sync -----
+
+    /// Slack sync started for an agent.
+    SlackSyncStarted {
+        agent_path: String,
+        slack_channel_name: String,
+    },
+    /// Slack sync stopped for an agent.
+    SlackSyncStopped {
+        agent_path: String,
+    },
+    /// A new Slack thread was created for a conversation.
+    SlackThreadCreated {
+        agent_path: String,
+        session_key: String,
+        thread_ts: String,
     },
 }

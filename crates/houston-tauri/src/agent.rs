@@ -1,7 +1,7 @@
-//! Workspace directory helpers for AI agent apps.
+//! Agent directory helpers for AI agent apps.
 //!
 //! Provides utilities for seeding template files, building system prompts
-//! from workspace contents, and listing/reading workspace files.
+//! from agent contents, and listing/reading agent files.
 
 use std::fs;
 use std::path::Path;
@@ -17,7 +17,7 @@ pub fn seed_file(dir: &Path, name: &str, content: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Build a system prompt by reading workspace files and assembling them.
+/// Build a system prompt by reading agent files and assembling them.
 ///
 /// - `base_prompt`: The base identity prompt (always included first).
 /// - `bootstrap_name`: If this file exists, it's injected prominently as a first-run signal.
@@ -49,19 +49,19 @@ pub fn build_system_prompt(
     sections.join("\n\n---\n\n")
 }
 
-/// Info about a workspace file for UI display.
+/// Info about a agent file for UI display.
 #[derive(serde::Serialize)]
-pub struct WorkspaceFileInfo {
+pub struct AgentFileInfo {
     pub name: String,
     pub description: String,
     pub exists: bool,
 }
 
-/// List known workspace files with their existence status.
-pub fn list_files(dir: &Path, known: &[(&str, &str)]) -> Vec<WorkspaceFileInfo> {
+/// List known agent files with their existence status.
+pub fn list_files(dir: &Path, known: &[(&str, &str)]) -> Vec<AgentFileInfo> {
     known
         .iter()
-        .map(|(name, desc)| WorkspaceFileInfo {
+        .map(|(name, desc)| AgentFileInfo {
             name: name.to_string(),
             description: desc.to_string(),
             exists: dir.join(name).exists(),
@@ -69,20 +69,20 @@ pub fn list_files(dir: &Path, known: &[(&str, &str)]) -> Vec<WorkspaceFileInfo> 
         .collect()
 }
 
-/// Read a workspace file, only allowing known file names.
+/// Read a agent file, only allowing known file names.
 pub fn read_file(
     dir: &Path,
     name: &str,
     allowed: &[&str],
 ) -> Result<String, String> {
     if !allowed.contains(&name) {
-        return Err(format!("Unknown workspace file: {name}"));
+        return Err(format!("Unknown agent file: {name}"));
     }
     fs::read_to_string(dir.join(name))
         .map_err(|e| format!("Failed to read {name}: {e}"))
 }
 
-/// Copy a file from an absolute source path into a workspace directory.
+/// Copy a file from an absolute source path into an agent directory.
 /// Returns the file name used (which may be deduplicated if a file with the
 /// same name already exists).
 pub fn copy_file_to_dir(dir: &Path, source: &Path) -> Result<String, String> {
@@ -107,7 +107,7 @@ pub fn copy_file_to_dir(dir: &Path, source: &Path) -> Result<String, String> {
     Ok(final_name)
 }
 
-/// Write raw bytes as a file into a workspace directory.
+/// Write raw bytes as a file into an agent directory.
 /// Returns the file name used (which may be deduplicated).
 pub fn import_file(dir: &Path, name: &str, data: &[u8]) -> Result<String, String> {
     let dest = deduplicate_name(dir, name);
@@ -122,7 +122,7 @@ pub fn import_file(dir: &Path, name: &str, data: &[u8]) -> Result<String, String
     Ok(final_name)
 }
 
-/// Create a folder inside a workspace directory.
+/// Create a folder inside an agent directory.
 /// Accepts a relative path (e.g., "docs" or "output/images") and creates all
 /// intermediate directories. Returns the relative path that was created.
 pub fn create_folder(dir: &Path, relative: &str) -> Result<String, String> {

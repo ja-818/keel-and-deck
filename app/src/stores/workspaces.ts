@@ -1,66 +1,66 @@
 import { create } from "zustand";
-import { tauriSpaces, tauriPreferences } from "../lib/tauri";
-import type { Space } from "../lib/types";
+import { tauriWorkspaces, tauriPreferences } from "../lib/tauri";
+import type { Workspace } from "../lib/types";
 
-interface SpaceState {
-  spaces: Space[];
-  current: Space | null;
+interface WorkspaceState {
+  workspaces: Workspace[];
+  current: Workspace | null;
   loading: boolean;
-  loadSpaces: () => Promise<void>;
-  setCurrent: (space: Space) => void;
-  create: (name: string) => Promise<Space>;
+  loadWorkspaces: () => Promise<void>;
+  setCurrent: (ws: Workspace) => void;
+  create: (name: string) => Promise<Workspace>;
   delete: (id: string) => Promise<void>;
   rename: (id: string, newName: string) => Promise<void>;
 }
 
-export const useSpaceStore = create<SpaceState>((set) => ({
-  spaces: [],
+export const useWorkspaceStore = create<WorkspaceState>((set) => ({
+  workspaces: [],
   current: null,
   loading: false,
 
-  loadSpaces: async () => {
+  loadWorkspaces: async () => {
     set({ loading: true });
     try {
-      const spaces = await tauriSpaces.list();
+      const workspaces = await tauriWorkspaces.list();
       const current =
-        spaces.find((s) => s.isDefault) ?? spaces[0] ?? null;
-      set({ spaces, current, loading: false });
+        workspaces.find((w) => w.isDefault) ?? workspaces[0] ?? null;
+      set({ workspaces, current, loading: false });
     } catch (e) {
-      console.error("[spaces] Failed to load:", e);
+      console.error("[workspaces] Failed to load:", e);
       set({ loading: false });
     }
   },
 
-  setCurrent: (space) => {
-    set({ current: space });
-    tauriPreferences.set("last_space_id", space.id);
+  setCurrent: (ws) => {
+    set({ current: ws });
+    tauriPreferences.set("last_workspace_id", ws.id);
   },
 
   create: async (name) => {
-    const space = await tauriSpaces.create(name);
+    const ws = await tauriWorkspaces.create(name);
     set((s) => ({
-      spaces: [...s.spaces, space],
+      workspaces: [...s.workspaces, ws],
     }));
-    return space;
+    return ws;
   },
 
   delete: async (id) => {
-    await tauriSpaces.delete(id);
+    await tauriWorkspaces.delete(id);
     set((s) => {
-      const spaces = s.spaces.filter((sp) => sp.id !== id);
+      const workspaces = s.workspaces.filter((w) => w.id !== id);
       const current =
         s.current?.id === id
-          ? spaces.find((sp) => sp.isDefault) ?? spaces[0] ?? null
+          ? workspaces.find((w) => w.isDefault) ?? workspaces[0] ?? null
           : s.current;
-      return { spaces, current };
+      return { workspaces, current };
     });
   },
 
   rename: async (id, newName) => {
-    await tauriSpaces.rename(id, newName);
+    await tauriWorkspaces.rename(id, newName);
     set((s) => ({
-      spaces: s.spaces.map((sp) =>
-        sp.id === id ? { ...sp, name: newName } : sp,
+      workspaces: s.workspaces.map((w) =>
+        w.id === id ? { ...w, name: newName } : w,
       ),
       current:
         s.current?.id === id ? { ...s.current, name: newName } : s.current,

@@ -1,21 +1,19 @@
 import { useEffect, useRef } from "react";
 import { tauriPreferences, tauriSystem } from "../lib/tauri";
-import { useExperienceStore } from "../stores/experiences";
-import { useSpaceStore } from "../stores/spaces";
+import { useAgentCatalogStore } from "../stores/agent-catalog";
 import { useWorkspaceStore } from "../stores/workspaces";
+import { useAgentStore } from "../stores/agents";
 import { useUIStore } from "../stores/ui";
 
 /**
  * App initialization hook. Called once in App.tsx.
- * Loads spaces, experiences, workspaces, restores last state,
- * checks Claude CLI availability, and sets initial viewMode.
  */
 export function useHoustonInit() {
   const initRef = useRef(false);
-  const loadExperiences = useExperienceStore((s) => s.loadExperiences);
-  const loadSpaces = useSpaceStore((s) => s.loadSpaces);
+  const loadConfigs = useAgentCatalogStore((s) => s.loadConfigs);
   const loadWorkspaces = useWorkspaceStore((s) => s.loadWorkspaces);
-  const setCurrent = useWorkspaceStore((s) => s.setCurrent);
+  const loadAgents = useAgentStore((s) => s.loadAgents);
+  const setCurrent = useAgentStore((s) => s.setCurrent);
   const setClaudeAvailable = useUIStore((s) => s.setClaudeAvailable);
   const setViewMode = useUIStore((s) => s.setViewMode);
 
@@ -24,54 +22,45 @@ export function useHoustonInit() {
     initRef.current = true;
 
     async function init() {
-      // 1. Load experiences
-      await loadExperiences();
+      await loadConfigs();
+      await loadWorkspaces();
 
-      // 2. Load spaces (Rust side creates "Personal" default if empty)
-      await loadSpaces();
-
-      // 3. Restore last space from preferences, or use default
-      const spaceState = useSpaceStore.getState();
-      let currentSpace = spaceState.current;
+      const wsState = useWorkspaceStore.getState();
+      let currentWorkspace = wsState.current;
       try {
-        const lastSpaceId = await tauriPreferences.get("last_space_id");
-        if (lastSpaceId) {
-          const saved = spaceState.spaces.find((s) => s.id === lastSpaceId);
+        const lastWsId = await tauriPreferences.get("last_workspace_id");
+        if (lastWsId) {
+          const saved = wsState.workspaces.find((w) => w.id === lastWsId);
           if (saved) {
-            useSpaceStore.getState().setCurrent(saved);
-            currentSpace = saved;
-          }
-        }
-      } catch (e) {
-        console.error("[init] Failed to restore last space:", e);
-      }
-
-      // 4. Load workspaces for current space
-      if (currentSpace) {
-        await loadWorkspaces(currentSpace.id);
-      }
-
-      // 5. Restore last workspace from preferences
-      try {
-        const lastId = await tauriPreferences.get("last_workspace_id");
-        if (lastId) {
-          const workspaces = useWorkspaceStore.getState().workspaces;
-          const saved = workspaces.find((w) => w.id === lastId);
-          if (saved) {
-            setCurrent(saved);
-            const experience = useExperienceStore
-              .getState()
-              .getById(saved.experienceId);
-            if (experience?.manifest.defaultTab) {
-              setViewMode(experience.manifest.defaultTab);
-            }
+            useWorkspaceStore.getState().setCurrent(saved);
+            currentWorkspace = saved;
           }
         }
       } catch (e) {
         console.error("[init] Failed to restore last workspace:", e);
       }
 
-      // 6. Check Claude CLI availability
+      if (currentWorkspace) {
+        await loadAgents(currentWorkspace.id);
+      }
+
+      try {
+        const lastId = await tauriPreferences.get("last_agent_id");
+        if (lastId) {
+          const agents = useAgentStore.getState().agents;
+          const saved = agents.find((a) => a.id === lastId);
+          if (saved) {
+            setCurrent(saved);
+            const agentDef = useAgentCatalogStore.getState().getById(saved.configId);
+            if (agentDef?.config.defaultTab) {
+              setViewMode(agentDef.config.defaultTab);
+            }
+          }
+        }
+      } catch (e) {
+        console.error("[init] Failed to restore last agent:", e);
+      }
+
       try {
         const available = await tauriSystem.checkClaudeCli();
         setClaudeAvailable(available);
@@ -81,12 +70,5 @@ export function useHoustonInit() {
     }
 
     init();
-  }, [
-    loadExperiences,
-    loadSpaces,
-    loadWorkspaces,
-    setCurrent,
-    setClaudeAvailable,
-    setViewMode,
-  ]);
+  }, [loadConfigs, loadWorkspaces, loadAgents, setCurrent, setClaudeAvailable, setViewMode]);
 }

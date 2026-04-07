@@ -1,6 +1,8 @@
+use houston_tauri::events::HoustonEvent;
 use houston_tauri::paths::expand_tilde;
 use serde::Serialize;
 use std::path::PathBuf;
+use tauri::Emitter;
 
 #[derive(Serialize)]
 pub struct SkillSummaryResponse {
@@ -58,6 +60,7 @@ pub async fn load_skill(
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn create_skill(
+    app_handle: tauri::AppHandle,
     workspace_path: String,
     name: String,
     description: String,
@@ -74,34 +77,56 @@ pub async fn create_skill(
             tags: vec![],
         },
     )
-    .map_err(|e| e.to_string())
+    .map_err(|e| e.to_string())?;
+    let _ = app_handle.emit("houston-event", HoustonEvent::SkillsChanged {
+        agent_path: workspace_path.clone(),
+    });
+    Ok(())
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn delete_skill(workspace_path: String, name: String) -> Result<(), String> {
+pub async fn delete_skill(
+    app_handle: tauri::AppHandle,
+    workspace_path: String,
+    name: String,
+) -> Result<(), String> {
     let dir = skills_dir(&workspace_path);
-    houston_skills::delete_skill(&dir, &name).map_err(|e| e.to_string())
+    houston_skills::delete_skill(&dir, &name).map_err(|e| e.to_string())?;
+    let _ = app_handle.emit("houston-event", HoustonEvent::SkillsChanged {
+        agent_path: workspace_path.clone(),
+    });
+    Ok(())
 }
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn save_skill(
+    app_handle: tauri::AppHandle,
     workspace_path: String,
     name: String,
     content: String,
 ) -> Result<(), String> {
     let dir = skills_dir(&workspace_path);
-    houston_skills::edit_skill(&dir, &name, &content).map_err(|e| e.to_string())
+    houston_skills::edit_skill(&dir, &name, &content).map_err(|e| e.to_string())?;
+    let _ = app_handle.emit("houston-event", HoustonEvent::SkillsChanged {
+        agent_path: workspace_path.clone(),
+    });
+    Ok(())
 }
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn install_skills_from_repo(
+    app_handle: tauri::AppHandle,
     workspace_path: String,
     source: String,
 ) -> Result<Vec<String>, String> {
     let dir = skills_dir(&workspace_path);
-    houston_skills::remote::install_from_repo(&dir, &source)
+    let result = houston_skills::remote::install_from_repo(&dir, &source)
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    let _ = app_handle.emit("houston-event", HoustonEvent::SkillsChanged {
+        agent_path: workspace_path.clone(),
+    });
+    Ok(result)
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -115,12 +140,17 @@ pub async fn search_community_skills(
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn install_community_skill(
+    app_handle: tauri::AppHandle,
     workspace_path: String,
     source: String,
     skill_id: String,
 ) -> Result<String, String> {
     let dir = skills_dir(&workspace_path);
-    houston_skills::remote::install_skill(&dir, &source, &skill_id)
+    let result = houston_skills::remote::install_skill(&dir, &source, &skill_id)
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    let _ = app_handle.emit("houston-event", HoustonEvent::SkillsChanged {
+        agent_path: workspace_path.clone(),
+    });
+    Ok(result)
 }

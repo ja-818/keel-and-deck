@@ -14,7 +14,7 @@ interface UIState {
   claudeAvailable: boolean | null;
   authRequired: boolean;
   toasts: ToastItem[];
-  createWorkspaceDialogOpen: boolean;
+  createAgentDialogOpen: boolean;
   chatDraft: string;
   /** Callback registered by the board tab to open the new-mission panel */
   onStartMission: (() => void) | null;
@@ -27,7 +27,7 @@ interface UIState {
   setAuthRequired: (required: boolean) => void;
   addToast: (toast: Omit<ToastItem, "id">) => void;
   dismissToast: (id: string) => void;
-  setCreateWorkspaceDialogOpen: (open: boolean) => void;
+  setCreateAgentDialogOpen: (open: boolean) => void;
   setChatDraft: (draft: string) => void;
   setOnStartMission: (cb: (() => void) | null) => void;
   setMissionPanelOpen: (open: boolean) => void;
@@ -42,7 +42,7 @@ export const useUIStore = create<UIState>((set) => ({
   claudeAvailable: null,
   authRequired: false,
   toasts: [],
-  createWorkspaceDialogOpen: false,
+  createAgentDialogOpen: false,
   chatDraft: "",
   onStartMission: null,
   missionPanelOpen: false,
@@ -71,8 +71,8 @@ export const useUIStore = create<UIState>((set) => ({
   dismissToast: (id) =>
     set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 
-  setCreateWorkspaceDialogOpen: (createWorkspaceDialogOpen) =>
-    set({ createWorkspaceDialogOpen }),
+  setCreateAgentDialogOpen: (createAgentDialogOpen) =>
+    set({ createAgentDialogOpen }),
 
   setChatDraft: (chatDraft) => set({ chatDraft }),
   setOnStartMission: (onStartMission) => set({ onStartMission }),

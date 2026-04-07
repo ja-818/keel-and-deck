@@ -2,74 +2,74 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "../../lib/query-keys";
 import { tauriSkills } from "../../lib/tauri";
 
-export function useSkills(workspacePath: string | undefined) {
+export function useSkills(agentPath: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.skills(workspacePath ?? ""),
-    queryFn: () => tauriSkills.list(workspacePath!),
-    enabled: !!workspacePath,
+    queryKey: queryKeys.skills(agentPath ?? ""),
+    queryFn: () => tauriSkills.list(agentPath!),
+    enabled: !!agentPath,
   });
 }
 
-export function useSkillDetail(workspacePath: string | undefined, name: string | undefined) {
+export function useSkillDetail(agentPath: string | undefined, name: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.skillDetail(workspacePath ?? "", name ?? ""),
-    queryFn: () => tauriSkills.load(workspacePath!, name!),
-    enabled: !!workspacePath && !!name,
+    queryKey: queryKeys.skillDetail(agentPath ?? "", name ?? ""),
+    queryFn: () => tauriSkills.load(agentPath!, name!),
+    enabled: !!agentPath && !!name,
   });
 }
 
-export function useCreateSkill(workspacePath: string | undefined) {
+export function useCreateSkill(agentPath: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (args: { name: string; description: string; content: string }) =>
-      tauriSkills.create(workspacePath!, args.name, args.description, args.content),
+      tauriSkills.create(agentPath!, args.name, args.description, args.content),
     onSuccess: () => {
-      if (workspacePath) qc.invalidateQueries({ queryKey: queryKeys.skills(workspacePath) });
+      if (agentPath) qc.invalidateQueries({ queryKey: queryKeys.skills(agentPath) });
     },
   });
 }
 
-export function useSaveSkill(workspacePath: string | undefined) {
+export function useSaveSkill(agentPath: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ name, content }: { name: string; content: string }) =>
-      tauriSkills.save(workspacePath!, name, content),
+      tauriSkills.save(agentPath!, name, content),
     onSuccess: (_data, { name }) => {
-      if (workspacePath) {
-        qc.invalidateQueries({ queryKey: queryKeys.skills(workspacePath) });
-        qc.invalidateQueries({ queryKey: queryKeys.skillDetail(workspacePath, name) });
+      if (agentPath) {
+        qc.invalidateQueries({ queryKey: queryKeys.skills(agentPath) });
+        qc.invalidateQueries({ queryKey: queryKeys.skillDetail(agentPath, name) });
       }
     },
   });
 }
 
-export function useDeleteSkill(workspacePath: string | undefined) {
+export function useDeleteSkill(agentPath: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) => tauriSkills.delete(workspacePath!, name),
+    mutationFn: (name: string) => tauriSkills.delete(agentPath!, name),
     onSuccess: () => {
-      if (workspacePath) qc.invalidateQueries({ queryKey: queryKeys.skills(workspacePath) });
+      if (agentPath) qc.invalidateQueries({ queryKey: queryKeys.skills(agentPath) });
     },
   });
 }
 
-export function useInstallSkillFromRepo(workspacePath: string | undefined) {
+export function useInstallSkillFromRepo(agentPath: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (source: string) => tauriSkills.installFromRepo(workspacePath!, source),
+    mutationFn: (source: string) => tauriSkills.installFromRepo(agentPath!, source),
     onSuccess: () => {
-      if (workspacePath) qc.invalidateQueries({ queryKey: queryKeys.skills(workspacePath) });
+      if (agentPath) qc.invalidateQueries({ queryKey: queryKeys.skills(agentPath) });
     },
   });
 }
 
-export function useInstallCommunitySkill(workspacePath: string | undefined) {
+export function useInstallCommunitySkill(agentPath: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ source, skillId }: { source: string; skillId: string }) =>
-      tauriSkills.installCommunity(workspacePath!, source, skillId),
+      tauriSkills.installCommunity(agentPath!, source, skillId),
     onSuccess: () => {
-      if (workspacePath) qc.invalidateQueries({ queryKey: queryKeys.skills(workspacePath) });
+      if (agentPath) qc.invalidateQueries({ queryKey: queryKeys.skills(agentPath) });
     },
   });
 }

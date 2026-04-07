@@ -1,6 +1,6 @@
-import type { ExperienceManifest } from "../../lib/types";
+import type { AgentConfig } from "../../lib/types";
 
-export const defaultExperience: ExperienceManifest = {
+export const defaultExperience: AgentConfig = {
   id: "default",
   name: "AI Assistant",
   description: "Chat with an AI assistant that can manage tasks, skills, and files",
@@ -15,7 +15,7 @@ export const defaultExperience: ExperienceManifest = {
     { id: "connections", label: "Connections", builtIn: "connections" },
     { id: "skills", label: "Skills", builtIn: "skills" },
     { id: "channels", label: "Channels", builtIn: "channels" },
-    { id: "context", label: "Context", builtIn: "context" },
+    { id: "instructions", label: "Instructions", builtIn: "instructions" },
   ],
   defaultTab: "activity",
   claudeMd: "## Instructions\n\nYou are a helpful AI assistant.\n\n## Learnings\n",

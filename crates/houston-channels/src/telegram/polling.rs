@@ -151,6 +151,7 @@ fn telegram_message_to_channel_message(msg: &TelegramMessage) -> ChannelMessage 
         text: msg.text.clone().unwrap_or_default(),
         timestamp,
         reply_to,
+        message_ts: None,
         attachments,
     }
 }

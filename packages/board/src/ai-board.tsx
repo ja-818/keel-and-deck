@@ -1,11 +1,66 @@
 import { useState, useCallback, useRef, useEffect } from "react"
 import type { ReactNode } from "react"
-import { SplitView } from "@houston-ai/layout"
+
 import { ChatPanel } from "@houston-ai/chat"
 import type { FeedItem } from "@houston-ai/chat"
 import { KanbanBoard } from "./kanban-board"
 import { KanbanDetailPanel } from "./kanban-detail-panel"
 import type { KanbanItem, KanbanColumn } from "./types"
+
+function ResizablePanel({
+  defaultWidth = 45,
+  minWidth = 380,
+  children,
+}: {
+  defaultWidth?: number
+  minWidth?: number
+  children: ReactNode
+}) {
+  const [width, setWidth] = useState<number | null>(null)
+  const dragging = useRef(false)
+
+  const onPointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      e.preventDefault()
+      dragging.current = true
+      ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+    },
+    [],
+  )
+
+  const onPointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!dragging.current) return
+      const newWidth = window.innerWidth - e.clientX
+      if (newWidth >= minWidth) setWidth(newWidth)
+    },
+    [minWidth],
+  )
+
+  const onPointerUp = useCallback(() => {
+    dragging.current = false
+  }, [])
+
+  const style = width
+    ? { width: `${width}px` }
+    : { width: `${defaultWidth}%`, minWidth: `${minWidth}px` }
+
+  return (
+    <div
+      className="fixed top-0 right-0 bottom-0 z-50 bg-background border-l border-border flex flex-col"
+      style={style}
+    >
+      {/* Drag handle */}
+      <div
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/10 active:bg-primary/20 transition-colors z-10"
+      />
+      {children}
+    </div>
+  )
+}
 
 export interface AIBoardProps {
   items: KanbanItem[]
@@ -36,6 +91,8 @@ export interface AIBoardProps {
   thinkingIndicator?: ReactNode
   /** Avatar element shown in the detail panel header. */
   panelAvatar?: ReactNode
+  /** Name shown next to the avatar in the panel header (e.g. "Houston"). */
+  panelAgentName?: string
   /** Called when the detail panel opens or closes. */
   onPanelOpenChange?: (open: boolean) => void
 }
@@ -67,6 +124,7 @@ export function AIBoard({
   onNewPanelOpenerReady,
   thinkingIndicator,
   panelAvatar,
+  panelAgentName,
   onPanelOpenChange,
 }: AIBoardProps) {
   const [internalSelectedId, setInternalSelectedId] = useState<string | null>(null)
@@ -180,33 +238,29 @@ export function AIBoard({
     setSelectedId(null)
   }, [setSelectedId])
 
-  const rightPanel = showPanel ? (
-    <div className="h-full overflow-hidden flex flex-col">
-      <KanbanDetailPanel
-        title={panelTitle}
-        onClose={closePanel}
-        avatar={panelAvatar}
-      >
-        <div className="flex-1 min-h-0 flex flex-col">
-          <ChatPanel
-            sessionKey={activeSessionKey ?? "new-conversation"}
-            feedItems={activeFeed}
-            isLoading={activeLoading}
-            onSend={handleSend}
-            placeholder={selectedItem ? "Send a follow-up..." : "What should the agent work on?"}
-            thinkingIndicator={thinkingIndicator}
-          />
-        </div>
-      </KanbanDetailPanel>
-    </div>
-  ) : null
-
   return (
     <div className="h-full overflow-hidden">
-      {rightPanel ? (
-        <SplitView left={board} right={rightPanel} />
-      ) : (
-        board
+      {board}
+      {showPanel && (
+        <ResizablePanel defaultWidth={45} minWidth={380}>
+          <KanbanDetailPanel
+            title={panelTitle}
+            onClose={closePanel}
+            avatar={panelAvatar}
+            agentName={panelAgentName}
+          >
+            <div className="flex-1 min-h-0 flex flex-col">
+              <ChatPanel
+                sessionKey={activeSessionKey ?? "new-conversation"}
+                feedItems={activeFeed}
+                isLoading={activeLoading}
+                onSend={handleSend}
+                placeholder={selectedItem ? "Send a follow-up..." : "What should the agent work on?"}
+                thinkingIndicator={thinkingIndicator}
+              />
+            </div>
+          </KanbanDetailPanel>
+        </ResizablePanel>
       )}
     </div>
   )

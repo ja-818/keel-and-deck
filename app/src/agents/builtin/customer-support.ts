@@ -1,6 +1,6 @@
-import type { ExperienceManifest } from "../../lib/types";
+import type { AgentConfig } from "../../lib/types";
 
-export const customerSupport: ExperienceManifest = {
+export const customerSupport: AgentConfig = {
   id: "customer-support",
   name: "Customer Support",
   description: "Handle support tickets, draft responses, manage FAQs, and track customer issues",
@@ -11,7 +11,7 @@ export const customerSupport: ExperienceManifest = {
   tabs: [
     { id: "chat", label: "Chat", builtIn: "chat" },
     { id: "activity", label: "Tickets", builtIn: "board" },
-    { id: "context", label: "Knowledge", builtIn: "context" },
+    { id: "instructions", label: "Instructions", builtIn: "instructions" },
     { id: "channels", label: "Channels", builtIn: "channels" },
     { id: "skills", label: "Skills", builtIn: "skills" },
     { id: "learnings", label: "Learnings", builtIn: "learnings" },

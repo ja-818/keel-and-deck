@@ -1,6 +1,6 @@
-import type { ExperienceManifest } from "../../lib/types";
+import type { AgentConfig } from "../../lib/types";
 
-export const devOps: ExperienceManifest = {
+export const devOps: AgentConfig = {
   id: "dev-ops",
   name: "DevOps Agent",
   description: "Monitor deployments, manage infrastructure, debug incidents, and automate operations",

@@ -8,24 +8,24 @@ import {
   DropdownMenuSeparator,
 } from "@houston-ai/core";
 
-export interface SpaceSwitcherProps {
-  spaces: { id: string; name: string }[];
+export interface WorkspaceSwitcherProps {
+  workspaces: { id: string; name: string }[];
   currentId: string | null;
   currentName: string;
-  onSwitch: (spaceId: string) => void;
+  onSwitch: (workspaceId: string) => void;
   onCreate: () => void;
   /** Optional trailing element (e.g., settings button) */
   trailing?: ReactNode;
 }
 
-export function SpaceSwitcher({
-  spaces,
+export function WorkspaceSwitcher({
+  workspaces,
   currentId,
   currentName,
   onSwitch,
   onCreate,
   trailing,
-}: SpaceSwitcherProps) {
+}: WorkspaceSwitcherProps) {
   return (
     <div
       className="flex items-center gap-1 px-2 pt-3 pb-1"
@@ -39,19 +39,19 @@ export function SpaceSwitcher({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-48">
-          {spaces.map((space) => (
+          {workspaces.map((ws) => (
             <DropdownMenuItem
-              key={space.id}
-              onClick={() => onSwitch(space.id)}
-              className={space.id === currentId ? "font-medium" : ""}
+              key={ws.id}
+              onClick={() => onSwitch(ws.id)}
+              className={ws.id === currentId ? "font-medium" : ""}
             >
-              {space.name}
+              {ws.name}
             </DropdownMenuItem>
           ))}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={onCreate}>
             <Plus className="h-4 w-4 mr-2" />
-            Create space
+            Create workspace
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

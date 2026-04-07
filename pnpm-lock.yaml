@@ -20,6 +20,9 @@ importers:
 
   app:
     dependencies:
+      '@houston-ai/agent':
+        specifier: workspace:*
+        version: link:../packages/agent
       '@houston-ai/board':
         specifier: workspace:*
         version: link:../packages/board
@@ -50,9 +53,6 @@ importers:
       '@houston-ai/skills':
         specifier: workspace:*
         version: link:../packages/skills
-      '@houston-ai/workspace':
-        specifier: workspace:*
-        version: link:../packages/workspace
       '@tanstack/react-query':
         specifier: ^5.96.2
         version: 5.96.2(react@19.2.4)
@@ -101,6 +101,21 @@ importers:
         version: 6.4.1(jiti@2.6.1)(lightningcss@1.32.0)
 
   create-app: {}
+
+  packages/agent:
+    dependencies:
+      '@houston-ai/core':
+        specifier: workspace:*
+        version: link:../core
+      lucide-react:
+        specifier: ^0.577.0
+        version: 0.577.0(react@19.2.4)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.4(react@19.2.4)
 
   packages/board:
     dependencies:
@@ -342,23 +357,11 @@ importers:
         specifier: ^19.0.0
         version: 19.2.4(react@19.2.4)
 
-  packages/workspace:
-    dependencies:
-      '@houston-ai/core':
-        specifier: workspace:*
-        version: link:../core
-      lucide-react:
-        specifier: ^0.577.0
-        version: 0.577.0(react@19.2.4)
-      react:
-        specifier: ^19.0.0
-        version: 19.2.4
-      react-dom:
-        specifier: ^19.0.0
-        version: 19.2.4(react@19.2.4)
-
   showcase:
     dependencies:
+      '@houston-ai/agent':
+        specifier: link:../packages/agent
+        version: link:../packages/agent
       '@houston-ai/board':
         specifier: link:../packages/board
         version: link:../packages/board
@@ -389,9 +392,6 @@ importers:
       '@houston-ai/skills':
         specifier: link:../packages/skills
         version: link:../packages/skills
-      '@houston-ai/workspace':
-        specifier: link:../packages/workspace
-        version: link:../packages/workspace
       lucide-react:
         specifier: ^0.577.0
         version: 0.577.0(react@19.2.4)

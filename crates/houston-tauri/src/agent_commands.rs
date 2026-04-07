@@ -1,29 +1,30 @@
-//! Pre-built Tauri commands for workspace file operations.
+//! Pre-built Tauri commands for agent file operations.
 //!
 //! Apps can register these directly in their `invoke_handler`:
 //!
 //! ```rust,ignore
 //! .invoke_handler(tauri::generate_handler![
-//!     houston_tauri::workspace_commands::list_project_files,
-//!     houston_tauri::workspace_commands::open_file,
-//!     houston_tauri::workspace_commands::reveal_file,
-//!     houston_tauri::workspace_commands::delete_file,
-//!     houston_tauri::workspace_commands::import_files,
-//!     houston_tauri::workspace_commands::create_workspace_folder,
-//!     houston_tauri::workspace_commands::reveal_workspace,
-//!     houston_tauri::workspace_commands::search_sessions,
-//!     houston_tauri::workspace_commands::list_recent_sessions,
+//!     houston_tauri::agent_commands::list_project_files,
+//!     houston_tauri::agent_commands::open_file,
+//!     houston_tauri::agent_commands::reveal_file,
+//!     houston_tauri::agent_commands::delete_file,
+//!     houston_tauri::agent_commands::import_files,
+//!     houston_tauri::agent_commands::create_agent_folder,
+//!     houston_tauri::agent_commands::reveal_agent,
+//!     houston_tauri::agent_commands::search_sessions,
+//!     houston_tauri::agent_commands::list_recent_sessions,
 //! ])
 //! ```
 //!
-//! These pair with `@houston-ai/workspace`'s `FilesBrowser` component on the frontend.
+//! These pair with `@houston-ai/agent`'s `FilesBrowser` component on the frontend.
 
+use crate::events::HoustonEvent;
 use crate::paths::expand_tilde;
 use crate::state::AppState;
-use crate::workspace;
+use crate::agent;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
-use tauri::State;
+use tauri::{Emitter, State};
 
 /// User-facing file extensions shown in the browser.
 /// Technical files (json, py, md) are excluded — they confuse non-technical users.
@@ -41,7 +42,7 @@ fn should_skip_dir(name: &str) -> bool {
     ) || name.starts_with('.')
 }
 
-/// A file entry matching `@houston-ai/workspace`'s `FileEntry` type.
+/// A file entry matching `@houston-ai/agent`'s `FileEntry` type.
 #[derive(Serialize, Clone)]
 pub struct ProjectFile {
     pub path: String,
@@ -51,12 +52,12 @@ pub struct ProjectFile {
     pub is_directory: bool,
 }
 
-/// List all user-facing files in a workspace folder.
+/// List all user-facing files in an agent folder.
 #[tauri::command(rename_all = "snake_case")]
 pub async fn list_project_files(
-    workspace_path: String,
+    agent_path: String,
 ) -> Result<Vec<ProjectFile>, String> {
-    let root = expand_tilde(&PathBuf::from(&workspace_path));
+    let root = expand_tilde(&PathBuf::from(&agent_path));
     if !root.is_dir() {
         return Ok(Vec::new());
     }
@@ -69,10 +70,10 @@ pub async fn list_project_files(
 /// Open a file with the system default application.
 #[tauri::command(rename_all = "snake_case")]
 pub async fn open_file(
-    workspace_path: String,
+    agent_path: String,
     relative_path: String,
 ) -> Result<(), String> {
-    let full_path = resolve_file(&workspace_path, &relative_path)?;
+    let full_path = resolve_file(&agent_path, &relative_path)?;
     std::process::Command::new("open")
         .arg(&full_path)
         .spawn()
@@ -83,10 +84,10 @@ pub async fn open_file(
 /// Show a file in the OS file manager (Finder on macOS).
 #[tauri::command(rename_all = "snake_case")]
 pub async fn reveal_file(
-    workspace_path: String,
+    agent_path: String,
     relative_path: String,
 ) -> Result<(), String> {
-    let full_path = resolve_file(&workspace_path, &relative_path)?;
+    let full_path = resolve_file(&agent_path, &relative_path)?;
     std::process::Command::new("open")
         .arg("-R")
         .arg(&full_path)
@@ -95,42 +96,51 @@ pub async fn reveal_file(
     Ok(())
 }
 
-/// Rename a file or folder in the workspace.
+/// Rename a file or folder in the agent.
 #[tauri::command(rename_all = "snake_case")]
 pub async fn rename_file(
-    workspace_path: String,
+    app_handle: tauri::AppHandle,
+    agent_path: String,
     relative_path: String,
     new_name: String,
 ) -> Result<(), String> {
-    let full_path = resolve_file(&workspace_path, &relative_path)?;
+    let full_path = resolve_file(&agent_path, &relative_path)?;
     let parent = full_path.parent().ok_or("Invalid file path")?;
     let new_path = parent.join(&new_name);
     std::fs::rename(&full_path, &new_path)
         .map_err(|e| format!("Failed to rename: {e}"))?;
+    let _ = app_handle.emit("houston-event", HoustonEvent::FilesChanged {
+        agent_path: agent_path.clone(),
+    });
     Ok(())
 }
 
-/// Delete a file from the workspace.
+/// Delete a file from the agent.
 #[tauri::command(rename_all = "snake_case")]
 pub async fn delete_file(
-    workspace_path: String,
+    app_handle: tauri::AppHandle,
+    agent_path: String,
     relative_path: String,
 ) -> Result<(), String> {
-    let full_path = resolve_file(&workspace_path, &relative_path)?;
+    let full_path = resolve_file(&agent_path, &relative_path)?;
     std::fs::remove_file(&full_path).map_err(|e| format!("Failed to delete: {e}"))?;
+    let _ = app_handle.emit("houston-event", HoustonEvent::FilesChanged {
+        agent_path: agent_path.clone(),
+    });
     Ok(())
 }
 
-/// Import files from absolute paths into the workspace.
-/// Uses `workspace::copy_file_to_dir` which auto-deduplicates names.
+/// Import files from absolute paths into the agent.
+/// Uses `agent::copy_file_to_dir` which auto-deduplicates names.
 /// Returns the list of imported files for immediate UI refresh.
 #[tauri::command(rename_all = "snake_case")]
 pub async fn import_files(
-    workspace_path: String,
+    app_handle: tauri::AppHandle,
+    agent_path: String,
     file_paths: Vec<String>,
     target_folder: Option<String>,
 ) -> Result<Vec<ProjectFile>, String> {
-    let root = expand_tilde(&PathBuf::from(&workspace_path));
+    let root = expand_tilde(&PathBuf::from(&agent_path));
     let dest_dir = match &target_folder {
         Some(folder) => {
             let d = root.join(folder);
@@ -144,7 +154,7 @@ pub async fn import_files(
     let mut imported = Vec::new();
     for src_str in &file_paths {
         let src = PathBuf::from(src_str);
-        match workspace::copy_file_to_dir(&dest_dir, &src) {
+        match agent::copy_file_to_dir(&dest_dir, &src) {
             Ok(final_name) => {
                 let dest = dest_dir.join(&final_name);
                 let ext = dest
@@ -165,28 +175,38 @@ pub async fn import_files(
                     is_directory: false,
                 });
             }
-            Err(e) => eprintln!("[workspace] import failed for {src_str}: {e}"),
+            Err(e) => eprintln!("[agent] import failed for {src_str}: {e}"),
         }
+    }
+    if !imported.is_empty() {
+        let _ = app_handle.emit("houston-event", HoustonEvent::FilesChanged {
+            agent_path: agent_path.clone(),
+        });
     }
     Ok(imported)
 }
 
-/// Create a folder inside the workspace.
+/// Create a folder inside the agent.
 #[tauri::command(rename_all = "snake_case")]
-pub async fn create_workspace_folder(
-    workspace_path: String,
+pub async fn create_agent_folder(
+    app_handle: tauri::AppHandle,
+    agent_path: String,
     folder_name: String,
 ) -> Result<String, String> {
-    let root = expand_tilde(&PathBuf::from(&workspace_path));
-    workspace::create_folder(&root, &folder_name)
+    let root = expand_tilde(&PathBuf::from(&agent_path));
+    let result = agent::create_folder(&root, &folder_name)?;
+    let _ = app_handle.emit("houston-event", HoustonEvent::FilesChanged {
+        agent_path: agent_path.clone(),
+    });
+    Ok(result)
 }
 
-/// Open the workspace folder in the OS file manager.
+/// Open the agent folder in the OS file manager.
 #[tauri::command(rename_all = "snake_case")]
-pub async fn reveal_workspace(
-    workspace_path: String,
+pub async fn reveal_agent(
+    agent_path: String,
 ) -> Result<(), String> {
-    let root = expand_tilde(&PathBuf::from(&workspace_path));
+    let root = expand_tilde(&PathBuf::from(&agent_path));
     std::process::Command::new("open")
         .arg(&root)
         .spawn()
@@ -208,22 +228,26 @@ pub async fn open_url(url: String) -> Result<(), String> {
 /// Used when files come from a web file picker (no filesystem path available).
 #[tauri::command(rename_all = "snake_case")]
 pub async fn write_file_bytes(
-    workspace_path: String,
+    app_handle: tauri::AppHandle,
+    agent_path: String,
     file_name: String,
     data_base64: String,
 ) -> Result<ProjectFile, String> {
     use base64::Engine;
-    let root = expand_tilde(&PathBuf::from(&workspace_path));
+    let root = expand_tilde(&PathBuf::from(&agent_path));
     let bytes = base64::engine::general_purpose::STANDARD
         .decode(&data_base64)
         .map_err(|e| format!("Invalid base64: {e}"))?;
-    let final_name = workspace::import_file(&root, &file_name, &bytes)?;
+    let final_name = agent::import_file(&root, &file_name, &bytes)?;
     let dest = root.join(&final_name);
     let ext = dest
         .extension()
         .map(|e| e.to_string_lossy().to_lowercase())
         .unwrap_or_default();
     let size = dest.metadata().map(|m| m.len()).unwrap_or(0);
+    let _ = app_handle.emit("houston-event", HoustonEvent::FilesChanged {
+        agent_path: agent_path.clone(),
+    });
     Ok(ProjectFile {
         path: final_name.clone(),
         name: final_name,
@@ -233,13 +257,13 @@ pub async fn write_file_bytes(
     })
 }
 
-/// Read a text file from the workspace by relative path.
+/// Read a text file from the agent by relative path.
 #[tauri::command(rename_all = "snake_case")]
 pub async fn read_project_file(
-    workspace_path: String,
+    agent_path: String,
     relative_path: String,
 ) -> Result<String, String> {
-    let full_path = resolve_file(&workspace_path, &relative_path)?;
+    let full_path = resolve_file(&agent_path, &relative_path)?;
     std::fs::read_to_string(&full_path)
         .map_err(|e| format!("Failed to read {relative_path}: {e}"))
 }
@@ -304,10 +328,10 @@ fn feed_rows_to_json(rows: Vec<houston_db::ChatFeedRow>) -> Vec<serde_json::Valu
 // -- Helpers --
 
 fn resolve_file(
-    workspace_path: &str,
+    agent_path: &str,
     relative_path: &str,
 ) -> Result<PathBuf, String> {
-    let root = expand_tilde(&PathBuf::from(workspace_path));
+    let root = expand_tilde(&PathBuf::from(agent_path));
     let full = root.join(relative_path);
     if !full.exists() {
         return Err(format!("File not found: {relative_path}"));

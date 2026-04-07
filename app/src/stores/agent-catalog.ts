@@ -1,28 +1,28 @@
 import { create } from "zustand";
-import { loadAllExperiences } from "../experiences/loader";
-import type { Experience } from "../lib/types";
+import { loadAllConfigs } from "../agents/loader";
+import type { AgentDefinition } from "../lib/types";
 
-interface ExperienceState {
-  experiences: Experience[];
+interface AgentCatalogState {
+  agents: AgentDefinition[];
   loading: boolean;
-  loadExperiences: () => Promise<void>;
-  getById: (id: string) => Experience | undefined;
+  loadConfigs: () => Promise<void>;
+  getById: (id: string) => AgentDefinition | undefined;
 }
 
-export const useExperienceStore = create<ExperienceState>((set, get) => ({
-  experiences: [],
+export const useAgentCatalogStore = create<AgentCatalogState>((set, get) => ({
+  agents: [],
   loading: false,
 
-  loadExperiences: async () => {
+  loadConfigs: async () => {
     set({ loading: true });
     try {
-      const experiences = await loadAllExperiences();
-      set({ experiences, loading: false });
+      const agents = await loadAllConfigs();
+      set({ agents, loading: false });
     } catch (e) {
-      console.error("[experiences] Failed to load:", e);
+      console.error("[agent-catalog] Failed to load:", e);
       set({ loading: false });
     }
   },
 
-  getById: (id) => get().experiences.find((e) => e.manifest.id === id),
+  getById: (id) => get().agents.find((a) => a.config.id === id),
 }));

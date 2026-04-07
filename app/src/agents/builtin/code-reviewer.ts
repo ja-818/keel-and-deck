@@ -1,6 +1,6 @@
-import type { ExperienceManifest } from "../../lib/types";
+import type { AgentConfig } from "../../lib/types";
 
-export const codeReviewer: ExperienceManifest = {
+export const codeReviewer: AgentConfig = {
   id: "code-reviewer",
   name: "Code Reviewer",
   description: "Automated code review agent that analyzes PRs, catches bugs, and suggests improvements",

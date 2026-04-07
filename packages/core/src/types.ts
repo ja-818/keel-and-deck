@@ -82,42 +82,54 @@ export type HoustonEvent =
       };
     }
   | {
-      type: "RoutineRunChanged";
-      data: { routine_id: string; run_id: string; status: string };
+      type: "RoutinesChanged";
+      data: { agent_path: string };
     }
   | {
-      type: "RoutinesChanged";
-      data: { project_id: string };
+      type: "RoutineRunsChanged";
+      data: { agent_path: string };
     }
   | {
       type: "ConversationsChanged";
-      data: { project_id: string; workspace_path: string };
+      data: { project_id: string; agent_path: string };
     }
   | {
       type: "ActivityChanged";
-      data: { workspace_path: string };
+      data: { agent_path: string };
     }
   | {
       type: "SkillsChanged";
-      data: { workspace_path: string };
+      data: { agent_path: string };
     }
   | {
       type: "LearningsChanged";
-      data: { workspace_path: string };
+      data: { agent_path: string };
     }
   | {
       type: "ChannelsConfigChanged";
-      data: { workspace_path: string };
+      data: { agent_path: string };
     }
   | {
       type: "FilesChanged";
-      data: { workspace_path: string };
+      data: { agent_path: string };
     }
   | {
       type: "ConfigChanged";
-      data: { workspace_path: string };
+      data: { agent_path: string };
     }
   | {
       type: "ContextChanged";
-      data: { workspace_path: string };
+      data: { agent_path: string };
+    }
+  | {
+      type: "SlackSyncStarted";
+      data: { agent_path: string; slack_channel_name: string };
+    }
+  | {
+      type: "SlackSyncStopped";
+      data: { agent_path: string };
+    }
+  | {
+      type: "SlackThreadCreated";
+      data: { agent_path: string; session_key: string; thread_ts: string };
     };

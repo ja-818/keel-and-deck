@@ -256,7 +256,7 @@ Design tokens for the sidebar — see `knowledge-base/houston.md` for the naviga
 - **Items:** `text-sm`, `py-1.5 px-2.5`, `rounded-lg` on hover
 - **Active state:** `bg-gray-200` background, `font-medium`
 - **Section headers:** `text-xs font-medium text-muted-foreground`
-- **SpaceSwitcher:** dropdown trigger — current space name + chevron, same item padding
+- **WorkspaceSwitcher:** dropdown trigger — current workspace name + chevron, same item padding
 
 ---
 

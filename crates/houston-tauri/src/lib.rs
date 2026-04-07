@@ -17,9 +17,11 @@ pub mod session_runner;
 pub mod state;
 pub mod supervisor;
 pub mod tray;
-pub mod workspace;
-pub mod workspace_commands;
-pub mod workspace_store;
+pub mod agent;
+pub mod agent_commands;
+pub mod agent_store;
+pub mod agent_watcher;
+pub mod slack_sync;
 
 // Re-export sub-crates for convenience.
 pub use houston_db;

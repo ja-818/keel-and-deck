@@ -1,4 +1,4 @@
-use crate::types::{ChannelMessage, ChannelStatus};
+use crate::types::{ChannelMessage, ChannelStatus, SendResult};
 use tokio::sync::mpsc;
 
 /// Trait for a messaging platform channel adapter.
@@ -16,6 +16,19 @@ pub trait Channel: Send + Sync {
 
     /// Send a text message to a specific channel or chat.
     async fn send_message(&self, channel_id: &str, text: &str) -> anyhow::Result<()>;
+
+    /// Send a text message as a thread reply. Returns metadata about the sent message.
+    /// Default implementation falls back to `send_message`.
+    async fn send_message_threaded(
+        &self,
+        channel_id: &str,
+        thread_ts: &str,
+        text: &str,
+    ) -> anyhow::Result<SendResult> {
+        let _ = thread_ts; // unused in default impl
+        self.send_message(channel_id, text).await?;
+        Ok(SendResult::default())
+    }
 
     /// Show a typing/activity indicator in the chat. No-op by default.
     /// Platforms that support it (Telegram) override this.

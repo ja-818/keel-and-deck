@@ -15,7 +15,17 @@ pub struct ChannelMessage {
     pub timestamp: DateTime<Utc>,
     /// Thread or reply context (platform-specific thread ID).
     pub reply_to: Option<String>,
+    /// The message's own platform-specific ID (e.g., Slack `ts`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub message_ts: Option<String>,
     pub attachments: Vec<Attachment>,
+}
+
+/// Result of sending a message, including platform-specific metadata.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct SendResult {
+    /// Platform-specific message timestamp/ID (e.g., Slack `ts`).
+    pub message_ts: Option<String>,
 }
 
 /// A file or media attachment on a message.

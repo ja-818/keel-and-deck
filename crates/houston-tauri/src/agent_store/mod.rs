@@ -9,8 +9,9 @@ pub mod commands;
 pub mod config;
 pub mod conversations;
 pub mod goals;
-mod helpers;
+pub mod helpers;
 pub mod log;
+pub mod routine_runs;
 pub mod routines;
 pub mod skills;
 pub mod activity;
@@ -71,6 +72,21 @@ impl AgentStore {
     }
     pub fn delete_routine(&self, id: &str) -> Result<(), String> {
         routines::delete(&self.root, id)
+    }
+
+    // -- Routine Runs --
+    pub fn list_routine_runs(&self) -> Result<Vec<RoutineRun>, String> {
+        routine_runs::list(&self.root)
+    }
+    pub fn list_routine_runs_for(&self, routine_id: &str) -> Result<Vec<RoutineRun>, String> {
+        routine_runs::list_for_routine(&self.root, routine_id)
+    }
+    pub fn create_routine_run(&self, routine_id: &str) -> Result<RoutineRun, String> {
+        self.ensure_houston_dir()?;
+        routine_runs::create(&self.root, routine_id)
+    }
+    pub fn update_routine_run(&self, id: &str, updates: RoutineRunUpdate) -> Result<RoutineRun, String> {
+        routine_runs::update(&self.root, id, updates)
     }
 
     // -- Goals --

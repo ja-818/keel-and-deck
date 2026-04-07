@@ -1,9 +1,9 @@
 import { DialogTitle, Input, cn } from "@houston-ai/core";
 import { Search } from "lucide-react";
-import type { Experience, ExperienceCategory } from "../../lib/types";
-import { ExperienceCard } from "./experience-card";
+import type { AgentDefinition, AgentCategory } from "../../lib/types";
+import { AgentCard } from "./experience-card";
 
-const categories: { id: "all" | ExperienceCategory; label: string }[] = [
+const categories: { id: "all" | AgentCategory; label: string }[] = [
   { id: "all", label: "All" },
   { id: "productivity", label: "Productivity" },
   { id: "development", label: "Development" },
@@ -12,39 +12,39 @@ const categories: { id: "all" | ExperienceCategory; label: string }[] = [
   { id: "business", label: "Business" },
 ];
 
-interface MarketplaceStepProps {
+interface StoreStepProps {
   search: string;
   onSearchChange: (value: string) => void;
-  category: "all" | ExperienceCategory;
-  onCategoryChange: (cat: "all" | ExperienceCategory) => void;
-  houstonExps: Experience[];
-  communityExps: Experience[];
+  category: "all" | AgentCategory;
+  onCategoryChange: (cat: "all" | AgentCategory) => void;
+  houstonAgents: AgentDefinition[];
+  communityAgents: AgentDefinition[];
   hasResults: boolean;
   onSelect: (id: string) => void;
 }
 
-export function MarketplaceStep({
+export function StoreStep({
   search,
   onSearchChange,
   category,
   onCategoryChange,
-  houstonExps,
-  communityExps,
+  houstonAgents,
+  communityAgents,
   hasResults,
   onSelect,
-}: MarketplaceStepProps) {
+}: StoreStepProps) {
   return (
     <>
       <div className="shrink-0 px-6 pt-6 space-y-4">
         <DialogTitle className="text-xl font-semibold">
-          Create a workspace
+          Houston Store
         </DialogTitle>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search workspaces..."
+            placeholder="Search the store..."
             className="pl-9 rounded-full bg-gray-50 border-black/5 focus:bg-white"
           />
         </div>
@@ -74,16 +74,16 @@ export function MarketplaceStep({
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-6">
-        {houstonExps.length > 0 && (
+        {houstonAgents.length > 0 && (
           <section>
             <p className="text-xs font-medium text-muted-foreground mb-3">
               By Houston
             </p>
             <div className="grid grid-cols-2 gap-3">
-              {houstonExps.map((exp) => (
-                <ExperienceCard
-                  key={exp.manifest.id}
-                  manifest={exp.manifest}
+              {houstonAgents.map((def) => (
+                <AgentCard
+                  key={def.config.id}
+                  config={def.config}
                   onSelect={onSelect}
                 />
               ))}
@@ -91,16 +91,16 @@ export function MarketplaceStep({
           </section>
         )}
 
-        {communityExps.length > 0 && (
+        {communityAgents.length > 0 && (
           <section>
             <p className="text-xs font-medium text-muted-foreground mb-3">
               Community
             </p>
             <div className="grid grid-cols-2 gap-3">
-              {communityExps.map((exp) => (
-                <ExperienceCard
-                  key={exp.manifest.id}
-                  manifest={exp.manifest}
+              {communityAgents.map((def) => (
+                <AgentCard
+                  key={def.config.id}
+                  config={def.config}
                   onSelect={onSelect}
                 />
               ))}
@@ -111,7 +111,7 @@ export function MarketplaceStep({
         {!hasResults && (
           <div className="flex items-center justify-center py-16">
             <p className="text-sm text-muted-foreground">
-              No workspaces match your search
+              No agents match your search
             </p>
           </div>
         )}

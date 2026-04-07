@@ -1,25 +1,25 @@
 import { Suspense } from "react";
 import { Spinner } from "@houston-ai/core";
-import { resolveTabComponent } from "../../experiences/tab-resolver";
-import type { Experience, Workspace, ExperienceTab } from "../../lib/types";
+import { resolveTabComponent } from "../../agents/tab-resolver";
+import type { AgentDefinition, Agent, AgentTab } from "../../lib/types";
 
-interface ExperienceRendererProps {
-  experience: Experience;
-  workspace: Workspace;
-  tabs: ExperienceTab[];
+interface AgentRendererProps {
+  agentDef: AgentDefinition;
+  agent: Agent;
+  tabs: AgentTab[];
   activeTabId: string;
 }
 
-export function ExperienceRenderer({
-  experience,
-  workspace,
+export function AgentRenderer({
+  agentDef,
+  agent,
   tabs,
   activeTabId,
-}: ExperienceRendererProps) {
+}: AgentRendererProps) {
   return (
     <div className="h-full w-full relative">
       {tabs.map((tab) => {
-        const TabComponent = resolveTabComponent(tab, experience);
+        const TabComponent = resolveTabComponent(tab, agentDef);
         const isActive = tab.id === activeTabId;
         return (
           <div
@@ -33,7 +33,7 @@ export function ExperienceRenderer({
                 </div>
               }
             >
-              <TabComponent workspace={workspace} experience={experience} />
+              <TabComponent agent={agent} agentDef={agentDef} />
             </Suspense>
           </div>
         );

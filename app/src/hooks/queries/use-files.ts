@@ -2,41 +2,41 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "../../lib/query-keys";
 import { tauriFiles } from "../../lib/tauri";
 
-export function useFiles(workspacePath: string | undefined) {
+export function useFiles(agentPath: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.files(workspacePath ?? ""),
-    queryFn: () => tauriFiles.list(workspacePath!),
-    enabled: !!workspacePath,
+    queryKey: queryKeys.files(agentPath ?? ""),
+    queryFn: () => tauriFiles.list(agentPath!),
+    enabled: !!agentPath,
   });
 }
 
-export function useDeleteFile(workspacePath: string | undefined) {
+export function useDeleteFile(agentPath: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (relativePath: string) => tauriFiles.delete(workspacePath!, relativePath),
+    mutationFn: (relativePath: string) => tauriFiles.delete(agentPath!, relativePath),
     onSuccess: () => {
-      if (workspacePath) qc.invalidateQueries({ queryKey: queryKeys.files(workspacePath) });
+      if (agentPath) qc.invalidateQueries({ queryKey: queryKeys.files(agentPath) });
     },
   });
 }
 
-export function useRenameFile(workspacePath: string | undefined) {
+export function useRenameFile(agentPath: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ relativePath, newName }: { relativePath: string; newName: string }) =>
-      tauriFiles.rename(workspacePath!, relativePath, newName),
+      tauriFiles.rename(agentPath!, relativePath, newName),
     onSuccess: () => {
-      if (workspacePath) qc.invalidateQueries({ queryKey: queryKeys.files(workspacePath) });
+      if (agentPath) qc.invalidateQueries({ queryKey: queryKeys.files(agentPath) });
     },
   });
 }
 
-export function useCreateFolder(workspacePath: string | undefined) {
+export function useCreateFolder(agentPath: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) => tauriFiles.createFolder(workspacePath!, name),
+    mutationFn: (name: string) => tauriFiles.createFolder(agentPath!, name),
     onSuccess: () => {
-      if (workspacePath) qc.invalidateQueries({ queryKey: queryKeys.files(workspacePath) });
+      if (agentPath) qc.invalidateQueries({ queryKey: queryKeys.files(agentPath) });
     },
   });
 }

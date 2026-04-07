@@ -7,9 +7,9 @@ import { dataAnalyst } from "./data-analyst";
 import { customerSupport } from "./customer-support";
 import { meetingAssistant } from "./meeting-assistant";
 import { devOps } from "./dev-ops";
-import type { ExperienceManifest } from "../../lib/types";
+import type { AgentConfig } from "../../lib/types";
 
-export const builtinExperiences: ExperienceManifest[] = [
+export const builtinConfigs: AgentConfig[] = [
   defaultExperience,
   projectManager,
   meetingAssistant,

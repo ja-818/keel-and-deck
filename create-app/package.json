@@ -1,10 +1,10 @@
 {
-  "name": "create-houston-experience",
+  "name": "create-houston-agent",
   "version": "0.2.0",
   "description": "Scaffold Houston experiences — manifest-only, custom React, or full Tauri app",
   "type": "module",
   "bin": {
-    "create-houston-experience": "./index.js"
+    "create-houston-agent": "./index.js"
   },
   "files": [
     "index.js",

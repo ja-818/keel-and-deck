@@ -1,7 +1,7 @@
-use houston_tauri::workspace as kw;
+use houston_tauri::agent as kw;
 use std::path::Path;
 
-pub fn seed_workspace(dir: &Path) -> Result<(), String> {
+pub fn seed_agent(dir: &Path) -> Result<(), String> {
     kw::seed_file(dir, "CLAUDE.md", CLAUDE_MD)?;
 
     // Create .houston/prompts/ directory and seed editable prompt files

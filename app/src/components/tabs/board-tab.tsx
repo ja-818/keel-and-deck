@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { AIBoard } from "@houston-ai/board";
 import type { KanbanItem } from "@houston-ai/board";
 import type { FeedItem } from "@houston-ai/chat";
-import { AgentAvatar } from "@houston-ai/core";
+
 import { useFeedStore } from "../../stores/feeds";
 import { useUIStore } from "../../stores/ui";
 import { useActivity, useDeleteActivity, useUpdateActivity, useCreateActivity } from "../../hooks/queries";
@@ -22,8 +22,8 @@ function ThinkingIndicator() {
   );
 }
 
-export default function BoardTab({ workspace }: TabProps) {
-  const path = workspace.folderPath;
+export default function BoardTab({ agent }: TabProps) {
+  const path = agent.folderPath;
   const { data: rawItems } = useActivity(path);
   const deleteActivity = useDeleteActivity(path);
   const updateActivity = useUpdateActivity(path);
@@ -38,6 +38,11 @@ export default function BoardTab({ workspace }: TabProps) {
     subtitle: t.description,
     status: t.status,
     updatedAt: t.updated_at ?? new Date().toISOString(),
+    group: t.routine_id ? "routine" : undefined,
+    metadata: {
+      ...(t.session_key ? { sessionKey: t.session_key } : {}),
+      ...(t.routine_id ? { routineId: t.routine_id } : {}),
+    },
   }));
 
   // Read and consume pending selection from Mission Control
@@ -106,17 +111,29 @@ export default function BoardTab({ workspace }: TabProps) {
     [path, pushFeedItem, createActivity, updateActivity],
   );
 
+  // Derive the session key for an activity, using custom key if set by routine runner
+  const sessionKeyFor = useCallback(
+    (activityId: string) => {
+      const item = (rawItems ?? []).find((t) => t.id === activityId);
+      return item?.session_key ?? `activity-${activityId}`;
+    },
+    [rawItems],
+  );
+
   const handleSendMessage = useCallback(
     async (sessionKey: string, text: string) => {
       pushFeedItem(sessionKey, { feed_type: "user_message", data: text });
       setLoading((prev) => ({ ...prev, [sessionKey]: true }));
-      if (sessionKey.startsWith("activity-")) {
-        const activityId = sessionKey.replace("activity-", "");
-        tauriActivity.update(path, activityId, { status: "running" }).catch(console.error);
+      // Find the activity ID from the session key to update its status
+      const activity = (rawItems ?? []).find(
+        (t) => (t.session_key ?? `activity-${t.id}`) === sessionKey,
+      );
+      if (activity) {
+        tauriActivity.update(path, activity.id, { status: "running" }).catch(console.error);
       }
       tauriChat.send(path, text, sessionKey);
     },
-    [path, pushFeedItem],
+    [path, pushFeedItem, rawItems],
   );
 
   return (
@@ -126,6 +143,7 @@ export default function BoardTab({ workspace }: TabProps) {
       onSelect={setSelectedId}
       feedItems={feedItems}
       isLoading={loadingState}
+      sessionKeyFor={sessionKeyFor}
       onDelete={handleDelete}
       onApprove={handleApprove}
       onCreateConversation={handleCreateConversation}
@@ -134,8 +152,11 @@ export default function BoardTab({ workspace }: TabProps) {
       onNewPanelOpenerReady={handleOpenerReady}
       onPanelOpenChange={setMissionPanelOpen}
       thinkingIndicator={<ThinkingIndicator />}
+      panelAgentName="Houston"
       panelAvatar={
-        <AgentAvatar src={houstonIcon} alt="Houston" size="sm" />
+        <span className="size-10 rounded-full ring-1 ring-border flex items-center justify-center shrink-0">
+          <img src={houstonIcon} alt="Houston" className="size-6" />
+        </span>
       }
     />
   );

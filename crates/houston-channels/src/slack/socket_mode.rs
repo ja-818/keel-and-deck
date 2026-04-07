@@ -138,6 +138,7 @@ pub async fn listen_socket_mode(
             text: text_content,
             timestamp: Utc::now(),
             reply_to: event.thread_ts,
+            message_ts: event.ts,
             attachments,
         };
 

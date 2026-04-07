@@ -4,8 +4,8 @@ import type { HoustonEvent } from "@houston-ai/core";
 import type { FeedItem } from "@houston-ai/chat";
 import { useFeedStore } from "../stores/feeds";
 import { useUIStore } from "../stores/ui";
-import { useSpaceStore } from "../stores/spaces";
 import { useWorkspaceStore } from "../stores/workspaces";
+import { useAgentStore } from "../stores/agents";
 import { tauriActivity } from "../lib/tauri";
 
 async function sendNotification(title: string, body: string) {
@@ -45,15 +45,15 @@ export function useSessionEvents() {
     pushFeedItem,
     addToast,
     setAuthRequired,
-    getSpace: () => useSpaceStore.getState().current,
     getWorkspace: () => useWorkspaceStore.getState().current,
+    getAgent: () => useAgentStore.getState().current,
   });
   handlersRef.current = {
     pushFeedItem,
     addToast,
     setAuthRequired,
-    getSpace: () => useSpaceStore.getState().current,
     getWorkspace: () => useWorkspaceStore.getState().current,
+    getAgent: () => useAgentStore.getState().current,
   };
 
   useEffect(() => {
@@ -83,21 +83,22 @@ export function useSessionEvents() {
           if (status === "completed") {
             // Move activity to "needs_you" — the ActivityChanged event
             // emitted by the Rust update command will auto-invalidate queries.
-            if (session_key.startsWith("activity-")) {
+            // Skip routine-* sessions — the routine runner handles their lifecycle.
+            if (session_key.startsWith("activity-") && !session_key.startsWith("routine-")) {
               const activityId = session_key.replace("activity-", "");
-              const workspace = h.getWorkspace();
-              if (workspace?.folderPath) {
-                tauriActivity.update(workspace.folderPath, activityId, { status: "needs_you" }).catch((e) =>
+              const agent = h.getAgent();
+              if (agent?.folderPath) {
+                tauriActivity.update(agent.folderPath, activityId, { status: "needs_you" }).catch((e) =>
                   console.error("[session] Failed to update activity status:", e),
                 );
               }
             }
-            const space = h.getSpace();
             const workspace = h.getWorkspace();
-            const spaceName = space?.name ?? "Houston";
-            const wsName = workspace?.name ?? "AI Workspace";
+            const agent = h.getAgent();
+            const workspaceName = workspace?.name ?? "Houston";
+            const agentName = agent?.name ?? "Agent";
             sendNotification(
-              `${spaceName} — ${wsName}`,
+              `${workspaceName} — ${agentName}`,
               "Your agent has finished working.",
             );
           }

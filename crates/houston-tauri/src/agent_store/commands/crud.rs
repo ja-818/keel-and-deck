@@ -102,7 +102,6 @@ pub async fn create_routine(
     let root = resolve_agent_dir(&agent_path)?;
     let routine = AgentStore::new(&root).create_routine(input)?;
     let _ = app_handle.emit("houston-event", HoustonEvent::RoutinesChanged {
-        project_id: agent_path.clone(),
         agent_path: agent_path.clone(),
     });
     Ok(routine)
@@ -118,7 +117,6 @@ pub async fn update_routine(
     let root = resolve_agent_dir(&agent_path)?;
     let routine = AgentStore::new(&root).update_routine(&routine_id, updates)?;
     let _ = app_handle.emit("houston-event", HoustonEvent::RoutinesChanged {
-        project_id: agent_path.clone(),
         agent_path: agent_path.clone(),
     });
     Ok(routine)
@@ -133,10 +131,24 @@ pub async fn delete_routine(
     let root = resolve_agent_dir(&agent_path)?;
     AgentStore::new(&root).delete_routine(&routine_id)?;
     let _ = app_handle.emit("houston-event", HoustonEvent::RoutinesChanged {
-        project_id: agent_path.clone(),
         agent_path: agent_path.clone(),
     });
     Ok(())
+}
+
+// -- Routine Runs --
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn list_routine_runs(
+    agent_path: String,
+    routine_id: Option<String>,
+) -> Result<Vec<RoutineRun>, String> {
+    let root = resolve_agent_dir(&agent_path)?;
+    let store = AgentStore::new(&root);
+    match routine_id {
+        Some(rid) => store.list_routine_runs_for(&rid),
+        None => store.list_routine_runs(),
+    }
 }
 
 // -- Goals --

@@ -1,49 +1,33 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback } from "react";
 import { LearningsPanel } from "@houston-ai/memory";
-import type { LearningEntry } from "@houston-ai/memory";
-import { tauriLearnings } from "../../lib/tauri";
+import { useLearnings, useAddLearning, useRemoveLearning } from "../../hooks/queries";
 import type { TabProps } from "../../lib/types";
 
-export default function LearningsTab({ workspace }: TabProps) {
-  const [entries, setEntries] = useState<LearningEntry[]>([]);
-  const path = workspace.folderPath;
+export default function LearningsTab({ agent }: TabProps) {
+  const path = agent.folderPath;
+  const { data } = useLearnings(path);
+  const addLearning = useAddLearning(path);
+  const removeLearning = useRemoveLearning(path);
 
-  const load = useCallback(async () => {
-    try {
-      const result = await tauriLearnings.load(path);
-      setEntries(result.entries);
-    } catch (e) {
-      console.error("[learnings] Failed to load:", e);
-    }
-  }, [path]);
+  const handleAdd = useCallback(
+    async (text: string) => {
+      await addLearning.mutateAsync(text);
+    },
+    [addLearning],
+  );
 
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const handleAdd = async (text: string) => {
-    try {
-      await tauriLearnings.add(path, text);
-      await load();
-    } catch (e) {
-      console.error("[learnings] Failed to add entry:", e);
-    }
-  };
-
-  const handleRemove = async (index: number) => {
-    try {
-      await tauriLearnings.remove(path, index);
-      await load();
-    } catch (e) {
-      console.error("[learnings] Failed to remove entry:", e);
-    }
-  };
+  const handleRemove = useCallback(
+    async (index: number) => {
+      await removeLearning.mutateAsync(index);
+    },
+    [removeLearning],
+  );
 
   return (
     <div className="h-full overflow-auto">
       <div className="max-w-3xl mx-auto w-full px-6 py-6">
         <LearningsPanel
-          entries={entries}
+          entries={data?.entries ?? []}
           onAdd={handleAdd}
           onRemove={handleRemove}
         />

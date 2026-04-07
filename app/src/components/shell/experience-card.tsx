@@ -11,7 +11,7 @@ import {
   Sparkles,
   type LucideIcon,
 } from "lucide-react";
-import type { ExperienceManifest } from "../../lib/types";
+import type { AgentConfig } from "../../lib/types";
 
 const iconMap: Record<string, LucideIcon> = {
   Bot,
@@ -39,26 +39,26 @@ const iconStyle: Record<string, { bg: string; fg: string }> = {
 
 const defaultStyle = { bg: "bg-gray-100", fg: "text-gray-600" };
 
-export function getExperienceIcon(name?: string): LucideIcon {
+export function getAgentIcon(name?: string): LucideIcon {
   return iconMap[name ?? ""] ?? Sparkles;
 }
 
-export function getExperienceIconStyle(name?: string) {
+export function getAgentIconStyle(name?: string) {
   return iconStyle[name ?? ""] ?? defaultStyle;
 }
 
-interface ExperienceCardProps {
-  manifest: ExperienceManifest;
+interface AgentCardProps {
+  config: AgentConfig;
   onSelect: (id: string) => void;
 }
 
-export function ExperienceCard({ manifest, onSelect }: ExperienceCardProps) {
-  const Icon = getExperienceIcon(manifest.icon);
-  const style = getExperienceIconStyle(manifest.icon);
+export function AgentCard({ config, onSelect }: AgentCardProps) {
+  const Icon = getAgentIcon(config.icon);
+  const style = getAgentIconStyle(config.icon);
 
   return (
     <button
-      onClick={() => onSelect(manifest.id)}
+      onClick={() => onSelect(config.id)}
       className="flex items-start gap-4 rounded-2xl border border-black/5 p-4 text-left transition-colors duration-200 hover:bg-gray-50/80"
     >
       <div
@@ -68,14 +68,14 @@ export function ExperienceCard({ manifest, onSelect }: ExperienceCardProps) {
       </div>
       <div className="flex flex-col gap-0.5 min-w-0 pt-0.5">
         <span className="text-sm font-semibold text-foreground">
-          {manifest.name}
+          {config.name}
         </span>
         <span className="text-xs text-muted-foreground line-clamp-3 leading-relaxed">
-          {manifest.description}
+          {config.description}
         </span>
-        {manifest.author && (
+        {config.author && (
           <span className="text-[11px] text-muted-foreground/50 mt-1">
-            By {manifest.author}
+            By {config.author}
           </span>
         )}
       </div>

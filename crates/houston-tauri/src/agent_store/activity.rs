@@ -21,6 +21,9 @@ pub fn create(root: &Path, title: &str, description: &str) -> Result<Activity, S
         description: description.to_string(),
         status: "queue".to_string(),
         claude_session_id: None,
+        session_key: None,
+        routine_id: None,
+        routine_run_id: None,
         updated_at: Some(now),
     };
     items.push(item.clone());
@@ -46,6 +49,15 @@ pub fn update(root: &Path, id: &str, updates: ActivityUpdate) -> Result<Activity
     }
     if let Some(session_id) = updates.claude_session_id {
         item.claude_session_id = session_id;
+    }
+    if let Some(session_key) = updates.session_key {
+        item.session_key = Some(session_key);
+    }
+    if let Some(routine_id) = updates.routine_id {
+        item.routine_id = Some(routine_id);
+    }
+    if let Some(routine_run_id) = updates.routine_run_id {
+        item.routine_run_id = Some(routine_run_id);
     }
 
     item.updated_at = Some(Utc::now().to_rfc3339());

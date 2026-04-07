@@ -1,6 +1,6 @@
 import { useState } from "react"
-import { FilesBrowser } from "@houston-ai/workspace"
-import type { FileEntry } from "@houston-ai/workspace"
+import { FilesBrowser } from "@houston-ai/agent"
+import type { FileEntry } from "@houston-ai/agent"
 import { CodeBlock } from "../../components/code-block"
 
 const now = Date.now()
@@ -18,8 +18,8 @@ const INITIAL_FILES: FileEntry[] = [
   { path: "archive.zip", name: "archive.zip", extension: "zip", size: 1540000, dateModified: now - 7 * day },
 ]
 
-const USAGE_CODE = `import { FilesBrowser } from "@houston-ai/workspace"
-import type { FileEntry } from "@houston-ai/workspace"
+const USAGE_CODE = `import { FilesBrowser } from "@houston-ai/agent"
+import type { FileEntry } from "@houston-ai/agent"
 
 function MyFiles({ files }: { files: FileEntry[] }) {
   const [selected, setSelected] = useState<string | null>(null)
@@ -54,7 +54,7 @@ export function FilesScreen() {
       <div>
         <h1 className="text-xl font-semibold mb-1">Files</h1>
         <p className="inline-block text-xs font-mono text-muted-foreground bg-secondary px-2 py-0.5 rounded mb-3">
-          @houston-ai/workspace
+          @houston-ai/agent
         </p>
         <p className="text-sm text-muted-foreground leading-relaxed mb-4">
           macOS Finder-style file browser for agent workspaces. Column headers

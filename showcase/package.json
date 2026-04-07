@@ -19,7 +19,7 @@
     "@houston-ai/review": "link:../packages/review",
     "@houston-ai/routines": "link:../packages/routines",
     "@houston-ai/skills": "link:../packages/skills",
-    "@houston-ai/workspace": "link:../packages/workspace",
+    "@houston-ai/agent": "link:../packages/agent",
     "lucide-react": "^0.577.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

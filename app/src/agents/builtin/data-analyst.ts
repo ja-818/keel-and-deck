@@ -1,6 +1,6 @@
-import type { ExperienceManifest } from "../../lib/types";
+import type { AgentConfig } from "../../lib/types";
 
-export const dataAnalyst: ExperienceManifest = {
+export const dataAnalyst: AgentConfig = {
   id: "data-analyst",
   name: "Data Analyst",
   description: "Analyze datasets, generate insights, create visualizations, and build reports from your data",

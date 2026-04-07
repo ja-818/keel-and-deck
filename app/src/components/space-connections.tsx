@@ -1,38 +1,18 @@
-import { useState, useEffect, useCallback } from "react";
 import { ConnectionsView } from "@houston-ai/connections";
-import type { ConnectionsResult } from "@houston-ai/connections";
-import { tauriConnections, tauriSystem } from "../lib/tauri";
+import { useConnections, useInvalidateConnections } from "../hooks/queries";
+import { tauriSystem } from "../lib/tauri";
 import { useComposioAuth } from "../hooks/use-composio-auth";
 import { ComposioAuthDialog } from "./composio-auth-dialog";
 
 const COMPOSIO_DASHBOARD_URL = "https://dashboard.composio.dev";
 
-export function SpaceConnections() {
-  const [result, setResult] = useState<ConnectionsResult | null>(null);
-  const [loading, setLoading] = useState(true);
+export function WorkspaceConnections() {
+  const { data: result, isLoading: loading, refetch } = useConnections();
+  const invalidate = useInvalidateConnections();
 
-  const fetchConnections = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await tauriConnections.list();
-      setResult(data);
-    } catch (e) {
-      console.error("[connections] Failed to load:", e);
-      setResult({ status: "error", message: String(e) });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchConnections();
-  }, [fetchConnections]);
-
-  const handleManage = useCallback(() => {
-    tauriSystem.openUrl(COMPOSIO_DASHBOARD_URL);
-  }, []);
-
-  const auth = useComposioAuth(fetchConnections);
+  const auth = useComposioAuth(() => {
+    invalidate();
+  });
 
   return (
     <div className="h-full overflow-auto">
@@ -41,10 +21,10 @@ export function SpaceConnections() {
           Connections
         </h1>
         <ConnectionsView
-          result={result}
+          result={result ?? null}
           loading={loading}
-          onRetry={fetchConnections}
-          onManage={handleManage}
+          onRetry={() => refetch()}
+          onManage={() => tauriSystem.openUrl(COMPOSIO_DASHBOARD_URL)}
           onAuth={auth.startAuth}
         />
       </div>

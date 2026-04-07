@@ -11,6 +11,16 @@ pub struct Activity {
     pub description: String,
     pub status: String,
     pub claude_session_id: Option<String>,
+    /// Optional override for the session key used to address this conversation.
+    /// When set (e.g. by a routine run), the board uses this instead of "activity-{id}".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session_key: Option<String>,
+    /// If this activity was created by a routine run, the source routine ID.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub routine_id: Option<String>,
+    /// If this activity was created by a routine run, the source run ID.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub routine_run_id: Option<String>,
     /// ISO-8601 timestamp — set on create and every update.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<String>,
@@ -22,6 +32,9 @@ pub struct ActivityUpdate {
     pub description: Option<String>,
     pub status: Option<String>,
     pub claude_session_id: Option<Option<String>>,
+    pub session_key: Option<String>,
+    pub routine_id: Option<String>,
+    pub routine_run_id: Option<String>,
 }
 
 // -- Conversations --
@@ -53,32 +66,76 @@ pub struct Routine {
     pub id: String,
     pub name: String,
     pub description: String,
-    pub trigger_type: String,
-    pub trigger_config: serde_json::Value,
-    pub status: String,
-    pub approval_mode: String,
-    pub claude_session_id: Option<String>,
+    /// The prompt sent to Claude when this routine fires.
+    pub prompt: String,
+    /// Cron expression (e.g. "0 9 * * 1-5").
+    pub schedule: String,
+    /// Whether the routine is active.
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    /// When true, runs where Claude responds with ROUTINE_OK are auto-completed
+    /// silently (no activity created on the board).
+    #[serde(default = "default_true")]
+    pub suppress_when_silent: bool,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct RoutineUpdate {
     pub name: Option<String>,
     pub description: Option<String>,
-    pub trigger_type: Option<String>,
-    pub trigger_config: Option<serde_json::Value>,
-    pub status: Option<String>,
-    pub approval_mode: Option<String>,
-    pub claude_session_id: Option<Option<String>>,
+    pub prompt: Option<String>,
+    pub schedule: Option<String>,
+    pub enabled: Option<bool>,
+    pub suppress_when_silent: Option<bool>,
 }
 
 /// Fields for creating a new routine (no id — generated server-side).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NewRoutine {
     pub name: String,
+    #[serde(default)]
     pub description: String,
-    pub trigger_type: String,
-    pub trigger_config: serde_json::Value,
-    pub approval_mode: String,
+    pub prompt: String,
+    pub schedule: String,
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default = "default_true")]
+    pub suppress_when_silent: bool,
+}
+
+// -- Routine Runs --
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RoutineRun {
+    pub id: String,
+    pub routine_id: String,
+    /// "running" | "silent" | "surfaced" | "error"
+    pub status: String,
+    /// Session key for chat history lookup (e.g. "routine-{routine_id}-run-{id}").
+    pub session_key: String,
+    /// If surfaced, the activity ID created on the board.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub activity_id: Option<String>,
+    /// Brief summary of the run output.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
+    pub started_at: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub completed_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct RoutineRunUpdate {
+    pub status: Option<String>,
+    pub activity_id: Option<String>,
+    pub summary: Option<String>,
+    pub completed_at: Option<String>,
 }
 
 // -- Goals --
@@ -112,6 +169,26 @@ pub struct NewChannel {
     pub channel_type: String,
     pub name: String,
     pub token: String,
+}
+
+// -- Slack Sync --
+
+/// Persisted Slack sync state for an agent (`.houston/slack_sync.json`).
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct SlackSyncConfig {
+    pub bot_token: String,
+    pub app_token: String,
+    pub slack_channel_id: String,
+    pub slack_channel_name: String,
+    pub threads: Vec<SlackThread>,
+}
+
+/// Maps a Houston conversation (session_key) to a Slack thread.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SlackThread {
+    pub session_key: String,
+    pub thread_ts: String,
+    pub title: String,
 }
 
 // -- Skills --

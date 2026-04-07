@@ -1,6 +1,6 @@
-import type { ExperienceManifest } from "../../lib/types";
+import type { AgentConfig } from "../../lib/types";
 
-export const contentWriter: ExperienceManifest = {
+export const contentWriter: AgentConfig = {
   id: "content-writer",
   name: "Content Writer",
   description: "Writing assistant for blog posts, documentation, marketing copy, and long-form content",

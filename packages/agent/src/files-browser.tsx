@@ -29,6 +29,8 @@ export interface FilesBrowserProps {
   onBrowse?: () => void
   emptyTitle?: string
   emptyDescription?: string
+  /** Optional action rendered in the bottom status bar (e.g. "Open in Finder" link) */
+  statusBarAction?: React.ReactNode
 }
 
 export function FilesBrowser({
@@ -36,6 +38,7 @@ export function FilesBrowser({
   onFilesDropped, onMove, onRename, onCreateFolder, onBrowse,
   emptyTitle = "No files yet",
   emptyDescription = "When agents create files, they\u2019ll appear here.",
+  statusBarAction,
 }: FilesBrowserProps) {
   // Internal selection state — used when consumer doesn't control selection
   const [internalSelected, setInternalSelected] = useState<string | null>(null)
@@ -114,14 +117,14 @@ export function FilesBrowser({
 
   return (
     <div
-      className="relative flex flex-col overflow-hidden bg-white border border-[#e0e0e0] rounded-xl m-4 h-[calc(100%-2rem)]"
+      className="relative flex flex-col overflow-hidden bg-white border border-[#e0e0e0] rounded-xl h-full"
       {...(onFilesDropped || onMove ? dragHandlers : {})}
     >
       <div className="h-[24px] shrink-0 border-b border-[#e5e5e5] bg-[#fafafa] select-none flex items-center rounded-t-xl">
         <div className="flex-1 min-w-0 items-center h-full" style={{ display: "grid", gridTemplateColumns: COL_GRID }}>
           <HeaderCell label="Name" col="name" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="pl-7" />
           <HeaderCell label="Date Modified" col="dateModified" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-          <HeaderCell label="Size" col="size" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="justify-end" />
+          <HeaderCell label="Size" col="size" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
           <HeaderCell label="Kind" col="kind" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} last />
         </div>
       </div>
@@ -188,6 +191,13 @@ export function FilesBrowser({
             />
           </>
         )}
+      </div>
+
+      <div className="h-[22px] shrink-0 border-t border-[#e5e5e5] bg-[#fafafa] select-none flex items-center justify-between px-3 rounded-b-xl">
+        <span className="text-[11px] text-[#6d6d6d]">
+          {fileCount} {fileCount === 1 ? "item" : "items"}
+        </span>
+        {statusBarAction}
       </div>
 
       {bgMenu && (
@@ -276,17 +286,25 @@ function HeaderCell({ label, col, sortKey, sortDir, onSort, className, last }: {
     <button
       onClick={() => onSort(col)}
       className={cn(
-        "flex items-center h-full px-2 text-[11px] font-medium text-[#6d6d6d] hover:bg-[#eaeaea] transition-colors",
+        "flex items-center justify-between h-full px-2 text-[11px] font-medium text-[#6d6d6d] hover:bg-[#eaeaea] transition-colors",
         !last && "border-r border-[#e5e5e5]",
         className,
       )}
     >
       <span className="truncate">{label}</span>
       {active && (
-        <svg className="size-[6px] ml-1 shrink-0" viewBox="0 0 8 5" fill="#6d6d6d">
+        <svg
+          className="size-[8px] shrink-0"
+          viewBox="0 0 8 6"
+          fill="none"
+          stroke="#6d6d6d"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           {sortDir === "asc"
-            ? <path d="M0 5L4 0L8 5Z" />
-            : <path d="M0 0L4 5L8 0Z" />}
+            ? <path d="M1 4.5L4 1.5L7 4.5" />
+            : <path d="M1 1.5L4 4.5L7 1.5" />}
         </svg>
       )}
     </button>

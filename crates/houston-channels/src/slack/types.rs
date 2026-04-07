@@ -56,7 +56,55 @@ pub struct SocketModeAck {
 #[derive(Debug, Deserialize)]
 pub struct PostMessageResponse {
     pub ok: bool,
+    pub ts: Option<String>,
+    pub channel: Option<String>,
     pub error: Option<String>,
+}
+
+/// Response from Slack's `conversations.create` API.
+#[derive(Debug, Deserialize)]
+pub struct ConversationsCreateResponse {
+    pub ok: bool,
+    pub channel: Option<ConversationsCreateChannel>,
+    pub error: Option<String>,
+}
+
+/// Channel info in `conversations.create` response.
+#[derive(Debug, Deserialize)]
+pub struct ConversationsCreateChannel {
+    pub id: String,
+    pub name: String,
+}
+
+/// Response from Slack's `conversations.list` API.
+#[derive(Debug, Deserialize)]
+pub struct ConversationsListResponse {
+    pub ok: bool,
+    pub channels: Option<Vec<ConversationsListChannel>>,
+    pub error: Option<String>,
+}
+
+/// Channel info in `conversations.list` response.
+#[derive(Debug, Deserialize)]
+pub struct ConversationsListChannel {
+    pub id: String,
+    pub name: String,
+}
+
+/// Response from Slack's `oauth.v2.access` API.
+#[derive(Debug, Deserialize)]
+pub struct OAuthAccessResponse {
+    pub ok: bool,
+    pub access_token: Option<String>,
+    pub team: Option<OAuthTeam>,
+    pub error: Option<String>,
+}
+
+/// Team info in OAuth response.
+#[derive(Debug, Deserialize)]
+pub struct OAuthTeam {
+    pub id: String,
+    pub name: String,
 }
 
 /// Response from Slack's `users.info` API.

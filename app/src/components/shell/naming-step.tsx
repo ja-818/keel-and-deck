@@ -1,11 +1,11 @@
 import type { FormEvent } from "react";
 import { DialogTitle, Button, Input } from "@houston-ai/core";
 import { ArrowLeft } from "lucide-react";
-import type { Experience } from "../../lib/types";
-import { getExperienceIcon, getExperienceIconStyle } from "./experience-card";
+import type { AgentDefinition } from "../../lib/types";
+import { getAgentIcon, getAgentIconStyle } from "./experience-card";
 
 interface NamingStepProps {
-  selectedExp: Experience | undefined;
+  selectedAgent: AgentDefinition | undefined;
   name: string;
   error: string | null;
   onNameChange: (value: string) => void;
@@ -14,15 +14,15 @@ interface NamingStepProps {
 }
 
 export function NamingStep({
-  selectedExp,
+  selectedAgent,
   name,
   error,
   onNameChange,
   onBack,
   onSubmit,
 }: NamingStepProps) {
-  const Icon = getExperienceIcon(selectedExp?.manifest.icon);
-  const style = getExperienceIconStyle(selectedExp?.manifest.icon);
+  const Icon = getAgentIcon(selectedAgent?.config.icon);
+  const style = getAgentIconStyle(selectedAgent?.config.icon);
 
   return (
     <div className="flex flex-col items-center justify-center flex-1 px-6 py-16">
@@ -33,17 +33,17 @@ export function NamingStep({
         <ArrowLeft className="h-4 w-4" />
       </button>
 
-      <DialogTitle className="sr-only">Name your workspace</DialogTitle>
+      <DialogTitle className="sr-only">Name your Agent</DialogTitle>
 
-      {selectedExp && (
+      {selectedAgent && (
         <div className="flex flex-col items-center gap-4 mb-8">
           <div className={`flex h-16 w-16 items-center justify-center rounded-full ${style.bg}`}>
             <Icon className={`h-7 w-7 ${style.fg}`} />
           </div>
           <div className="text-center">
-            <p className="text-lg font-semibold">{selectedExp.manifest.name}</p>
+            <p className="text-lg font-semibold">{selectedAgent.config.name}</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Name your new workspace
+              Name your new Agent
             </p>
           </div>
         </div>
@@ -65,7 +65,7 @@ export function NamingStep({
           disabled={!name.trim()}
           className="w-full rounded-full"
         >
-          Create workspace
+          Create Agent
         </Button>
       </form>
     </div>

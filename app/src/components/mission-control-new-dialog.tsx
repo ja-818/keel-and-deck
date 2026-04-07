@@ -8,19 +8,19 @@ import {
   Button,
   Textarea,
 } from "@houston-ai/core";
-import type { Workspace } from "../lib/types";
+import type { Agent } from "../lib/types";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  workspaces: Workspace[];
-  onSubmit: (workspacePath: string, text: string) => void;
+  agents: Agent[];
+  onSubmit: (agentPath: string, text: string) => void;
 }
 
 export function MissionControlNewDialog({
   open,
   onOpenChange,
-  workspaces,
+  agents,
   onSubmit,
 }: Props) {
   const [selectedPath, setSelectedPath] = useState("");
@@ -40,25 +40,25 @@ export function MissionControlNewDialog({
         <DialogHeader>
           <DialogTitle>New conversation</DialogTitle>
           <DialogDescription>
-            Pick a workspace and describe what the agent should do.
+            Pick an agent and describe what it should do.
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 mt-2">
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="mc-workspace" className="text-sm font-medium">
-              Workspace
+            <label htmlFor="mc-agent" className="text-sm font-medium">
+              Agent
             </label>
             <select
-              id="mc-workspace"
+              id="mc-agent"
               value={selectedPath}
               onChange={(e) => setSelectedPath(e.target.value)}
               className="h-9 rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
             >
-              <option value="">Select a workspace…</option>
-              {workspaces.map((ws) => (
-                <option key={ws.id} value={ws.folderPath}>
-                  {ws.name}
+              <option value="">Select an agent...</option>
+              {agents.map((a) => (
+                <option key={a.id} value={a.folderPath}>
+                  {a.name}
                 </option>
               ))}
             </select>

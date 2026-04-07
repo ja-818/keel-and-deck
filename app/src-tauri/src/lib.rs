@@ -1,11 +1,16 @@
 mod commands;
 mod agent;
+mod routine_runner;
 
 use commands::agents::WorkspaceRoot;
 use houston_tauri::agent_sessions::AgentSessionMap;
+use houston_tauri::channel_manager::ChannelManager;
 use houston_tauri::houston_db::Database;
+use houston_tauri::slack_sync::SlackSyncManager;
 use houston_tauri::state::AppState;
+use std::sync::Arc;
 use tauri::Manager;
+use tokio::sync::RwLock;
 
 pub fn run() {
     tauri::Builder::default()
@@ -32,6 +37,55 @@ pub fn run() {
             app.manage(AgentSessionMap::default());
             app.manage(WorkspaceRoot(root));
             app.manage(houston_tauri::agent_watcher::WatcherState::default());
+            app.manage(routine_runner::RoutineSchedulerState::default());
+
+            // Channel manager + Slack sync
+            let (channel_mgr, message_rx) = ChannelManager::new();
+            let channel_mgr = Arc::new(channel_mgr);
+            let sync_mgr = Arc::new(RwLock::new(SlackSyncManager::default()));
+            app.manage(channel_mgr.clone());
+            app.manage(sync_mgr.clone());
+
+            // Start Slack sync listeners
+            let app_handle = app.handle().clone();
+            houston_tauri::slack_sync::outbound::start_outbound_listener(
+                &app_handle,
+                sync_mgr.clone(),
+            );
+            houston_tauri::slack_sync::inbound::start_inbound_listener(
+                message_rx,
+                app_handle.clone(),
+                sync_mgr.clone(),
+            );
+
+            // Listen for inbound Slack messages → route to Claude sessions
+            {
+                use tauri::Listener;
+                let handle = app.handle().clone();
+                app.listen("slack-inbound-message", move |event| {
+                    let parsed: serde_json::Value = match serde_json::from_str(event.payload()) {
+                        Ok(v) => v,
+                        Err(_) => return,
+                    };
+                    let agent_path = parsed["agent_path"].as_str().unwrap_or("").to_string();
+                    let session_key = parsed["session_key"].as_str().unwrap_or("main").to_string();
+                    let text = parsed["text"].as_str().unwrap_or("").to_string();
+                    if agent_path.is_empty() || text.is_empty() {
+                        return;
+                    }
+                    let h = handle.clone();
+                    tokio::spawn(async move {
+                        let state: tauri::State<'_, AppState> = h.state();
+                        let sessions: tauri::State<'_, AgentSessionMap> = h.state();
+                        if let Err(e) = commands::chat::send_message(
+                            h.clone(), state, sessions,
+                            agent_path, text, Some(session_key),
+                        ).await {
+                            eprintln!("[slack-inbound] send_message failed: {e}");
+                        }
+                    });
+                });
+            }
 
             // Size window to 80% of the screen so it looks good on any display
             if let Some(window) = app.get_webview_window("main") {
@@ -62,8 +116,8 @@ pub fn run() {
             // Preferences
             commands::preferences::get_preference,
             commands::preferences::set_preference,
-            // Agent manifests (formerly "Experiences")
-            commands::agent_manifests::list_installed_manifests,
+            // Houston Store — installed agent configs
+            commands::agent_configs::list_installed_configs,
             // Chat commands (send_message, load_chat_history, file read/write)
             commands::chat::send_message,
             commands::chat::load_chat_history,
@@ -94,6 +148,7 @@ pub fn run() {
             houston_tauri::agent_store::commands::create_routine,
             houston_tauri::agent_store::commands::update_routine,
             houston_tauri::agent_store::commands::delete_routine,
+            houston_tauri::agent_store::commands::list_routine_runs,
             houston_tauri::agent_store::commands::list_goals,
             houston_tauri::agent_store::commands::create_goal,
             houston_tauri::agent_store::commands::update_goal,
@@ -123,8 +178,17 @@ pub fn run() {
             // Agent file watcher (AI-native reactivity)
             houston_tauri::agent_watcher::start_agent_watcher,
             houston_tauri::agent_watcher::stop_agent_watcher,
+            // Routine scheduler
+            routine_runner::run_routine_now,
+            routine_runner::start_routine_scheduler,
+            routine_runner::stop_routine_scheduler,
+            routine_runner::sync_routine_scheduler,
             // System
             commands::system::check_claude_cli,
+            // Slack sync
+            commands::slack::connect_slack,
+            commands::slack::disconnect_slack,
+            commands::slack::get_slack_sync_status,
             // Composio integrations
             houston_tauri::composio_commands::list_composio_connections,
             houston_tauri::composio_commands::start_composio_oauth,

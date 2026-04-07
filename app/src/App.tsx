@@ -2,6 +2,7 @@ import "./styles/globals.css";
 import { ToastContainer } from "@houston-ai/core";
 import type { Toast } from "@houston-ai/core";
 import { useState } from "react";
+import houstonIconBlack from "./assets/houston-icon.svg";
 import {
   Empty,
   EmptyHeader,
@@ -17,37 +18,39 @@ import {
 import { TabBar } from "@houston-ai/layout";
 import { useHoustonInit } from "./hooks/use-houston-init";
 import { useSessionEvents } from "./hooks/use-session-events";
-import { useWorkspaceInvalidation } from "./hooks/use-workspace-invalidation";
-import { useSpaceStore } from "./stores/spaces";
+import { useAgentInvalidation } from "./hooks/use-agent-invalidation";
 import { useWorkspaceStore } from "./stores/workspaces";
-import { useExperienceStore } from "./stores/experiences";
+import { useAgentStore } from "./stores/agents";
+import { useAgentCatalogStore } from "./stores/agent-catalog";
 import { useUIStore } from "./stores/ui";
 import { Sidebar } from "./components/shell/sidebar";
-import { CreateWorkspaceDialog } from "./components/shell/create-workspace-dialog";
-import { ExperienceRenderer } from "./components/shell/experience-renderer";
+import { CreateAgentDialog } from "./components/shell/create-workspace-dialog";
+import { AgentRenderer } from "./components/shell/experience-renderer";
 import { Dashboard } from "./components/dashboard";
-import { SpaceConnections } from "./components/space-connections";
+import { WorkspaceConnections } from "./components/space-connections";
 
 export default function App() {
   useHoustonInit();
   useSessionEvents();
-  useWorkspaceInvalidation();
+  useAgentInvalidation();
 
-  const spaceLoading = useSpaceStore((s) => s.loading);
-  const spaces = useSpaceStore((s) => s.spaces);
-  const createSpace = useSpaceStore((s) => s.create);
-  const setCurrentSpace = useSpaceStore((s) => s.setCurrent);
-  const loadWorkspaces = useWorkspaceStore((s) => s.loadWorkspaces);
-  const current = useWorkspaceStore((s) => s.current);
-  const loading = useWorkspaceStore((s) => s.loading);
-  const getById = useExperienceStore((s) => s.getById);
+  const wsLoading = useWorkspaceStore((s) => s.loading);
+  const workspaces = useWorkspaceStore((s) => s.workspaces);
+  const createWorkspace = useWorkspaceStore((s) => s.create);
+  const setCurrentWorkspace = useWorkspaceStore((s) => s.setCurrent);
+  const loadAgents = useAgentStore((s) => s.loadAgents);
+  const currentAgent = useAgentStore((s) => s.current);
+  const agentLoading = useAgentStore((s) => s.loading);
+  const getById = useAgentCatalogStore((s) => s.getById);
   const viewMode = useUIStore((s) => s.viewMode);
   const setViewMode = useUIStore((s) => s.setViewMode);
   const toasts = useUIStore((s) => s.toasts);
   const dismissToast = useUIStore((s) => s.dismissToast);
+  const onStartMission = useUIStore((s) => s.onStartMission);
+  const missionPanelOpen = useUIStore((s) => s.missionPanelOpen);
 
-  const experience = current ? getById(current.experienceId) : undefined;
-  const tabs = experience?.manifest.tabs ?? [];
+  const agentDef = currentAgent ? getById(currentAgent.configId) : undefined;
+  const tabs = agentDef?.config.tabs ?? [];
 
   const mappedToasts: Toast[] = toasts.map((t) => ({
     id: t.id,
@@ -56,7 +59,7 @@ export default function App() {
     action: t.action,
   }));
 
-  if (loading || spaceLoading) {
+  if (agentLoading || wsLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-background text-foreground">
         <p className="text-muted-foreground text-sm">Starting...</p>
@@ -64,21 +67,21 @@ export default function App() {
     );
   }
 
-  // No spaces yet — full screen welcome
-  if (spaces.length === 0) {
+  // No workspaces yet — full screen welcome
+  if (workspaces.length === 0) {
     return <WelcomeScreen
       onCreate={async (name) => {
         try {
-          const space = await createSpace(name);
-          setCurrentSpace(space);
-          await loadWorkspaces(space.id);
+          const ws = await createWorkspace(name);
+          setCurrentWorkspace(ws);
+          await loadAgents(ws.id);
         } catch {
-          const loadSpaces = useSpaceStore.getState().loadSpaces;
-          await loadSpaces();
-          const reloaded = useSpaceStore.getState().spaces;
+          const reload = useWorkspaceStore.getState().loadWorkspaces;
+          await reload();
+          const reloaded = useWorkspaceStore.getState().workspaces;
           if (reloaded.length > 0) {
-            setCurrentSpace(reloaded[0]);
-            await loadWorkspaces(reloaded[0].id);
+            setCurrentWorkspace(reloaded[0]);
+            await loadAgents(reloaded[0].id);
           }
         }
       }}
@@ -94,19 +97,36 @@ export default function App() {
           {viewMode === "dashboard" ? (
             <Dashboard />
           ) : viewMode === "connections" ? (
-            <SpaceConnections />
-          ) : current && experience && tabs.length > 0 ? (
+            <WorkspaceConnections />
+          ) : currentAgent && agentDef && tabs.length > 0 ? (
             <>
               <TabBar
-                title={current.name}
+                title={currentAgent.name}
                 tabs={tabs.map((t) => ({ id: t.id, label: t.label }))}
                 activeTab={viewMode}
                 onTabChange={setViewMode}
+                actions={
+                  !missionPanelOpen && onStartMission ? (
+                    <button
+                      onClick={() => {
+                        setViewMode("activity");
+                        // Small delay so the board tab mounts and registers its opener
+                        setTimeout(() => {
+                          useUIStore.getState().onStartMission?.();
+                        }, 50);
+                      }}
+                      className="flex items-center gap-2 rounded-full bg-white text-gray-950 h-9 pl-2 pr-4 text-sm font-medium border border-black/15 hover:bg-gray-50 transition-colors"
+                    >
+                      <img src={houstonIconBlack} alt="" className="size-4" />
+                      Start a Mission
+                    </button>
+                  ) : undefined
+                }
               />
               <main className="flex-1 min-h-0 overflow-hidden">
-                <ExperienceRenderer
-                  experience={experience}
-                  workspace={current}
+                <AgentRenderer
+                  agentDef={agentDef}
+                  agent={currentAgent}
                   tabs={tabs}
                   activeTabId={viewMode}
                 />
@@ -116,9 +136,9 @@ export default function App() {
             <div className="flex-1 flex flex-col items-center justify-center">
               <Empty className="border-0">
                 <EmptyHeader>
-                  <EmptyTitle>No AI Workspaces yet</EmptyTitle>
+                  <EmptyTitle>No Agents yet</EmptyTitle>
                   <EmptyDescription>
-                    Create your first AI Workspace to get started.
+                    Create your first Agent to get started.
                   </EmptyDescription>
                 </EmptyHeader>
               </Empty>
@@ -127,7 +147,7 @@ export default function App() {
         </main>
       </Sidebar>
 
-      <CreateWorkspaceDialog />
+      <CreateAgentDialog />
       <ToastContainer toasts={mappedToasts} onDismiss={dismissToast} />
     </div>
   );
@@ -143,7 +163,7 @@ function WelcomeScreen({
   onDismissToast: (id: string) => void;
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [spaceName, setSpaceName] = useState("Personal");
+  const [wsName, setWsName] = useState("Personal");
 
   return (
     <div className="h-screen flex flex-col items-center justify-center bg-background text-foreground">
@@ -151,44 +171,44 @@ function WelcomeScreen({
         <EmptyHeader>
           <EmptyTitle>Welcome to Houston</EmptyTitle>
           <EmptyDescription>
-            Create your first space to get started.
+            Create your first workspace to get started.
           </EmptyDescription>
         </EmptyHeader>
         <Button
           className="mt-4 rounded-full"
           onClick={() => setDialogOpen(true)}
         >
-          Create your first space
+          Create your first workspace
         </Button>
       </Empty>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Name your space</DialogTitle>
+            <DialogTitle>Name your workspace</DialogTitle>
           </DialogHeader>
           <form
             onSubmit={async (e) => {
               e.preventDefault();
-              if (!spaceName.trim()) return;
-              await onCreate(spaceName.trim());
+              if (!wsName.trim()) return;
+              await onCreate(wsName.trim());
               setDialogOpen(false);
             }}
             className="space-y-4 pt-2"
           >
             <Input
               autoFocus
-              value={spaceName}
-              onChange={(e) => setSpaceName(e.target.value)}
+              value={wsName}
+              onChange={(e) => setWsName(e.target.value)}
               placeholder="e.g. Personal, Work, Acme Corp"
             />
             <div className="flex justify-end">
               <Button
                 type="submit"
-                disabled={!spaceName.trim()}
+                disabled={!wsName.trim()}
                 className="rounded-full"
               >
-                Create space
+                Create workspace
               </Button>
             </div>
           </form>

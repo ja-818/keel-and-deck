@@ -1,89 +1,73 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { SkillsGrid, SkillDetailPage } from "@houston-ai/skills";
 import type { Skill, CommunitySkill } from "@houston-ai/skills";
-import { tauriSkills } from "../../lib/tauri";
+import {
+  useSkills,
+  useSkillDetail,
+  useSaveSkill,
+  useInstallCommunitySkill,
+  useInstallSkillFromRepo,
+  useSearchCommunitySkills,
+} from "../../hooks/queries";
 import type { TabProps } from "../../lib/types";
 
-export default function SkillsTab({ workspace }: TabProps) {
-  const [skills, setSkills] = useState<Skill[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
-  const path = workspace.folderPath;
+export default function SkillsTab({ agent }: TabProps) {
+  const path = agent.folderPath;
+  const { data: summaries, isLoading: loading } = useSkills(path);
+  const [selectedName, setSelectedName] = useState<string | null>(null);
+  const { data: detail } = useSkillDetail(path, selectedName ?? undefined);
+  const saveSkill = useSaveSkill(path);
+  const installCommunity = useInstallCommunitySkill(path);
+  const installFromRepo = useInstallSkillFromRepo(path);
+  const searchCommunity = useSearchCommunitySkills();
 
-  const loadSkills = useCallback(async () => {
-    setLoading(true);
-    try {
-      const summaries = await tauriSkills.list(path);
-      const mapped: Skill[] = summaries.map((s) => ({
-        id: s.name,
-        name: s.name,
-        description: s.description,
-        instructions: "",
-        learnings: "",
-        file_path: s.name,
-      }));
-      setSkills(mapped);
-    } catch (e) {
-      console.error("[skills] Failed to load:", e);
-    } finally {
-      setLoading(false);
-    }
-  }, [path]);
+  const skills: Skill[] = (summaries ?? []).map((s) => ({
+    id: s.name,
+    name: s.name,
+    description: s.description,
+    instructions: "",
+    learnings: "",
+    file_path: s.name,
+  }));
 
-  useEffect(() => {
-    loadSkills();
-  }, [loadSkills]);
+  const selectedSkill = selectedName && detail
+    ? { id: selectedName, name: detail.name, description: detail.description, instructions: detail.content, learnings: "", file_path: selectedName }
+    : null;
 
-  const handleSkillClick = useCallback(
-    async (skill: Skill) => {
-      try {
-        const detail = await tauriSkills.load(path, skill.name);
-        setSelectedSkill({ ...skill, instructions: detail.content });
-      } catch (e) {
-        console.error("[skills] Failed to load detail:", e);
-      }
-    },
-    [path],
-  );
+  const handleSkillClick = useCallback((skill: Skill) => {
+    setSelectedName(skill.name);
+  }, []);
 
   const handleSave = useCallback(
     async (skillName: string, instructions: string) => {
-      await tauriSkills.save(path, skillName, instructions);
+      await saveSkill.mutateAsync({ name: skillName, content: instructions });
     },
-    [path],
+    [saveSkill],
   );
 
-  const handleSearch = useCallback(async (query: string) => {
-    const results = await tauriSkills.searchCommunity(query);
-    return results as CommunitySkill[];
-  }, []);
+  const handleSearch = useCallback(
+    async (query: string) => {
+      const results = await searchCommunity.mutateAsync(query);
+      return results as CommunitySkill[];
+    },
+    [searchCommunity],
+  );
 
   const handleInstallCommunity = useCallback(
     async (skill: CommunitySkill) => {
-      const name = await tauriSkills.installCommunity(
-        path,
-        skill.source,
-        skill.skillId,
-      );
-      await loadSkills();
+      const name = await installCommunity.mutateAsync({ source: skill.source, skillId: skill.skillId });
       return name;
     },
-    [path, loadSkills],
+    [installCommunity],
   );
 
   const handleInstallFromRepo = useCallback(
     async (source: string) => {
-      const installed = await tauriSkills.installFromRepo(path, source);
-      await loadSkills();
+      const installed = await installFromRepo.mutateAsync(source);
       return installed;
     },
-    [path, loadSkills],
+    [installFromRepo],
   );
-
-  const handleBack = useCallback(() => {
-    setSelectedSkill(null);
-    loadSkills();
-  }, [loadSkills]);
 
   return (
     <div className="h-full overflow-auto">
@@ -91,7 +75,7 @@ export default function SkillsTab({ workspace }: TabProps) {
         {selectedSkill ? (
           <SkillDetailPage
             skill={selectedSkill}
-            onBack={handleBack}
+            onBack={() => setSelectedName(null)}
             onSave={handleSave}
           />
         ) : (

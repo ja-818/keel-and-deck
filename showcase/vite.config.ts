@@ -19,7 +19,7 @@ export default defineConfig({
       "@houston-ai/connections",
       "@houston-ai/skills",
       "@houston-ai/review",
-      "@houston-ai/workspace",
+      "@houston-ai/agent",
     ],
   },
 });

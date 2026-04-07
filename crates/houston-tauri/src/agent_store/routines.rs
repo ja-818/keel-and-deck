@@ -2,6 +2,7 @@
 
 use super::helpers::{read_json, write_json};
 use super::types::{NewRoutine, Routine, RoutineUpdate};
+use chrono::Utc;
 use std::path::Path;
 use uuid::Uuid;
 
@@ -13,15 +14,17 @@ pub fn list(root: &Path) -> Result<Vec<Routine>, String> {
 
 pub fn create(root: &Path, input: NewRoutine) -> Result<Routine, String> {
     let mut routines = list(root)?;
+    let now = Utc::now().to_rfc3339();
     let routine = Routine {
         id: Uuid::new_v4().to_string(),
         name: input.name,
         description: input.description,
-        trigger_type: input.trigger_type,
-        trigger_config: input.trigger_config,
-        status: "active".to_string(),
-        approval_mode: input.approval_mode,
-        claude_session_id: None,
+        prompt: input.prompt,
+        schedule: input.schedule,
+        enabled: input.enabled,
+        suppress_when_silent: input.suppress_when_silent,
+        created_at: now.clone(),
+        updated_at: now,
     };
     routines.push(routine.clone());
     write_json(root, FILE, &routines)?;
@@ -41,21 +44,19 @@ pub fn update(root: &Path, id: &str, updates: RoutineUpdate) -> Result<Routine, 
     if let Some(description) = updates.description {
         routine.description = description;
     }
-    if let Some(trigger_type) = updates.trigger_type {
-        routine.trigger_type = trigger_type;
+    if let Some(prompt) = updates.prompt {
+        routine.prompt = prompt;
     }
-    if let Some(trigger_config) = updates.trigger_config {
-        routine.trigger_config = trigger_config;
+    if let Some(schedule) = updates.schedule {
+        routine.schedule = schedule;
     }
-    if let Some(status) = updates.status {
-        routine.status = status;
+    if let Some(enabled) = updates.enabled {
+        routine.enabled = enabled;
     }
-    if let Some(approval_mode) = updates.approval_mode {
-        routine.approval_mode = approval_mode;
+    if let Some(suppress) = updates.suppress_when_silent {
+        routine.suppress_when_silent = suppress;
     }
-    if let Some(session_id) = updates.claude_session_id {
-        routine.claude_session_id = session_id;
-    }
+    routine.updated_at = Utc::now().to_rfc3339();
 
     let result = routine.clone();
     write_json(root, FILE, &routines)?;

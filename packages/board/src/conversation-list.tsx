@@ -53,9 +53,9 @@ export function ConversationList({ entries, onSelect }: ConversationListProps) {
                 <span className="text-sm font-medium truncate block">
                   {entry.title}
                 </span>
-                {entry.workspaceName && (
+                {entry.agentName && (
                   <span className="text-xs text-muted-foreground truncate block">
-                    {entry.workspaceName}
+                    {entry.agentName}
                   </span>
                 )}
               </div>

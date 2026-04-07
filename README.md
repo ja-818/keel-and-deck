@@ -18,9 +18,9 @@
 
 ## What is this?
 
-**Houston** is an AI work delegation desktop app and framework for building AI agent experiences. It includes 10 React packages with 100+ components, Rust crates for session management and workspace persistence, and the Houston app itself — a Tauri 2 desktop app where you create AI workspaces, delegate tasks to Claude, and track progress on a kanban board.
+**Houston** is an AI work delegation desktop app and framework for building AI agent experiences. It includes 10 React packages with 100+ components, Rust crates for session management and agent persistence, and the Houston app itself — a Tauri 2 desktop app where you create AI workspaces, delegate tasks to Claude agents, and track progress on a kanban board.
 
-Files-first architecture: agent-visible data lives in `.houston/` workspace files (JSON + markdown), not in a database. Agents read and write files naturally. The only SQL is for chat conversation replay.
+Files-first architecture: agent-visible data lives in `.houston/` agent files (JSON + markdown), not in a database. Agents read and write files naturally. The only SQL is for chat conversation replay.
 
 Built with Tauri 2, React 19, TypeScript, Tailwind CSS 4, shadcn/ui, and Framer Motion.
 
@@ -37,12 +37,12 @@ pnpm install
 cd app && pnpm tauri dev
 ```
 
-On first launch, create a space and workspace. Pick an experience (Project Manager, Research Agent, Code Reviewer, etc.) and start chatting with Claude.
+On first launch, create a workspace and an agent. Pick an agent definition (Project Manager, Research Agent, Code Reviewer, etc.) and start chatting with Claude.
 
-### Build Your Own Experience
+### Build Your Own Agent
 
 ```bash
-npx create-houston-experience my-app
+npx create-houston-agent my-app
 cd my-app
 pnpm install
 pnpm tauri dev
@@ -54,19 +54,19 @@ You get a working app with Chat + CLAUDE.md editor out of the box. Add @houston-
 
 ## How the App Works
 
-Houston organizes work into **Spaces** and **Workspaces**:
+Houston organizes work into **Workspaces** and **Agents**:
 
-- **Space** — top-level container (like a team or project group). Each space has its own connections and workspaces.
-- **Workspace** — an AI agent workspace powered by an experience. Each workspace has a chat, optional kanban board, skills, files, and more.
-- **Experience** — defines what tabs and capabilities a workspace has. Pick from built-in experiences or build your own.
+- **Workspace** — top-level container (like a team or project group). Each workspace has its own connections and agents.
+- **Agent** — an AI agent instance powered by an agent definition. Each agent has a chat, optional kanban board, skills, files, and more.
+- **Agent Definition** — defines what tabs and capabilities an agent has. Pick from built-in definitions or build your own.
 
 ```
-Space ("Personal")
-  +-- Workspace ("Research Agent")    <- experience: Research Agent
+Workspace ("Personal")
+  +-- Agent ("Research Agent")    <- definition: Research Agent
   |     Chat | Files | Skills
-  +-- Workspace ("Project Manager")   <- experience: Project Manager
+  +-- Agent ("Project Manager")   <- definition: Project Manager
   |     Chat | Tasks | Context | Skills
-  +-- Workspace ("Code Reviewer")     <- experience: Code Reviewer
+  +-- Agent ("Code Reviewer")     <- definition: Code Reviewer
         Chat | Files | Skills
 ```
 
@@ -74,9 +74,9 @@ Each kanban card is a Claude conversation. Click a task to see its full chat his
 
 ---
 
-## Experience System
+## Agent Definition System
 
-Experiences are JSON manifests that define what an AI workspace looks like. Three tiers:
+Agent definitions are JSON manifests that define what an AI agent looks like. Three tiers:
 
 | Tier | What you write | What you get |
 |------|---------------|-------------|
@@ -106,21 +106,21 @@ Experiences are JSON manifests that define what an AI workspace looks like. Thre
 
 **Built-in tab types:** `chat`, `board`, `skills`, `files`, `connections`, `context`, `routines`, `channels`, `events`, `learnings`
 
-**9 built-in experiences:** Default, Project Manager, Meeting Assistant, Research Agent, Data Analyst, Code Reviewer, DevOps, Content Writer, Customer Support.
+**9 built-in agent definitions:** Default, Project Manager, Meeting Assistant, Research Agent, Data Analyst, Code Reviewer, DevOps, Content Writer, Customer Support.
 
-**Installed experiences** load from `~/.houston/experiences/{id}/manifest.json`.
+**Installed agent definitions** load from `~/.houston/agents/{id}/manifest.json`.
 
 ---
 
-## Workspace Convention
+## Agent Convention
 
-Every Houston workspace stores agent-visible data in a `.houston/` folder:
+Every Houston agent stores agent-visible data in a `.houston/` folder:
 
 ```
-~/Documents/Houston/{SpaceName}/{WorkspaceName}/
+~/Documents/Houston/{WorkspaceName}/{AgentName}/
   .houston/
-    workspace.json      # Workspace metadata (id, experience, timestamps)
-    tasks.json          # Kanban board items
+    agent.json          # Agent metadata (id, manifest, timestamps)
+    activity.json       # Kanban board items
     routines.json       # Recurring schedules
     goals.json          # High-level objectives
     channels.json       # Messaging integrations (Telegram, Slack)
@@ -136,7 +136,7 @@ Every Houston workspace stores agent-visible data in a `.houston/` folder:
 
 **The rule:** if `@houston-ai` has a component that renders it, the data lives in `.houston/`. App-specific files go in their own folder.
 
-Agents interact with these files directly — no CLI intermediary, no SQL queries. The `workspace_store` module provides typed CRUD with atomic writes.
+Agents interact with these files directly — no CLI intermediary, no SQL queries. The `agent_store` module provides typed CRUD with atomic writes.
 
 ---
 
@@ -193,7 +193,7 @@ App shell components.
 
 | Export | What it does |
 |--------|-------------|
-| `AppSidebar` | Project/workspace switcher with add/delete |
+| `AppSidebar` | Project/agent switcher with add/delete |
 | `TabBar` | Tab navigation with optional badges and actions |
 | `SplitView` | Resizable two-panel layout (default 55/45) |
 
@@ -251,9 +251,9 @@ Review queue for completed agent work.
 | `ReviewDetail` | Deliverables, output summary, feedback |
 | `DeliverableCard` | File deliverable with open/reveal actions |
 
-### @houston-ai/workspace
+### @houston-ai/agent
 
-Workspace file management.
+Agent file management.
 
 | Export | What it does |
 |--------|-------------|
@@ -293,13 +293,13 @@ The integration layer. Wraps everything into Tauri 2 commands and state.
 
 | Module | What it provides |
 |--------|-----------------|
-| `workspace_store` | Typed CRUD for `.houston/` files -- 23 Tauri commands for tasks, routines, goals, channels, skills, log, config |
+| `agent_store` | Typed CRUD for `.houston/` files -- 23 Tauri commands for tasks, routines, goals, channels, skills, log, config |
 | `session_runner` | `spawn_and_monitor()` -- spawn Claude, emit events, persist feed, track session ID to disk |
 | `session_queue` | Sequential message queue with automatic `--resume` |
 | `agent_sessions` | Per-agent session state with `.claude_session_id` disk persistence |
 | `channel_manager` | Start/stop channel adapters, route messages, auto-reconnect |
 | `events` | `HoustonEvent` enum for Rust->JS event emission |
-| `workspace` | Seed files, build system prompts, file operations |
+| `agent` | Seed files, build system prompts, file operations |
 | `tray` | System tray with show/quit menu |
 | `paths` | `expand_tilde()` for user-facing paths |
 
@@ -328,13 +328,13 @@ Cron jobs and heartbeat timer scheduling.
 ```
 +-------------------------------------------------------------+
 |                Houston App / Your Tauri App                  |
-|   Spaces > Workspaces > Experiences                         |
+|   Workspaces > Agents > Agent Definitions                   |
 +------------------------+------------------------------------+
 |                        |                                    |
 |   Houston UI (React)   |   Houston (Rust)                   |
 |                        |                                    |
 |   @houston-ai/core     |   houston-tauri                    |
-|   @houston-ai/chat     |     +-- workspace_store (.houston/)|
+|   @houston-ai/chat     |     +-- agent_store (.houston/)    |
 |   @houston-ai/board    |     +-- session_runner/queue       |
 |   @houston-ai/layout   |     +-- channel_manager            |
 |   @houston-ai/skills   |     +-- houston-sessions           |
@@ -346,13 +346,13 @@ Cron jobs and heartbeat timer scheduling.
 |                    Tauri 2 IPC Bridge                        |
 +------------------------+------------------------------------+
 |   .houston/ files      |   Claude Code / Codex / Other      |
-|   (workspace data)     |   (AI agent processes)             |
+|   (agent data)         |   (AI agent processes)             |
 +------------------------+------------------------------------+
 ```
 
 **Houston UI** components are props-driven with no store lock-in. Use Zustand, Redux, Jotai — whatever you want.
 
-**Houston** handles session lifecycle, workspace file management, and channel routing. Agent-visible data lives in `.houston/` files. SQLite is only for chat conversation replay.
+**Houston** handles session lifecycle, agent file management, and channel routing. Agent-visible data lives in `.houston/` files. SQLite is only for chat conversation replay.
 
 ---
 
@@ -376,10 +376,10 @@ Override `--color-primary` for brand theming. All components pick it up automati
 
 ## Built with Houston
 
-Build your own AI agent experience with `create-houston-experience`:
+Build your own AI agent with `create-houston-agent`:
 
 ```bash
-npx create-houston-experience my-app
+npx create-houston-agent my-app
 ```
 
 *Building something? Open a PR to add it here.*

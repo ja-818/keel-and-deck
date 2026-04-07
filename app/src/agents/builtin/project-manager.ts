@@ -1,6 +1,6 @@
-import type { ExperienceManifest } from "../../lib/types";
+import type { AgentConfig } from "../../lib/types";
 
-export const projectManager: ExperienceManifest = {
+export const projectManager: AgentConfig = {
   id: "project-manager",
   name: "Project Manager",
   description: "AI project manager that breaks down work, tracks progress, and keeps your team aligned",
@@ -11,7 +11,7 @@ export const projectManager: ExperienceManifest = {
   tabs: [
     { id: "chat", label: "Chat", builtIn: "chat" },
     { id: "activity", label: "Tasks", builtIn: "board" },
-    { id: "context", label: "Context", builtIn: "context" },
+    { id: "instructions", label: "Instructions", builtIn: "instructions" },
     { id: "files", label: "Docs", builtIn: "files" },
     { id: "channels", label: "Channels", builtIn: "channels" },
     { id: "skills", label: "Skills", builtIn: "skills" },

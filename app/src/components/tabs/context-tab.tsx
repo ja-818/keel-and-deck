@@ -1,50 +1,39 @@
-import { useEffect, useState } from "react";
-import { InstructionsPanel } from "@houston-ai/workspace";
-import type { InstructionFile } from "@houston-ai/workspace";
-import { tauriWorkspace } from "../../lib/tauri";
+import { InstructionsPanel } from "@houston-ai/agent";
+import { useContextFiles, useSaveContextFile, CONTEXT_FILE_NAMES } from "../../hooks/queries";
 import type { TabProps } from "../../lib/types";
 
-const PROMPT_FILES: { name: string; label: string }[] = [
-  { name: "CLAUDE.md", label: "CLAUDE.md" },
-  {
-    name: ".houston/prompts/system.md",
-    label: "System Prompt",
-  },
-  {
-    name: ".houston/prompts/self-improvement.md",
-    label: "Self-Improvement",
-  },
+const PROMPT_FILES = [
+  { name: CONTEXT_FILE_NAMES.claudeMd, label: "CLAUDE.md" },
+  { name: CONTEXT_FILE_NAMES.systemPrompt, label: "System Prompt" },
+  { name: CONTEXT_FILE_NAMES.selfImprovement, label: "Self-Improvement" },
 ];
 
-export default function ContextTab({ workspace }: TabProps) {
-  const [files, setFiles] = useState<InstructionFile[]>([]);
+export default function ContextTab({ agent }: TabProps) {
+  const path = agent.folderPath;
+  const { data } = useContextFiles(path);
+  const saveFile = useSaveContextFile(path);
 
-  useEffect(() => {
-    Promise.all(
-      PROMPT_FILES.map(async ({ name, label }) => {
-        const content = await tauriWorkspace
-          .readFile(workspace.folderPath, name)
-          .catch(() => "");
-        return { name, label, content };
-      }),
-    ).then(setFiles);
-  }, [workspace.folderPath]);
-
-  const handleSave = async (name: string, content: string) => {
-    await tauriWorkspace.writeFile(workspace.folderPath, name, content);
-    setFiles((prev) =>
-      prev.map((f) => (f.name === name ? { ...f, content } : f)),
-    );
-  };
+  const files = data
+    ? PROMPT_FILES.map((pf) => ({
+        name: pf.name,
+        label: pf.label,
+        content:
+          pf.name === CONTEXT_FILE_NAMES.claudeMd
+            ? data.claudeMd
+            : pf.name === CONTEXT_FILE_NAMES.systemPrompt
+              ? data.systemPrompt
+              : data.selfImprovement,
+      }))
+    : [];
 
   return (
     <div className="h-full overflow-auto">
       <div className="max-w-3xl mx-auto w-full px-6 py-6">
         <InstructionsPanel
           files={files}
-          onSave={handleSave}
+          onSave={(name, content) => saveFile.mutateAsync({ name, content })}
           emptyTitle="No prompt files found"
-          emptyDescription="Prompt files will be created when the workspace initializes."
+          emptyDescription="Prompt files will be created when the agent initializes."
         />
       </div>
     </div>

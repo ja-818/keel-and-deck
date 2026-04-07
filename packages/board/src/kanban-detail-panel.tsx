@@ -18,7 +18,10 @@ export interface KanbanDetailPanelProps {
   onClose: () => void
   children: React.ReactNode
   actions?: React.ReactNode
+  /** Large avatar shown in the header */
   avatar?: React.ReactNode
+  /** Name displayed next to the avatar (e.g. "Houston") */
+  agentName?: string
   runningStatuses?: string[]
   statusLabels?: Record<string, string>
 }
@@ -31,11 +34,13 @@ export function KanbanDetailPanel({
   children,
   actions,
   avatar,
+  agentName,
   runningStatuses = ["running"],
   statusLabels,
 }: KanbanDetailPanelProps) {
   const labels = statusLabels ?? STATUS_LABEL
   const isRunning = status ? runningStatuses.includes(status) : false
+  const missionLabel = title ? `Mission: ${title}` : subtitle
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -44,25 +49,27 @@ export function KanbanDetailPanel({
         <div className="flex items-center gap-3">
           <button
             onClick={onClose}
-            className="size-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+            className="size-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors shrink-0"
           >
             <ArrowLeft className="size-4" strokeWidth={1.75} />
           </button>
           {avatar}
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-foreground truncate">
-              {title}
+            <p className="text-sm font-semibold text-foreground">
+              {agentName ?? title}
             </p>
-            {(subtitle || status) && (
-              <p className="text-[11px] text-muted-foreground">
-                {subtitle}
-                {subtitle && status && (
-                  <span className="mx-1">&middot;</span>
-                )}
+            {(agentName ? missionLabel : subtitle) && (
+              <p className="text-xs text-muted-foreground truncate">
+                {agentName ? missionLabel : subtitle}
                 {status && (
-                  <span className={cn(isRunning && "text-blue-500")}>
-                    {labels[status] ?? status}
-                  </span>
+                  <>
+                    {(agentName ? missionLabel : subtitle) && (
+                      <span className="mx-1">&middot;</span>
+                    )}
+                    <span className={cn(isRunning && "text-blue-500")}>
+                      {labels[status] ?? status}
+                    </span>
+                  </>
                 )}
               </p>
             )}

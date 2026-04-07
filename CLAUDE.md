@@ -34,10 +34,10 @@ Houston is a monorepo for building AI agent desktop apps. It contains both the r
 | Directory | What |
 |-----------|------|
 | `packages/` | React UI packages (`@houston-ai/*`) — design system, chat, board, layout, etc. |
-| `crates/` | Rust crates (`houston-*`) — session management, database, workspace persistence, Tauri integration |
+| `crates/` | Rust crates (`houston-*`) — session management, database, agent persistence, Tauri integration |
 | `app/` | The Houston app — AI work delegation desktop app (Tauri 2) |
 | `showcase/` | Component showcase — live docs & demos for all @houston-ai components |
-| `create-app/` | Scaffolding template for new Houston experiences |
+| `create-app/` | Scaffolding template for new Houston agents |
 
 **Core relationship:** `packages/` and `crates/` are the reusable library. `app/` consumes it and serves as both a real product and living documentation.
 
@@ -230,7 +230,7 @@ Houston builds **AI-native workspaces**. Users and LLMs are equal participants �
 - **Every data surface must react to file changes**, regardless of who made them (user via UI, agent via file write, external edit)
 - **All `.houston/` data fetching uses TanStack Query** with query invalidation via Tauri events + file watcher. Never use manual load-on-mount-only patterns.
 - **Never build a feature where "the agent can do X but the UI won't show it until refresh"** — this violates the core paradigm
-- **Workspace store writes (Rust) must emit events** so the frontend can invalidate queries
+- **Agent store writes (Rust) must emit events** so the frontend can invalidate queries
 - **The `.houston/` file watcher is architecturally required**, not optional — it catches agent writes that bypass Tauri commands
 
 ## General Rules
@@ -285,7 +285,7 @@ Before ANY edit, ask: "Would this pass code review?"
 1. Work on `claude/wip` branch
 2. Multiple agents commit independently (they touch different files)
 3. Before committing, agents MUST get user approval (Phase 12)
-4. When ready to merge: PR `claude/wip` → `main`, squash merge for clean history
+4. When ready to merge: PR `claude/wip` -> `main`, squash merge for clean history
 5. After merge, reset `claude/wip` from `main`: `git checkout claude/wip && git reset --hard main`
 
 ## Commit Messages
@@ -313,8 +313,8 @@ All packages share ONE version number. Every release bumps ALL packages together
 
 ## Versioning
 - All packages follow semver: `0.x.y`
-- Pre-1.0: breaking changes bump minor (`0.1.0` → `0.2.0`)
-- Bug fixes bump patch (`0.1.0` → `0.1.1`)
+- Pre-1.0: breaking changes bump minor (`0.1.0` -> `0.2.0`)
+- Bug fixes bump patch (`0.1.0` -> `0.1.1`)
 - `1.0.0` when API is stable and publicly committed
 
 ## How to Release
@@ -338,20 +338,21 @@ This script:
 
 ---
 
-# Experience System
+# Agent Definition System
 
-Houston hosts multiple "experiences" — configurable AI agent workspaces.
+Houston hosts multiple "agent definitions" — configurable AI agent manifests.
 
 ## Three Tiers
 1. **JSON-only:** `manifest.json` defines tabs, prompt, colors, icon. Uses built-in @houston-ai components.
 2. **Custom React:** `manifest.json` + `bundle.js` with custom components. Components import @houston-ai as peer deps.
-3. **Custom Rust:** PR a new crate to this repo. Experience declares `features: ["capability"]` in manifest.
+3. **Custom Rust:** PR a new crate to this repo. Agent definition declares `features: ["capability"]` in manifest.
 
 ## Manifest Location
-- Built-in experiences: `app/src/experiences/builtin/`
-- Installed experiences: `~/.houston/experiences/{id}/manifest.json`
+- Built-in agents: `app/src/agents/builtin/`
+- Installed agent definitions: `~/.houston/agents/{id}/manifest.json`
 
-## Workspace Location
+## Agent Location
 - All workspaces: `~/Documents/Houston/{workspace-name}/`
-- Workspace metadata: `.houston/workspace.json`
-- Agent data: `.houston/tasks.json`, `.houston/skills/`, etc.
+- Agent directories: `~/Documents/Houston/{workspace-name}/{agent-name}/`
+- Agent metadata: `.houston/agent.json`
+- Agent data: `.houston/activity.json`, `.houston/skills/`, etc.

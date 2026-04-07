@@ -27,4 +27,4 @@ pub use channel::Channel;
 pub use registry::ChannelRegistry;
 pub use slack::SlackChannel;
 pub use telegram::TelegramChannel;
-pub use types::{Attachment, ChannelConfig, ChannelMessage, ChannelStatus};
+pub use types::{Attachment, ChannelConfig, ChannelMessage, ChannelStatus, SendResult};

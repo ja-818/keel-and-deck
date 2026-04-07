@@ -48,7 +48,7 @@ function getTypeLabel(ext: string): string {
   return map[ext] ?? (ext ? ext.toUpperCase() : "File");
 }
 
-/** File type icon matching @houston-ai/workspace's FileRow icons */
+/** File type icon matching @houston-ai/agent's FileRow icons */
 function AttachmentIcon({ ext }: { ext: string }) {
   if (ext === "pdf") {
     return (

@@ -1,30 +1,30 @@
 import { useState, useMemo, type FormEvent } from "react";
 import { Dialog, DialogContent } from "@houston-ai/core";
-import { useExperienceStore } from "../../stores/experiences";
+import { useAgentCatalogStore } from "../../stores/agent-catalog";
+import { useAgentStore } from "../../stores/agents";
 import { useWorkspaceStore } from "../../stores/workspaces";
-import { useSpaceStore } from "../../stores/spaces";
 import { useUIStore } from "../../stores/ui";
-import type { ExperienceCategory } from "../../lib/types";
-import { MarketplaceStep } from "./marketplace-step";
+import type { AgentCategory } from "../../lib/types";
+import { StoreStep } from "./store-step";
 import { NamingStep } from "./naming-step";
 
-export function CreateWorkspaceDialog() {
-  const open = useUIStore((s) => s.createWorkspaceDialogOpen);
-  const setOpen = useUIStore((s) => s.setCreateWorkspaceDialogOpen);
-  const experiences = useExperienceStore((s) => s.experiences);
-  const createWorkspace = useWorkspaceStore((s) => s.create);
-  const currentSpace = useSpaceStore((s) => s.current);
+export function CreateAgentDialog() {
+  const open = useUIStore((s) => s.createAgentDialogOpen);
+  const setOpen = useUIStore((s) => s.setCreateAgentDialogOpen);
+  const agentDefs = useAgentCatalogStore((s) => s.agents);
+  const createAgent = useAgentStore((s) => s.create);
+  const currentWorkspace = useWorkspaceStore((s) => s.current);
 
   const [step, setStep] = useState<1 | 2>(1);
-  const [selectedExpId, setSelectedExpId] = useState<string | null>(null);
+  const [selectedConfigId, setSelectedManifestId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState<"all" | ExperienceCategory>("all");
+  const [category, setCategory] = useState<"all" | AgentCategory>("all");
 
   const reset = () => {
     setStep(1);
-    setSelectedExpId(null);
+    setSelectedManifestId(null);
     setName("");
     setError(null);
     setSearch("");
@@ -39,9 +39,9 @@ export function CreateWorkspaceDialog() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const trimmed = name.trim();
-    if (!trimmed || !selectedExpId || !currentSpace) return;
+    if (!trimmed || !selectedConfigId || !currentWorkspace) return;
     try {
-      await createWorkspace(currentSpace.id, trimmed, selectedExpId, selectedExp?.manifest.claudeMd);
+      await createAgent(currentWorkspace.id, trimmed, selectedConfigId, selectedDef?.config.claudeMd);
       handleClose();
     } catch (err) {
       setError(String(err));
@@ -49,48 +49,48 @@ export function CreateWorkspaceDialog() {
   };
 
   const filtered = useMemo(() => {
-    let result = experiences;
+    let result = agentDefs;
     if (category !== "all") {
-      result = result.filter((e) => e.manifest.category === category);
+      result = result.filter((d) => d.config.category === category);
     }
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(
-        (e) =>
-          e.manifest.name.toLowerCase().includes(q) ||
-          e.manifest.description.toLowerCase().includes(q) ||
-          e.manifest.tags?.some((t) => t.toLowerCase().includes(q)),
+        (d) =>
+          d.config.name.toLowerCase().includes(q) ||
+          d.config.description.toLowerCase().includes(q) ||
+          d.config.tags?.some((t) => t.toLowerCase().includes(q)),
       );
     }
     return result;
-  }, [experiences, category, search]);
+  }, [agentDefs, category, search]);
 
-  const houstonExps = filtered.filter((e) => e.manifest.author === "Houston");
-  const communityExps = filtered.filter(
-    (e) => e.manifest.author && e.manifest.author !== "Houston",
+  const houstonAgents = filtered.filter((d) => d.config.author === "Houston");
+  const communityAgents = filtered.filter(
+    (d) => d.config.author && d.config.author !== "Houston",
   );
-  const selectedExp = experiences.find((e) => e.manifest.id === selectedExpId);
+  const selectedDef = agentDefs.find((d) => d.config.id === selectedConfigId);
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
       <DialogContent className="sm:max-w-[900px] h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
         {step === 1 ? (
-          <MarketplaceStep
+          <StoreStep
             search={search}
             onSearchChange={setSearch}
             category={category}
             onCategoryChange={setCategory}
-            houstonExps={houstonExps}
-            communityExps={communityExps}
+            houstonAgents={houstonAgents}
+            communityAgents={communityAgents}
             hasResults={filtered.length > 0}
             onSelect={(id) => {
-              setSelectedExpId(id);
+              setSelectedManifestId(id);
               setStep(2);
             }}
           />
         ) : (
           <NamingStep
-            selectedExp={selectedExp}
+            selectedAgent={selectedDef}
             name={name}
             error={error}
             onNameChange={setName}

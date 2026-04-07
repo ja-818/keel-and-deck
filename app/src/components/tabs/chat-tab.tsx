@@ -11,9 +11,9 @@ import { useFeedStore } from "../../stores/feeds";
 import { tauriChat } from "../../lib/tauri";
 import type { TabProps } from "../../lib/types";
 
-export default function ChatTab({ workspace }: TabProps) {
-  // Session key is workspace-scoped to prevent cross-workspace event bleeding
-  const sessionKey = workspace.id;
+export default function ChatTab({ agent }: TabProps) {
+  // Session key is agent-scoped to prevent cross-agent event bleeding
+  const sessionKey = agent.id;
   const feedItems = useFeedStore((s) => s.items[sessionKey]);
   const pushFeedItem = useFeedStore((s) => s.pushFeedItem);
   const setFeed = useFeedStore((s) => s.setFeed);
@@ -23,13 +23,13 @@ export default function ChatTab({ workspace }: TabProps) {
   const loadedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (loadedRef.current === workspace.id) return;
-    loadedRef.current = workspace.id;
+    if (loadedRef.current === agent.id) return;
+    loadedRef.current = agent.id;
     clearFeed(sessionKey);
-    tauriChat.loadHistory(workspace.folderPath, sessionKey).then((rows) => {
+    tauriChat.loadHistory(agent.folderPath, sessionKey).then((rows) => {
       if (rows.length > 0) setFeed(sessionKey, rows as FeedItem[]);
     });
-  }, [workspace.id, sessionKey, setFeed, clearFeed, workspace.folderPath]);
+  }, [agent.id, sessionKey, setFeed, clearFeed, agent.folderPath]);
 
   const handleSend = useCallback(
     async (text: string) => {
@@ -38,7 +38,7 @@ export default function ChatTab({ workspace }: TabProps) {
       setIsLoading(true);
       pushFeedItem(sessionKey, { feed_type: "user_message", data: text });
       try {
-        await tauriChat.send(workspace.folderPath, text, sessionKey);
+        await tauriChat.send(agent.folderPath, text, sessionKey);
       } catch (err) {
         pushFeedItem(sessionKey, {
           feed_type: "system_message",
@@ -49,7 +49,7 @@ export default function ChatTab({ workspace }: TabProps) {
         sendingRef.current = false;
       }
     },
-    [workspace.folderPath, sessionKey, pushFeedItem],
+    [agent.folderPath, sessionKey, pushFeedItem],
   );
 
   return (

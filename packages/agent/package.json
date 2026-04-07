@@ -1,5 +1,5 @@
 {
-  "name": "@houston-ai/workspace",
+  "name": "@houston-ai/agent",
   "version": "0.2.0",
   "type": "module",
   "main": "src/index.ts",

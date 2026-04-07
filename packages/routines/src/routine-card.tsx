@@ -1,86 +1,90 @@
-import type { Routine } from "./types"
-import { TRIGGER_LABELS } from "./types"
+/**
+ * RoutineCard — displays a single routine with schedule summary and enabled toggle.
+ */
 import { cn } from "@houston-ai/core"
 import { Clock } from "lucide-react"
+import type { Routine, RoutineRun } from "./types"
+import { cronToPreset, presetSummary, cronToOptions } from "./schedule-cron-utils"
 
 export interface RoutineCardProps {
   routine: Routine
-  onClick: () => void
+  lastRun?: RoutineRun
+  onClick?: () => void
+  onToggle?: (enabled: boolean) => void
 }
 
-const STATUS_DOT: Record<string, string> = {
-  active: "bg-success",
-  paused: "bg-muted-foreground",
-  needs_setup: "bg-yellow-500",
-  error: "bg-destructive",
+function scheduleSummary(cron: string): string {
+  const preset = cronToPreset(cron)
+  if (!preset) return cron
+  const options = cronToOptions(cron)
+  return presetSummary(preset, {
+    time: options.time ?? "09:00",
+    dayOfWeek: options.dayOfWeek ?? 1,
+    dayOfMonth: options.dayOfMonth ?? 1,
+  })
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  active: "Active",
-  paused: "Paused",
-  needs_setup: "Needs Setup",
-  error: "Error",
+const RUN_STATUS_LABEL: Record<string, string> = {
+  silent: "Last: silent",
+  surfaced: "Last: surfaced",
+  running: "Running…",
+  error: "Last: error",
 }
 
-export function RoutineCard({ routine, onClick }: RoutineCardProps) {
-  const displayName = routine.name || "Untitled"
-  const triggerLabel =
-    TRIGGER_LABELS[routine.trigger_type as keyof typeof TRIGGER_LABELS] ??
-    routine.trigger_type
-  const lastRun = routine.last_run_at
-    ? new Date(routine.last_run_at).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      })
-    : null
+const RUN_STATUS_COLOR: Record<string, string> = {
+  silent: "text-muted-foreground",
+  surfaced: "text-foreground",
+  running: "text-blue-600",
+  error: "text-red-500",
+}
 
+export function RoutineCard({ routine, lastRun, onClick, onToggle }: RoutineCardProps) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        "w-full text-left rounded-2xl border border-border p-5",
-        "bg-background hover:border-border/80 transition-all duration-150",
-        "hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)]",
-        "flex flex-col gap-3",
+        "w-full text-left rounded-xl border border-border/50 p-4 transition-colors",
+        "hover:bg-secondary/50",
+        !routine.enabled && "opacity-50",
       )}
     >
-      {/* Top: name + status */}
-      <div className="flex items-start gap-2.5">
-        <h3 className="text-[15px] font-medium text-foreground leading-snug flex-1 min-w-0">
-          {displayName}
-        </h3>
-        <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
-          <div
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-foreground truncate">
+            {routine.name || "Untitled"}
+          </p>
+          <div className="flex items-center gap-1 mt-0.5">
+            <Clock className="size-3 text-muted-foreground" />
+            <p className="text-xs text-muted-foreground">
+              {scheduleSummary(routine.schedule)}
+            </p>
+          </div>
+          {lastRun && (
+            <p className={cn("text-xs mt-1", RUN_STATUS_COLOR[lastRun.status])}>
+              {RUN_STATUS_LABEL[lastRun.status] ?? lastRun.status}
+            </p>
+          )}
+        </div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggle?.(!routine.enabled)
+          }}
+          className={cn(
+            "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors",
+            routine.enabled ? "bg-primary" : "bg-gray-300",
+          )}
+          role="switch"
+          aria-checked={routine.enabled}
+        >
+          <span
             className={cn(
-              "size-1.5 rounded-full",
-              STATUS_DOT[routine.status] ?? "bg-muted-foreground",
+              "pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow",
+              "transform transition-transform mt-0.5",
+              routine.enabled ? "translate-x-4 ml-0.5" : "translate-x-0.5",
             )}
           />
-          <span className="text-xs text-muted-foreground">
-            {STATUS_LABEL[routine.status] ?? routine.status}
-          </span>
-        </div>
-      </div>
-
-      {/* Description */}
-      {routine.description && (
-        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
-          {routine.description}
-        </p>
-      )}
-
-      {/* Footer: trigger + last run + run count */}
-      <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
-        <span className="flex items-center gap-1">
-          <Clock className="size-3" />
-          {triggerLabel}
-        </span>
-        {routine.run_count > 0 && (
-          <span>
-            {routine.run_count} run{routine.run_count !== 1 ? "s" : ""}
-          </span>
-        )}
-        {lastRun && <span>Last: {lastRun}</span>}
+        </button>
       </div>
     </button>
   )

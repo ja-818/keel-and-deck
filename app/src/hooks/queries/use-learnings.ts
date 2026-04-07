@@ -2,41 +2,41 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "../../lib/query-keys";
 import { tauriLearnings } from "../../lib/tauri";
 
-export function useLearnings(workspacePath: string | undefined) {
+export function useLearnings(agentPath: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.learnings(workspacePath ?? ""),
-    queryFn: () => tauriLearnings.load(workspacePath!),
-    enabled: !!workspacePath,
+    queryKey: queryKeys.learnings(agentPath ?? ""),
+    queryFn: () => tauriLearnings.load(agentPath!),
+    enabled: !!agentPath,
   });
 }
 
-export function useAddLearning(workspacePath: string | undefined) {
+export function useAddLearning(agentPath: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (text: string) => tauriLearnings.add(workspacePath!, text),
+    mutationFn: (text: string) => tauriLearnings.add(agentPath!, text),
     onSuccess: () => {
-      if (workspacePath) qc.invalidateQueries({ queryKey: queryKeys.learnings(workspacePath) });
+      if (agentPath) qc.invalidateQueries({ queryKey: queryKeys.learnings(agentPath) });
     },
   });
 }
 
-export function useReplaceLearning(workspacePath: string | undefined) {
+export function useReplaceLearning(agentPath: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ index, text }: { index: number; text: string }) =>
-      tauriLearnings.replace(workspacePath!, index, text),
+      tauriLearnings.replace(agentPath!, index, text),
     onSuccess: () => {
-      if (workspacePath) qc.invalidateQueries({ queryKey: queryKeys.learnings(workspacePath) });
+      if (agentPath) qc.invalidateQueries({ queryKey: queryKeys.learnings(agentPath) });
     },
   });
 }
 
-export function useRemoveLearning(workspacePath: string | undefined) {
+export function useRemoveLearning(agentPath: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (index: number) => tauriLearnings.remove(workspacePath!, index),
+    mutationFn: (index: number) => tauriLearnings.remove(agentPath!, index),
     onSuccess: () => {
-      if (workspacePath) qc.invalidateQueries({ queryKey: queryKeys.learnings(workspacePath) });
+      if (agentPath) qc.invalidateQueries({ queryKey: queryKeys.learnings(agentPath) });
     },
   });
 }

@@ -1,6 +1,6 @@
-import type { ExperienceManifest } from "../../lib/types";
+import type { AgentConfig } from "../../lib/types";
 
-export const researchAgent: ExperienceManifest = {
+export const researchAgent: AgentConfig = {
   id: "research-agent",
   name: "Research Agent",
   description: "Deep research assistant that investigates topics, synthesizes findings, and produces structured reports",

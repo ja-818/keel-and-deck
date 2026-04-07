@@ -1,49 +1,42 @@
 /**
- * RoutinesGrid — Card grid view for routines.
- * Accepts data and callbacks via props (no Zustand, no Tauri).
+ * RoutinesGrid — Card grid view for routines with create button.
+ * Props-driven: no Zustand, no Tauri.
  */
-import { useMemo } from "react"
 import {
-  Empty, EmptyHeader, EmptyTitle, EmptyDescription,
+  Empty, EmptyHeader, EmptyTitle, EmptyDescription, Button,
 } from "@houston-ai/core"
-import type { Routine } from "./types"
+import { Plus } from "lucide-react"
+import type { Routine, RoutineRun } from "./types"
 import { RoutineCard } from "./routine-card"
 
 export interface RoutinesGridProps {
   routines: Routine[]
+  /** Most recent run per routine, keyed by routine ID. */
+  lastRuns?: Record<string, RoutineRun>
   loading?: boolean
-  onSelectRoutine: (routineId: string) => void
-}
-
-const STATUS_ORDER: Record<string, number> = {
-  active: 0,
-  needs_setup: 1,
-  error: 2,
-  paused: 3,
+  onSelect: (routineId: string) => void
+  onCreate?: () => void
+  onToggle?: (routineId: string, enabled: boolean) => void
 }
 
 export function RoutinesGrid({
   routines,
+  lastRuns = {},
   loading,
-  onSelectRoutine,
+  onSelect,
+  onCreate,
+  onToggle,
 }: RoutinesGridProps) {
-  const sorted = useMemo(() => {
-    return [...routines].sort((a, b) => {
-      const sa = STATUS_ORDER[a.status] ?? 9
-      const sb = STATUS_ORDER[b.status] ?? 9
-      if (sa !== sb) return sa - sb
-      const nameA = a.name.toLowerCase()
-      const nameB = b.name.toLowerCase()
-      return nameA.localeCompare(nameB)
-    })
-  }, [routines])
+  // Sort: enabled first, then alphabetical
+  const sorted = [...routines].sort((a, b) => {
+    if (a.enabled !== b.enabled) return a.enabled ? -1 : 1
+    return a.name.localeCompare(b.name)
+  })
 
   if (loading && routines.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <p className="text-sm text-muted-foreground animate-pulse">
-          Loading routines...
-        </p>
+        <p className="text-sm text-muted-foreground animate-pulse">Loading routines...</p>
       </div>
     )
   }
@@ -54,10 +47,18 @@ export function RoutinesGrid({
         <EmptyHeader>
           <EmptyTitle>Automate recurring work</EmptyTitle>
           <EmptyDescription>
-            Routines run on a schedule — daily reports, weekly research, and
-            more.
+            Routines run on a schedule and notify you only when something needs
+            your attention.
           </EmptyDescription>
         </EmptyHeader>
+        {onCreate && (
+          <div className="mt-4">
+            <Button onClick={onCreate}>
+              <Plus className="size-4 mr-1" />
+              New routine
+            </Button>
+          </div>
+        )}
       </Empty>
     )
   }
@@ -65,12 +66,23 @@ export function RoutinesGrid({
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="max-w-4xl mx-auto px-6 py-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-medium text-foreground">Routines</h2>
+          {onCreate && (
+            <Button variant="outline" size="sm" onClick={onCreate}>
+              <Plus className="size-3.5 mr-1" />
+              New routine
+            </Button>
+          )}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {sorted.map((routine) => (
             <RoutineCard
               key={routine.id}
               routine={routine}
-              onClick={() => onSelectRoutine(routine.id)}
+              lastRun={lastRuns[routine.id]}
+              onClick={() => onSelect(routine.id)}
+              onToggle={onToggle ? (enabled) => onToggle(routine.id, enabled) : undefined}
             />
           ))}
         </div>

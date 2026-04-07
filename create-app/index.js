@@ -63,7 +63,7 @@ const projectName = positional[0];
 
 if (!projectName) {
   console.log(`
-  Usage: npx create-houston-experience <name> [flags]
+  Usage: npx create-houston-agent <name> [flags]
 
   Modes:
     (default)   Generate a manifest.json experience definition
@@ -71,9 +71,9 @@ if (!projectName) {
     --app       Generate a full Tauri 2 desktop app (existing template)
 
   Examples:
-    npx create-houston-experience my-experience
-    npx create-houston-experience my-experience --custom
-    npx create-houston-experience my-experience --app
+    npx create-houston-agent my-agent
+    npx create-houston-agent my-agent --custom
+    npx create-houston-agent my-agent --app
 `);
   process.exit(1);
 }

@@ -1,3 +1,5 @@
+pub mod api;
+pub mod oauth;
 pub mod socket_mode;
 pub mod types;
 
@@ -6,7 +8,7 @@ use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
 use crate::channel::Channel;
-use crate::types::{ChannelMessage, ChannelStatus};
+use crate::types::{ChannelMessage, ChannelStatus, SendResult};
 
 use self::types::PostMessageResponse;
 
@@ -40,6 +42,11 @@ impl SlackChannel {
             listen_handle: None,
             http_client: reqwest::Client::new(),
         }
+    }
+
+    /// Get the bot token (needed by SlackSync for API calls).
+    pub fn bot_token(&self) -> &str {
+        &self.bot_token
     }
 }
 
@@ -75,11 +82,9 @@ impl Channel for SlackChannel {
 
     async fn disconnect(&mut self) -> anyhow::Result<()> {
         tracing::info!("disconnecting from Slack");
-
         if let Some(handle) = self.listen_handle.take() {
             handle.abort();
         }
-
         self.status = ChannelStatus::Disconnected;
         Ok(())
     }
@@ -110,6 +115,15 @@ impl Channel for SlackChannel {
         }
 
         Ok(())
+    }
+
+    async fn send_message_threaded(
+        &self,
+        channel_id: &str,
+        thread_ts: &str,
+        text: &str,
+    ) -> anyhow::Result<SendResult> {
+        api::post_message(&self.bot_token, channel_id, text, Some(thread_ts)).await
     }
 
     fn status(&self) -> ChannelStatus {
