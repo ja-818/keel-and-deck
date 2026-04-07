@@ -4,6 +4,16 @@ use super::resolve_workspace_dir;
 use crate::workspace_store::types::*;
 use crate::workspace_store::WorkspaceStore;
 
+// -- Conversations --
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn list_conversations(
+    workspace_path: String,
+) -> Result<Vec<crate::workspace_store::types::ConversationEntry>, String> {
+    let root = resolve_workspace_dir(&workspace_path)?;
+    WorkspaceStore::new(&root).list_conversations()
+}
+
 // -- Tasks --
 
 #[tauri::command(rename_all = "snake_case")]

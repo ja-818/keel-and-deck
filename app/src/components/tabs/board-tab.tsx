@@ -10,6 +10,7 @@ import type { TabProps } from "../../lib/types";
 
 export default function BoardTab({ workspace }: TabProps) {
   const [items, setItems] = useState<KanbanItem[]>([]);
+  const [loading, setLoading] = useState<Record<string, boolean>>({});
   const path = workspace.folderPath;
 
   // Read and consume pending selection from dashboard drill-down
@@ -24,6 +25,7 @@ export default function BoardTab({ workspace }: TabProps) {
   }, [pendingId, clearPending]);
   const feedItems = useFeedStore((s) => s.items);
   const pushFeedItem = useFeedStore((s) => s.pushFeedItem);
+  const clearFeed = useFeedStore((s) => s.clearFeed);
 
   const loadTasks = useCallback(async () => {
     try {
@@ -47,16 +49,30 @@ export default function BoardTab({ workspace }: TabProps) {
   }, [loadTasks]);
 
   const handleEvent = useCallback(
-    (payload: HoustonEvent) => {
-      if (
-        payload.type === "SessionStatus" ||
+    async (payload: HoustonEvent) => {
+      if (payload.type === "SessionStatus") {
+        const { session_key, status } = payload.data;
+        if (status === "completed" || status === "error") {
+          setLoading((prev) => ({ ...prev, [session_key]: false }));
+        }
+        // When a task session completes, move task to "needs_you"
+        if (status === "completed" && session_key.startsWith("task-")) {
+          const taskId = session_key.replace("task-", "");
+          try {
+            await tauriTasks.update(path, taskId, { status: "needs_you" });
+          } catch (e) {
+            console.error("[board] Failed to update task status:", e);
+          }
+        }
+        loadTasks();
+      } else if (
         payload.type === "IssuesChanged" ||
         payload.type === "ConversationsChanged"
       ) {
         loadTasks();
       }
     },
-    [loadTasks],
+    [loadTasks, path],
   );
   useHoustonEvent<HoustonEvent>("houston-event", handleEvent);
 
@@ -79,11 +95,13 @@ export default function BoardTab({ workspace }: TabProps) {
 
   const handleCreateConversation = useCallback(
     async (text: string) => {
-      pushFeedItem("new-conversation", { feed_type: "user_message", data: text });
       const title = text.length > 80 ? text.slice(0, 77) + "..." : text;
       const task = await tauriTasks.create(path, title, text);
+      const sessionKey = `task-${task.id}`;
+      pushFeedItem(sessionKey, { feed_type: "user_message", data: text });
+      setLoading((prev) => ({ ...prev, [sessionKey]: true }));
       await tauriTasks.update(path, task.id, { status: "running" });
-      await tauriChat.send(path, text, `task-${task.id}`);
+      await tauriChat.send(path, text, sessionKey);
       await loadTasks();
       return task.id;
     },
@@ -93,10 +111,15 @@ export default function BoardTab({ workspace }: TabProps) {
   const handleSendMessage = useCallback(
     async (sessionKey: string, text: string) => {
       pushFeedItem(sessionKey, { feed_type: "user_message", data: text });
+      setLoading((prev) => ({ ...prev, [sessionKey]: true }));
       await tauriChat.send(path, text, sessionKey);
     },
     [path, pushFeedItem],
   );
+
+  const handleNewConversationOpen = useCallback(() => {
+    clearFeed("new-conversation");
+  }, [clearFeed]);
 
   return (
     <AIBoard
@@ -104,10 +127,12 @@ export default function BoardTab({ workspace }: TabProps) {
       selectedId={selectedId}
       onSelect={setSelectedId}
       feedItems={feedItems}
+      isLoading={loading}
       onDelete={handleDelete}
       onApprove={handleApprove}
       onCreateConversation={handleCreateConversation}
       onSendMessage={handleSendMessage}
+      onNewConversationOpen={handleNewConversationOpen}
     />
   );
 }

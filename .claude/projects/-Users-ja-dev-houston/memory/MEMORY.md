@@ -1,0 +1,1 @@
+- [feedback_always_toast_errors.md](feedback_always_toast_errors.md) — Never suppress error toasts; user prefers noisy errors over silent failures

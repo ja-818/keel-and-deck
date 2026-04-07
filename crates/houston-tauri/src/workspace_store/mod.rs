@@ -7,6 +7,7 @@
 pub mod channels;
 pub mod commands;
 pub mod config;
+pub mod conversations;
 pub mod goals;
 mod helpers;
 pub mod log;
@@ -35,6 +36,11 @@ impl WorkspaceStore {
 
     pub fn ensure_houston_dir(&self) -> Result<(), String> {
         helpers::ensure_houston_dir(&self.root)
+    }
+
+    // -- Conversations --
+    pub fn list_conversations(&self) -> Result<Vec<ConversationEntry>, String> {
+        conversations::list(&self.root)
     }
 
     // -- Tasks --

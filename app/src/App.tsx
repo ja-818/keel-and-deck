@@ -1,12 +1,18 @@
 import "./styles/globals.css";
 import { ToastContainer } from "@houston-ai/core";
 import type { Toast } from "@houston-ai/core";
+import { useState } from "react";
 import {
   Empty,
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
   Button,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  Input,
 } from "@houston-ai/core";
 import { TabBar } from "@houston-ai/layout";
 import { useHoustonInit } from "./hooks/use-houston-init";
@@ -58,41 +64,25 @@ export default function App() {
 
   // No spaces yet — full screen welcome
   if (spaces.length === 0) {
-    return (
-      <div className="h-screen flex flex-col items-center justify-center bg-background text-foreground">
-        <Empty className="border-0">
-          <EmptyHeader>
-            <EmptyTitle>Welcome to Houston</EmptyTitle>
-            <EmptyDescription>
-              Create your first space to get started.
-            </EmptyDescription>
-          </EmptyHeader>
-          <Button
-            className="mt-4 rounded-full"
-            onClick={async () => {
-              const name = window.prompt("Name your space", "Personal");
-              if (!name?.trim()) return;
-              try {
-                const space = await createSpace(name.trim());
-                setCurrentSpace(space);
-                await loadWorkspaces(space.id);
-              } catch {
-                const loadSpaces = useSpaceStore.getState().loadSpaces;
-                await loadSpaces();
-                const reloaded = useSpaceStore.getState().spaces;
-                if (reloaded.length > 0) {
-                  setCurrentSpace(reloaded[0]);
-                  await loadWorkspaces(reloaded[0].id);
-                }
-              }
-            }}
-          >
-            Create your first space
-          </Button>
-        </Empty>
-        <ToastContainer toasts={mappedToasts} onDismiss={dismissToast} />
-      </div>
-    );
+    return <WelcomeScreen
+      onCreate={async (name) => {
+        try {
+          const space = await createSpace(name);
+          setCurrentSpace(space);
+          await loadWorkspaces(space.id);
+        } catch {
+          const loadSpaces = useSpaceStore.getState().loadSpaces;
+          await loadSpaces();
+          const reloaded = useSpaceStore.getState().spaces;
+          if (reloaded.length > 0) {
+            setCurrentSpace(reloaded[0]);
+            await loadWorkspaces(reloaded[0].id);
+          }
+        }
+      }}
+      toasts={mappedToasts}
+      onDismissToast={dismissToast}
+    />;
   }
 
   return (
@@ -137,6 +127,73 @@ export default function App() {
 
       <CreateWorkspaceDialog />
       <ToastContainer toasts={mappedToasts} onDismiss={dismissToast} />
+    </div>
+  );
+}
+
+function WelcomeScreen({
+  onCreate,
+  toasts,
+  onDismissToast,
+}: {
+  onCreate: (name: string) => Promise<void>;
+  toasts: Toast[];
+  onDismissToast: (id: string) => void;
+}) {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [spaceName, setSpaceName] = useState("Personal");
+
+  return (
+    <div className="h-screen flex flex-col items-center justify-center bg-background text-foreground">
+      <Empty className="border-0">
+        <EmptyHeader>
+          <EmptyTitle>Welcome to Houston</EmptyTitle>
+          <EmptyDescription>
+            Create your first space to get started.
+          </EmptyDescription>
+        </EmptyHeader>
+        <Button
+          className="mt-4 rounded-full"
+          onClick={() => setDialogOpen(true)}
+        >
+          Create your first space
+        </Button>
+      </Empty>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Name your space</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!spaceName.trim()) return;
+              await onCreate(spaceName.trim());
+              setDialogOpen(false);
+            }}
+            className="space-y-4 pt-2"
+          >
+            <Input
+              autoFocus
+              value={spaceName}
+              onChange={(e) => setSpaceName(e.target.value)}
+              placeholder="e.g. Personal, Work, Acme Corp"
+            />
+            <div className="flex justify-end">
+              <Button
+                type="submit"
+                disabled={!spaceName.trim()}
+                className="rounded-full"
+              >
+                Create space
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <ToastContainer toasts={toasts} onDismiss={onDismissToast} />
     </div>
   );
 }

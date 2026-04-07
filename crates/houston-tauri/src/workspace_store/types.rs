@@ -24,6 +24,24 @@ pub struct TaskUpdate {
     pub claude_session_id: Option<Option<String>>,
 }
 
+// -- Conversations --
+
+/// A unified conversation entry — either the primary chat or a task conversation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConversationEntry {
+    pub id: String,
+    pub title: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+    /// `"primary"` for the workspace's main chat, `"task"` for task conversations.
+    #[serde(rename = "type")]
+    pub entry_type: String,
+    /// Session key used to address this conversation (e.g. `"main"`, `"task-{id}"`).
+    pub session_key: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub updated_at: Option<String>,
+}
+
 // -- Routines --
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

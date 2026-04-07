@@ -18,6 +18,8 @@ export interface AIBoardProps {
   onCreateConversation?: (text: string) => Promise<string>
   /** Called when user sends a follow-up message in an existing conversation's detail panel. */
   onSendMessage?: (sessionKey: string, text: string) => Promise<void>
+  /** Called when the new-conversation panel opens, so the app can clear stale feed data. */
+  onNewConversationOpen?: () => void
   /** Feed items keyed by session key (e.g. "task-{id}"). */
   feedItems?: Record<string, FeedItem[]>
   /** Whether a message is currently being processed. */
@@ -47,6 +49,7 @@ export function AIBoard({
   onApprove,
   onCreateConversation,
   onSendMessage,
+  onNewConversationOpen,
   feedItems = {},
   isLoading = {},
   emptyState,
@@ -63,10 +66,15 @@ export function AIBoard({
 
   const selectedItem = items.find((i) => i.id === selectedId) ?? null
 
+  const openNewPanel = useCallback(() => {
+    onNewConversationOpen?.()
+    setNewPanelOpen(true)
+  }, [onNewConversationOpen])
+
   // Inject onAdd into the first column for the "+" button
   const resolvedColumns = (columns ?? DEFAULT_COLUMNS).map((col, idx) =>
     idx === 0 && onCreateConversation
-      ? { ...col, onAdd: () => setNewPanelOpen(true) }
+      ? { ...col, onAdd: openNewPanel }
       : col,
   )
 
@@ -162,7 +170,6 @@ function DetailPanel({
     <KanbanDetailPanel
       title={item.title}
       subtitle={item.subtitle}
-      status={item.status}
       onClose={onClose}
     >
       <div className="flex-1 min-h-0 flex flex-col">

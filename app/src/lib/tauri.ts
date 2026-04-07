@@ -162,6 +162,18 @@ export const tauriExperiences = {
     ),
 };
 
+export const tauriConversations = {
+  list: (workspacePath: string) =>
+    invoke<Array<{
+      id: string;
+      title: string;
+      status?: string;
+      type: "primary" | "task";
+      session_key: string;
+      updated_at?: string;
+    }>>("list_conversations", { workspace_path: workspacePath }),
+};
+
 export const tauriTasks = {
   list: (workspacePath: string) =>
     invoke<Array<{ id: string; title: string; description?: string; status: string; updated_at?: string }>>(

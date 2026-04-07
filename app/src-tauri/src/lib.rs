@@ -73,7 +73,8 @@ pub fn run() {
             commands::skills::install_skills_from_repo,
             commands::skills::search_community_skills,
             commands::skills::install_community_skill,
-            // Workspace store — tasks, routines, goals, channels, skills, log, config
+            // Workspace store — conversations, tasks, routines, goals, channels, skills, log, config
+            houston_tauri::workspace_store::commands::list_conversations,
             houston_tauri::workspace_store::commands::list_tasks,
             houston_tauri::workspace_store::commands::create_task,
             houston_tauri::workspace_store::commands::update_task,
