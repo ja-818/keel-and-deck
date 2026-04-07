@@ -70,12 +70,13 @@ export default function App() {
           <Button
             className="mt-4 rounded-full"
             onClick={async () => {
+              const name = window.prompt("Name your space", "Personal");
+              if (!name?.trim()) return;
               try {
-                const space = await createSpace("Personal");
+                const space = await createSpace(name.trim());
                 setCurrentSpace(space);
                 await loadWorkspaces(space.id);
               } catch {
-                // Space might already exist from a previous session — just reload
                 const loadSpaces = useSpaceStore.getState().loadSpaces;
                 await loadSpaces();
                 const reloaded = useSpaceStore.getState().spaces;

@@ -177,7 +177,7 @@ export const tauriTasks = {
     workspacePath: string,
     taskId: string,
     update: { status?: string; title?: string; description?: string },
-  ) => invoke<void>("update_task", { workspace_path: workspacePath, task_id: taskId, update }),
+  ) => invoke<void>("update_task", { workspace_path: workspacePath, task_id: taskId, updates: update }),
   delete: (workspacePath: string, taskId: string) =>
     invoke<void>("delete_task", { workspace_path: workspacePath, task_id: taskId }),
 };
