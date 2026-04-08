@@ -54,7 +54,7 @@ pub async fn begin_oauth_flow(
         .as_deref()
         .ok_or("Server does not support dynamic client registration")?;
     let registration = register_client(reg_endpoint, &redirect_uri).await?;
-    eprintln!("[composio:auth] Registered client: {}", registration.client_id);
+    tracing::debug!("[composio:auth] Registered client: {}", registration.client_id);
 
     let verifier = generate_verifier();
     let challenge = compute_challenge(&verifier);
@@ -155,7 +155,7 @@ pub async fn refresh_access_token() -> Result<String, String> {
         token.refresh_token.as_deref(),
     )?;
 
-    eprintln!("[composio] Token refreshed silently");
+    tracing::info!("[composio] Token refreshed silently");
     Ok(token.access_token)
 }
 
@@ -228,7 +228,7 @@ async fn exchange_and_store(code: &str) -> Result<(), String> {
     // Clear pending state
     { *PENDING.lock().unwrap() = None; }
 
-    eprintln!("[composio] OAuth flow completed successfully");
+    tracing::info!("[composio] OAuth flow completed successfully");
     Ok(())
 }
 
@@ -338,17 +338,17 @@ async fn fetch_metadata(
     ];
 
     for url in &candidates {
-        eprintln!("[composio:auth] Trying: {url}");
+        tracing::debug!("[composio:auth] Trying: {url}");
         let resp = match client.get(url).send().await {
             Ok(r) => r,
             Err(_) => continue,
         };
         if !resp.status().is_success() {
-            eprintln!("[composio:auth]   → {}", resp.status());
+            tracing::debug!("[composio:auth]   → {}", resp.status());
             continue;
         }
         let body = resp.text().await.unwrap_or_default();
-        eprintln!("[composio:auth]   → 200, body: {}", &body[..body.len().min(300)]);
+        tracing::debug!("[composio:auth]   → 200, body: {}", &body[..body.len().min(300)]);
 
         if let Ok(meta) = serde_json::from_str::<OAuthMetadata>(&body) {
             return Ok(meta);
@@ -356,7 +356,7 @@ async fn fetch_metadata(
         if let Ok(res) = serde_json::from_str::<serde_json::Value>(&body) {
             if let Some(servers) = res.get("authorization_servers").and_then(|s| s.as_array()) {
                 for server_url in servers.iter().filter_map(|s| s.as_str()) {
-                    eprintln!("[composio:auth] Found AS: {server_url}");
+                    tracing::debug!("[composio:auth] Found AS: {server_url}");
                     let as_url = format!("{}/.well-known/oauth-authorization-server", server_url);
                     if let Ok(as_resp) = client.get(&as_url).send().await {
                         if as_resp.status().is_success() {

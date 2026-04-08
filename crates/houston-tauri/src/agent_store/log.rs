@@ -39,7 +39,7 @@ pub fn read(root: &Path) -> Result<Vec<LogEntry>, String> {
         }
         match serde_json::from_str::<LogEntry>(trimmed) {
             Ok(entry) => entries.push(entry),
-            Err(e) => eprintln!("[agent_store] skipping log line {i}: {e}"),
+            Err(e) => tracing::warn!("[agent_store] skipping log line {i}: {e}"),
         }
     }
     Ok(entries)

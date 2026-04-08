@@ -26,3 +26,6 @@ tauri-plugin-notification = "2"
 open = "5"
 houston-channels = { path = "../../crates/houston-channels" }
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tracing-appender = { workspace = true }

@@ -6,13 +6,22 @@ STOP - FOLLOW THIS PROTOCOL FOR EVERY INTERACTION
 
 # Claude Session Protocol — Houston
 
-### MANDATORY DEBUGGING RULE
+### MANDATORY DEBUGGING RULE — USE THE LOG FILES
 When a bug occurs and the fix isn't immediately obvious: **NEVER guess.** Always:
-1. Add error logging (try/catch, window.onerror, console.error, eprintln!, etc.)
-2. Tell the user what to run and what output to share back
-3. Fix based on the ACTUAL error, not assumptions
+1. **Read the log files first** — they contain all backend and frontend errors:
+   - **Backend:** `~/Library/Application Support/houston/logs/backend.log` (Rust tracing output — sessions, agent store, channels, watcher, etc.)
+   - **Frontend:** `~/Library/Application Support/houston/logs/frontend.log` (JS console.error/warn, React crashes, Tauri command failures)
+2. Diagnose from the ACTUAL error in the logs, not assumptions
+3. If the logs don't have enough info, add targeted `tracing::debug!()` (Rust) or `logger.debug()` (TS from `lib/logger.ts`) to narrow it down
+4. **Never ask the user to copy-paste terminal output** — read the log files directly
 
-Guessing wastes time. Getting the real error is always faster.
+### Logging System Reference
+- **Rust:** All logging uses `tracing` macros (`tracing::info!`, `tracing::error!`, etc.) — output goes to `backend.log` via `tracing-subscriber` with daily rolling file appender
+- **Frontend:** `logger` from `app/src/lib/logger.ts` — `logger.error()`, `logger.warn()`, `logger.info()`, `logger.debug()`. Also, `console.error` and `console.warn` are patched to auto-write to `frontend.log`
+- **Bug reports:** "Report bug" button on error toasts automatically attaches the last 50 lines from both log files
+- **Log levels (Rust):** Configurable via `RUST_LOG` env var. Default: `info` globally, `debug` for `houston_sessions` and `houston_tauri`
+
+Guessing wastes time. Reading the logs is always faster.
 
 ### MANDATORY STOPPING RULES
 Whenever this protocol tells you to "wait for approval", "wait for user feedback", or "ask the user", you MUST IMMEDIATELY STOP GENERATING YOUR RESPONSE.

@@ -121,7 +121,7 @@ pub fn start_watching(
             let events = match events {
                 Ok(e) => e,
                 Err(err) => {
-                    eprintln!("[watcher] error: {err}");
+                    tracing::error!("[watcher] error: {err}");
                     return;
                 }
             };
@@ -137,7 +137,7 @@ pub fn start_watching(
                 let relative = match path.strip_prefix(&root) {
                     Ok(r) => r,
                     Err(_) => {
-                        eprintln!("[watcher] skip: cannot strip prefix {} from {}", root.display(), path.display());
+                        tracing::warn!("[watcher] skip: cannot strip prefix {} from {}", root.display(), path.display());
                         continue;
                     }
                 };
@@ -146,7 +146,7 @@ pub fn start_watching(
                     // Use the event type name as dedup key
                     let key = format!("{:?}", std::mem::discriminant(&houston_event));
                     if emitted.insert(key.clone()) {
-                        eprintln!("[watcher] emit: {key} for {}", relative.display());
+                        tracing::debug!("[watcher] emit: {key} for {}", relative.display());
                         let _ = handle.emit("houston-event", houston_event);
                     }
                 }
@@ -162,7 +162,7 @@ pub fn start_watching(
         .watch(&watch_path, notify::RecursiveMode::Recursive)
         .map_err(|e| format!("Failed to start watching {agent_path}: {e}"))?;
 
-    eprintln!("[watcher] Watching: {agent_path}");
+    tracing::info!("[watcher] Watching: {agent_path}");
 
     Ok(AgentWatcher {
         _debouncer: debouncer,
@@ -194,6 +194,6 @@ pub async fn stop_agent_watcher(
 ) -> Result<(), String> {
     let mut guard = state.0.lock().await;
     *guard = None;
-    eprintln!("[watcher] Stopped");
+    tracing::info!("[watcher] Stopped");
     Ok(())
 }

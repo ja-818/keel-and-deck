@@ -14,7 +14,7 @@ pub async fn read_stderr_lines(
     let reader = BufReader::new(stderr);
     let mut reader_lines = reader.lines();
     while let Ok(Some(line)) = reader_lines.next_line().await {
-        eprintln!("claude stderr: {line}");
+        tracing::debug!("claude stderr: {line}");
         let _ = tx.send(SessionUpdate::Feed(FeedItem::SystemMessage(format!(
             "stderr: {line}",
         ))));
@@ -38,7 +38,7 @@ pub async fn read_stdout_events(
         line_count += 1;
         // Log every NDJSON line type for debugging.
         let line_type = line.trim().chars().take(80).collect::<String>();
-        eprintln!("[houston:stdout] line {line_count}: {line_type}");
+        tracing::debug!("[houston:stdout] line {line_count}: {line_type}");
 
         if let Some(sid) = parser::extract_session_id(&line) {
             let _ = tx.send(SessionUpdate::SessionId(sid));
@@ -48,19 +48,19 @@ pub async fn read_stdout_events(
             item_count += 1;
             match item {
                 FeedItem::AssistantTextStreaming(t) => {
-                    eprintln!(
+                    tracing::debug!(
                         "[houston:stdout] -> FeedItem::AssistantTextStreaming ({} chars)",
                         t.len()
                     );
                 }
                 FeedItem::AssistantText(t) => {
-                    eprintln!(
+                    tracing::debug!(
                         "[houston:stdout] -> FeedItem::AssistantText ({} chars)",
                         t.len()
                     );
                 }
                 other => {
-                    eprintln!(
+                    tracing::debug!(
                         "[houston:stdout] -> FeedItem::{:?}",
                         std::mem::discriminant(other)
                     );
@@ -71,7 +71,7 @@ pub async fn read_stdout_events(
             let _ = tx.send(SessionUpdate::Feed(item));
         }
     }
-    eprintln!(
+    tracing::debug!(
         "[houston:stdout] stream ended. {line_count} lines, {item_count} feed items emitted"
     );
 }

@@ -18,7 +18,7 @@ pub async fn supervise_monitor(
     set.spawn(monitor);
     while let Some(result) = set.join_next().await {
         if let Err(join_err) = result {
-            eprintln!(
+            tracing::error!(
                 "[houston:supervisor] {context} monitor failed (panic={}): {join_err:?}",
                 join_err.is_panic()
             );

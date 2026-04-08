@@ -109,7 +109,7 @@ pub async fn auto_reconnect(db: &houston_db::Database, mgr: &ChannelManager) {
     let rows = match db.conn().query(query, libsql::params![]).await {
         Ok(rows) => rows,
         Err(e) => {
-            eprintln!("[channels] auto-reconnect query failed: {e}");
+            tracing::error!("[channels] auto-reconnect query failed: {e}");
             return;
         }
     };
@@ -131,9 +131,9 @@ pub async fn auto_reconnect(db: &houston_db::Database, mgr: &ChannelManager) {
                 extra: config_val,
             };
             if let Err(e) = mgr.start_channel(id.clone(), config).await {
-                eprintln!("[channels] auto-reconnect failed for {id} ({ch_type}): {e}");
+                tracing::error!("[channels] auto-reconnect failed for {id} ({ch_type}): {e}");
             } else {
-                eprintln!("[channels] auto-reconnected {id} ({ch_type})");
+                tracing::info!("[channels] auto-reconnected {id} ({ch_type})");
             }
         }
     }

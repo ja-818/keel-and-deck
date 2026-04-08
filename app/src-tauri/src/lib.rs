@@ -1,5 +1,6 @@
 mod commands;
 mod agent;
+mod logging;
 mod routine_runner;
 
 use commands::agents::WorkspaceRoot;
@@ -13,6 +14,10 @@ use tauri::Manager;
 use tokio::sync::RwLock;
 
 pub fn run() {
+    // Initialize logging before anything else
+    let data_dir = houston_tauri::houston_db::db::default_data_dir("houston");
+    logging::init(&data_dir);
+
     tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {
@@ -94,7 +99,7 @@ pub fn run() {
                             agent_path, text, Some(session_key),
                             Some("slack".to_string()),
                         ).await {
-                            eprintln!("[slack-inbound] send_message failed: {e}");
+                            tracing::error!("[slack-inbound] send_message failed: {e}");
                         }
                     });
                 });
@@ -213,9 +218,13 @@ pub fn run() {
             commands::slack::get_slack_sync_status,
             // Composio integrations
             houston_tauri::composio_commands::list_composio_connections,
+            houston_tauri::composio_commands::connect_composio_app,
             houston_tauri::composio_commands::start_composio_oauth,
             houston_tauri::composio_commands::reopen_composio_oauth,
             houston_tauri::composio_commands::submit_composio_callback,
+            // Logging
+            logging::write_frontend_log,
+            logging::read_recent_logs,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -261,10 +270,10 @@ async fn auto_reconnect_slack(
                         registry_id,
                         config,
                     );
-                    eprintln!("[slack] auto-reconnected: {agent_name}");
+                    tracing::info!("[slack] auto-reconnected: {agent_name}");
                 }
                 Err(e) => {
-                    eprintln!("[slack] auto-reconnect failed for {agent_name}: {e}");
+                    tracing::error!("[slack] auto-reconnect failed for {agent_name}: {e}");
                 }
             }
         }

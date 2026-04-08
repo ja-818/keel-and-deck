@@ -175,7 +175,7 @@ pub async fn import_files(
                     is_directory: false,
                 });
             }
-            Err(e) => eprintln!("[agent] import failed for {src_str}: {e}"),
+            Err(e) => tracing::error!("[agent] import failed for {src_str}: {e}"),
         }
     }
     if !imported.is_empty() {

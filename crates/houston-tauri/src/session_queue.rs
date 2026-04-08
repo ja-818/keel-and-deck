@@ -74,7 +74,7 @@ async fn queue_loop(
             None => None,
         };
 
-        eprintln!(
+        tracing::debug!(
             "[houston:queue] processing message, resume={:?}, prompt={}...",
             resume_id,
             &msg.prompt[..msg.prompt.len().min(60)]
@@ -191,9 +191,9 @@ async fn queue_loop(
             }
         }
 
-        eprintln!("[houston:queue] message done, checking for next...");
+        tracing::debug!("[houston:queue] message done, checking for next...");
     }
-    eprintln!("[houston:queue] queue closed");
+    tracing::info!("[houston:queue] queue closed");
 }
 
 fn serialize_for_persist(item: &FeedItem) -> Option<(String, String)> {

@@ -36,7 +36,7 @@ impl SessionManager {
 
         let handle = tokio::spawn(async move {
             let _ = tx.send(SessionUpdate::Status(SessionStatus::Starting));
-            eprintln!(
+            tracing::info!(
                 "[houston:session] spawning claude -p (resume={:?})",
                 resume_session_id
             );
@@ -122,7 +122,7 @@ impl SessionManager {
                 let _ = tx.send(SessionUpdate::ProcessPid(pid));
             }
             let _ = tx.send(SessionUpdate::Status(SessionStatus::Running));
-            eprintln!("[houston:session] claude process started, reading output");
+            tracing::info!("[houston:session] claude process started, reading output");
 
             let stdout = child.stdout.take();
             let stderr = child.stderr.take();
@@ -153,7 +153,7 @@ impl SessionManager {
                     Ok(None) => {}
                     Err(e) => {
                         let msg = format!("I/O reader panicked: {e:?}");
-                        eprintln!("[houston:session] {msg}");
+                        tracing::info!("[houston:session] {msg}");
                         let _ = tx.send(SessionUpdate::Status(SessionStatus::Error(msg)));
                         let _ = child.kill().await;
                         return;
@@ -161,10 +161,10 @@ impl SessionManager {
                 }
             }
 
-            eprintln!("[houston:session] stdout closed, waiting for process exit");
+            tracing::info!("[houston:session] stdout closed, waiting for process exit");
             match child.wait().await {
                 Ok(status) => {
-                    eprintln!("[houston:session] process exited with {status}");
+                    tracing::info!("[houston:session] process exited with {status}");
                     // Exit 143 = SIGTERM (128+15) — expected when user stops session.
                     let is_sigterm = status.code() == Some(143);
                     if status.success() || is_sigterm {

@@ -40,14 +40,14 @@ pub fn list_installed_configs() -> Result<Vec<InstalledConfig>, String> {
                     });
                 }
                 Err(e) => {
-                    eprintln!(
+                    tracing::warn!(
                         "[store] failed to parse {}: {e}",
                         config_path.display()
                     );
                 }
             },
             Err(e) => {
-                eprintln!(
+                tracing::warn!(
                     "[store] failed to read {}: {e}",
                     config_path.display()
                 );

@@ -589,6 +589,25 @@ All operations use atomic temp-file + rename to prevent corruption. Types define
 
 ---
 
+## Logging & Debugging
+
+All logging writes to files at `~/Library/Application Support/houston/logs/`:
+
+| File | Source | What |
+|------|--------|------|
+| `backend.log` | `tracing` (Rust) | Session I/O, agent store, channels, watcher, scheduler, Composio |
+| `frontend.log` | `logger.ts` (TS) | console.error/warn, React crashes, Tauri command errors |
+
+**Rust:** Uses `tracing` macros (`tracing::info!`, `tracing::error!`, etc.) everywhere. Initialized in `app/src-tauri/src/logging.rs` with `tracing-subscriber` + daily rolling file appender. Default filter: `info` globally, `debug` for `houston_sessions` and `houston_tauri`. Override with `RUST_LOG` env var.
+
+**Frontend:** `logger` from `app/src/lib/logger.ts` — `logger.error()`, `logger.warn()`, `logger.info()`, `logger.debug()`. `console.error` and `console.warn` are monkey-patched at startup to also write to `frontend.log`.
+
+**Bug reports:** "Report bug" on error toasts attaches the last 50 lines from both log files via the `read_recent_logs` Tauri command.
+
+**Tauri commands:** `write_frontend_log(level, message, context)`, `read_recent_logs(lines?)`.
+
+---
+
 ## Gotchas
 
 1. **Tailwind v4 has no config file.** Don't create `tailwind.config.ts`. All config is in CSS.

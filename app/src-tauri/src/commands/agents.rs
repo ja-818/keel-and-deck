@@ -136,7 +136,7 @@ pub fn list_agents(
         }
         match read_agent_meta(&path) {
             Ok(meta) => agents.push(meta_to_agent(&path, &meta)),
-            Err(e) => eprintln!("[agents] skipping {name}: {e}"),
+            Err(e) => tracing::warn!("[agents] skipping {name}: {e}"),
         }
     }
 

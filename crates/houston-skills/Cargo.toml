@@ -14,6 +14,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
 chrono = { version = "0.4", features = ["serde"] }
+tracing = "0.1"
 reqwest = { version = "0.12", features = ["json"], optional = true }
 
 [dev-dependencies]

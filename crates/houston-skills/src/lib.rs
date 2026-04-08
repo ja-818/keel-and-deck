@@ -75,7 +75,7 @@ pub fn list_skills(skills_dir: &Path) -> Result<Vec<SkillSummary>, SkillError> {
         }
         match format::parse_file(&skill_md) {
             Ok((summary, _body)) => summaries.push(summary),
-            Err(e) => eprintln!("[houston-skills] skipping {}: {e}", path.display()),
+            Err(e) => tracing::warn!("[houston-skills] skipping {}: {e}", path.display()),
         }
     }
     summaries.sort_by(|a, b| a.name.cmp(&b.name));

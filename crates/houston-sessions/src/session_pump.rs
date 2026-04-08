@@ -57,7 +57,7 @@ pub async fn pump_session(
     // Safety net: if channel closed without a terminal status, synthesise an error.
     if !got_terminal {
         let sid_info = captured_session_id.as_deref().unwrap_or("unknown");
-        eprintln!(
+        tracing::warn!(
             "[houston:pump] channel closed without terminal status (key={}, session={})",
             session_key, sid_info
         );

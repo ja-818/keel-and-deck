@@ -16,7 +16,7 @@ impl Database {
             std::fs::create_dir_all(parent).context("Failed to create data directory")?;
         }
 
-        eprintln!("[houston:db] using local SQLite at {}", path.display());
+        tracing::info!("[houston:db] using local SQLite at {}", path.display());
         let db = libsql::Builder::new_local(path)
             .build()
             .await

@@ -151,10 +151,10 @@ pub async fn install_from_repo(
                 };
                 match crate::create_skill(skills_dir, input) {
                     Ok(()) => installed.push(skill_id.clone()),
-                    Err(e) => eprintln!("[houston-skills] skip {skill_id}: {e}"),
+                    Err(e) => tracing::warn!("[houston-skills] skip {skill_id}: {e}"),
                 }
             }
-            Err(e) => eprintln!("[houston-skills] skip {skill_id}: {e}"),
+            Err(e) => tracing::warn!("[houston-skills] skip {skill_id}: {e}"),
         }
     }
 

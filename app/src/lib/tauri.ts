@@ -12,6 +12,7 @@ import type {
   StoreListing,
   TrackedIntegration,
 } from "./types";
+import { logger } from "./logger";
 
 /**
  * Wrapper around Tauri invoke that surfaces errors as toasts.
@@ -22,7 +23,7 @@ async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T
     return await tauriInvoke<T>(cmd, args);
   } catch (err) {
     const message = typeof err === "string" ? err : String(err);
-    console.error(`[tauri:${cmd}] ${message}`, args);
+    logger.error(`[tauri:${cmd}] ${message}`, JSON.stringify(args));
 
     // Show toast — import dynamically to avoid circular deps
     const { useUIStore } = await import("../stores/ui");
@@ -125,6 +126,8 @@ export const tauriLearnings = {
 
 export const tauriConnections = {
   list: () => invoke<ConnectionsResult>("list_composio_connections"),
+  connectApp: (toolkit: string) =>
+    invoke<string>("connect_composio_app", { toolkit }),
   startOAuth: () => invoke<{ auth_url: string }>("start_composio_oauth"),
   reopenOAuth: () => invoke<void>("reopen_composio_oauth"),
   submitCallback: (callbackUrl: string) =>

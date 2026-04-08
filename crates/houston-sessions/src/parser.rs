@@ -91,7 +91,7 @@ impl StreamAccumulator {
                             // Signature verification — internal, ignore.
                         }
                         Some(other) => {
-                            eprintln!("[houston:parser] unhandled delta type: {other}");
+                            tracing::warn!("[houston:parser] unhandled delta type: {other}");
                         }
                         None => {
                             // message_delta events have no type — expected, ignore.
@@ -135,7 +135,7 @@ pub fn parse_event(line: &str, acc: &mut StreamAccumulator) -> Vec<FeedItem> {
     let event: ClaudeEvent = match serde_json::from_str(line) {
         Ok(e) => e,
         Err(e) => {
-            eprintln!("Failed to parse Claude event: {e}\nLine: {line}");
+            tracing::error!("Failed to parse Claude event: {e}\nLine: {line}");
             return vec![];
         }
     };

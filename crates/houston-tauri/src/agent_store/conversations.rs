@@ -71,7 +71,7 @@ pub fn list_all(roots: &[&Path]) -> Result<Vec<ConversationEntry>, String> {
     for root in roots {
         match list(root) {
             Ok(entries) => all.extend(entries),
-            Err(e) => eprintln!("[conversations] skipping {}: {e}", root.display()),
+            Err(e) => tracing::warn!("[conversations] skipping {}: {e}", root.display()),
         }
     }
     // Sort: entries with updated_at first (descending), then entries without

@@ -80,7 +80,7 @@ impl RoutineScheduler {
         for id in to_remove {
             if let Some(handle) = self.jobs.remove(&id) {
                 handle.abort();
-                eprintln!("[routines] Stopped cron for routine {id}");
+                tracing::info!("[routines] Stopped cron for routine {id}");
             }
         }
 
@@ -91,14 +91,14 @@ impl RoutineScheduler {
             }
             match self.spawn_cron(app_handle, routine) {
                 Ok(handle) => {
-                    eprintln!(
+                    tracing::info!(
                         "[routines] Started cron for '{}' ({})",
                         routine.name, routine.schedule
                     );
                     self.jobs.insert(routine.id.clone(), handle);
                 }
                 Err(e) => {
-                    eprintln!(
+                    tracing::error!(
                         "[routines] Failed to start cron for '{}': {e}",
                         routine.name
                     );
@@ -145,13 +145,13 @@ impl RoutineScheduler {
                     }
                 }
 
-                eprintln!(
+                tracing::info!(
                     "[routines] Cron fired for routine {routine_id} at {}",
                     Utc::now().to_rfc3339()
                 );
 
                 if let Err(e) = run_routine(&handle, &agent_path, &routine_id).await {
-                    eprintln!("[routines] Error running routine {routine_id}: {e}");
+                    tracing::error!("[routines] Error running routine {routine_id}: {e}");
                 }
             }
         }))
@@ -161,7 +161,7 @@ impl RoutineScheduler {
         let _ = self.shutdown_tx.send(true);
         for (id, handle) in self.jobs.drain() {
             handle.abort();
-            eprintln!("[routines] Stopped cron for routine {id}");
+            tracing::info!("[routines] Stopped cron for routine {id}");
         }
     }
 }

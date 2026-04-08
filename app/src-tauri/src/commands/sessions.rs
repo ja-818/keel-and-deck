@@ -26,7 +26,7 @@ pub async fn start_session(
         .get_for_agent(&agent_key, &workspace_path)
         .await;
     let resume_id = chat_state.get().await;
-    eprintln!(
+    tracing::debug!(
         "[houston:session] resume_id={:?} for agent={}",
         resume_id, agent_key
     );

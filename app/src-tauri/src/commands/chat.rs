@@ -54,7 +54,7 @@ pub async fn send_message(
         .get_for_agent(&agent_key, &agent_path)
         .await;
     let resume_id = chat_state.get().await;
-    eprintln!(
+    tracing::debug!(
         "[houston:session] resume_id={:?} for key={}",
         resume_id, agent_key
     );
@@ -117,7 +117,7 @@ pub async fn send_message(
                 if let Err(e) = mgr.create_thread_for_user_message(
                     &agent_path_clone, &session_key_clone, &prompt_clone,
                 ).await {
-                    eprintln!("[slack] failed to create thread: {e}");
+                    tracing::error!("[slack] failed to create thread: {e}");
                 }
             }
         });
@@ -241,7 +241,7 @@ pub async fn stop_session(
     session_key: String,
 ) -> Result<(), String> {
     if let Some(pid) = pid_map.remove(&session_key).await {
-        eprintln!("[houston:session] stopping session {session_key} (pid {pid})");
+        tracing::info!("[houston:session] stopping session {session_key} (pid {pid})");
         // Kill the Claude CLI process
         std::process::Command::new("kill")
             .arg("-TERM")

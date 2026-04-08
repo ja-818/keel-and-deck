@@ -26,7 +26,7 @@ pub fn list(root: &Path) -> Result<Vec<Skill>, String> {
             .unwrap_or_default();
         match parse_skill_file(&path, &name) {
             Ok(skill) => skills.push(skill),
-            Err(e) => eprintln!("[agent_store] skipping skill {name}: {e}"),
+            Err(e) => tracing::warn!("[agent_store] skipping skill {name}: {e}"),
         }
     }
     skills.sort_by(|a, b| a.name.cmp(&b.name));

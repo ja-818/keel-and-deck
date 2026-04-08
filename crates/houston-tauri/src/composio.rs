@@ -5,7 +5,6 @@
 //! services (Gmail, GitHub, Slack, etc.) the user has connected.
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 // -- Public types --
 
@@ -52,13 +51,46 @@ pub async fn list_active_connections() -> ComposioResult {
 
     // If fetch failed, try one refresh + retry before giving up
     if matches!(result, ComposioResult::Error { .. }) {
-        eprintln!("[composio] Fetch failed, attempting token refresh and retry");
+        tracing::warn!("[composio] Fetch failed, attempting token refresh and retry");
         if let Ok(new_token) = crate::composio_auth::refresh_access_token().await {
             return fetch_connections(&url, &new_token).await;
         }
     }
 
     result
+}
+
+/// Initiate a connection to a Composio app. Returns the redirect URL for authentication.
+pub async fn initiate_app_connection(toolkit: &str) -> Result<String, String> {
+    let url = read_composio_url().ok_or("Composio not configured")?;
+    let token = get_valid_token()
+        .await
+        .ok_or("Not authenticated with Composio")?;
+
+    let text = call_mcp_tool(
+        &url,
+        &token,
+        "COMPOSIO_MANAGE_CONNECTIONS",
+        serde_json::json!({ "toolkits": [toolkit] }),
+    )
+    .await?;
+
+    let parsed: serde_json::Value =
+        serde_json::from_str(&text).map_err(|e| format!("Invalid JSON: {e}"))?;
+
+    let tk_result = parsed
+        .pointer(&format!("/data/results/{toolkit}"))
+        .ok_or_else(|| format!("No result for toolkit '{toolkit}'"))?;
+
+    if tk_result.get("status").and_then(|s| s.as_str()) == Some("active") {
+        return Err("Already connected".to_string());
+    }
+
+    tk_result
+        .get("redirect_url")
+        .and_then(|u| u.as_str())
+        .map(String::from)
+        .ok_or_else(|| "No authentication URL available".to_string())
 }
 
 async fn get_valid_token() -> Option<String> {
@@ -70,11 +102,11 @@ async fn get_valid_token() -> Option<String> {
     }
 
     // Token expired — try silent refresh
-    eprintln!("[composio] Token expired, attempting silent refresh");
+    tracing::warn!("[composio] Token expired, attempting silent refresh");
     match crate::composio_auth::refresh_access_token().await {
         Ok(new_token) => Some(new_token),
         Err(e) => {
-            eprintln!("[composio] Silent refresh failed: {e}");
+            tracing::error!("[composio] Silent refresh failed: {e}");
             None
         }
     }
@@ -155,21 +187,22 @@ fn read_oauth_token_with_expiry() -> (Option<String>, bool) {
     (None, false)
 }
 
-// -- Fetch connections via MCP JSON-RPC --
+// -- MCP JSON-RPC helper --
 
-async fn fetch_connections(url: &str, token: &str) -> ComposioResult {
-    let toolkits: Vec<String> = COMMON_TOOLKITS.iter().map(|s| s.to_string()).collect();
-    let mut arguments = HashMap::new();
-    arguments.insert("toolkits", serde_json::to_value(&toolkits).unwrap());
-
+async fn call_mcp_tool(
+    url: &str,
+    token: &str,
+    tool_name: &str,
+    arguments: serde_json::Value,
+) -> Result<String, String> {
     let mcp_request = serde_json::json!({
         "jsonrpc": "2.0", "id": 1,
         "method": "tools/call",
-        "params": { "name": "COMPOSIO_MANAGE_CONNECTIONS", "arguments": arguments }
+        "params": { "name": tool_name, "arguments": arguments }
     });
 
     let client = reqwest::Client::new();
-    let response = match client
+    let response = client
         .post(url)
         .header("Content-Type", "application/json")
         .header("Accept", "application/json, text/event-stream")
@@ -177,54 +210,45 @@ async fn fetch_connections(url: &str, token: &str) -> ComposioResult {
         .json(&mcp_request)
         .send()
         .await
-    {
-        Ok(r) => r,
-        Err(e) => {
-            return ComposioResult::Error {
-                message: format!("Could not reach Composio: {e}"),
-            }
-        }
-    };
+        .map_err(|e| format!("Could not reach Composio: {e}"))?;
 
-    let body = match response.text().await {
-        Ok(b) => b,
-        Err(e) => {
-            return ComposioResult::Error {
-                message: format!("Failed to read response: {e}"),
-            }
-        }
-    };
+    let body = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read response: {e}"))?;
 
-    // Parse SSE "data: " line
-    let data_line = match body.lines().find(|l| l.starts_with("data: ")) {
-        Some(l) => &l[6..],
-        None => {
-            return ComposioResult::Error {
-                message: "No data in Composio response".into(),
-            }
-        }
-    };
-    let rpc: serde_json::Value = match serde_json::from_str(data_line) {
-        Ok(v) => v,
-        Err(e) => {
-            return ComposioResult::Error {
-                message: format!("Invalid JSON: {e}"),
-            }
-        }
-    };
-    let text = match rpc
-        .pointer("/result/content/0/text")
+    let data_line = body
+        .lines()
+        .find(|l| l.starts_with("data: "))
+        .ok_or_else(|| "No data in Composio response".to_string())?;
+
+    let rpc: serde_json::Value =
+        serde_json::from_str(&data_line[6..]).map_err(|e| format!("Invalid JSON: {e}"))?;
+
+    rpc.pointer("/result/content/0/text")
         .and_then(|t| t.as_str())
+        .map(String::from)
+        .ok_or_else(|| "Missing content in response".to_string())
+}
+
+// -- Fetch connections --
+
+async fn fetch_connections(url: &str, token: &str) -> ComposioResult {
+    let toolkits: Vec<String> = COMMON_TOOLKITS.iter().map(|s| s.to_string()).collect();
+
+    let text = match call_mcp_tool(
+        url,
+        token,
+        "COMPOSIO_MANAGE_CONNECTIONS",
+        serde_json::json!({ "toolkits": toolkits }),
+    )
+    .await
     {
-        Some(t) => t,
-        None => {
-            return ComposioResult::Error {
-                message: "Missing content in response".into(),
-            }
-        }
+        Ok(t) => t,
+        Err(e) => return ComposioResult::Error { message: e },
     };
 
-    match parse_composio_json(text) {
+    match parse_composio_json(&text) {
         Ok(c) => ComposioResult::Ok { connections: c },
         Err(e) => ComposioResult::Error { message: e },
     }

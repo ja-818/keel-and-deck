@@ -67,7 +67,7 @@ fn list_summaries(skills_dir: &Path) -> Result<Vec<SkillSummary>, crate::SkillEr
         }
         match format::parse_file(&skill_md) {
             Ok((summary, _body)) => summaries.push(summary),
-            Err(e) => eprintln!("[houston-skills] skipping {}: {e}", path.display()),
+            Err(e) => tracing::warn!("[houston-skills] skipping {}: {e}", path.display()),
         }
     }
     Ok(summaries)

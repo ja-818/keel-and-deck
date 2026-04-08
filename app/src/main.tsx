@@ -5,8 +5,14 @@ import { queryClient } from "./lib/query-client";
 import App from "./App";
 import "./styles/globals.css";
 import { useUIStore } from "./stores/ui";
+import { initFrontendLogging, logger } from "./lib/logger";
+
+// Initialize file-based logging — patches console.error/warn to write to
+// ~/Library/Application Support/houston/logs/frontend.log
+initFrontendLogging();
 
 // Global error handlers — surface ALL uncaught errors as toasts
+// (console.error calls here also flow to the log file via initFrontendLogging)
 window.onerror = (_event, _source, _line, _col, error) => {
   const message = error?.message ?? String(_event);
   console.error("[global:error]", message, error);
@@ -29,6 +35,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
   state: { error: Error | null } = { error: null };
   static getDerivedStateFromError(error: Error) { return { error }; }
   componentDidCatch(error: Error) {
+    logger.error(`[react-crash] ${error.message}`, error.stack);
     useUIStore.getState().addToast({
       title: "React crash",
       description: error.message,
