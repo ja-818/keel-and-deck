@@ -39,5 +39,14 @@ export function mergeFeedItem(items: FeedItem[], item: FeedItem): FeedItem[] {
     }
   }
 
+  // tool_call with real input replaces the immediate null-input notification
+  // (the Rust parser emits two tool_calls per tool: one on content_block_start
+  // with null input, one on content_block_stop with the real input)
+  if (item.feed_type === "tool_call" && last?.feed_type === "tool_call") {
+    if (last.data.name === item.data.name && last.data.input == null) {
+      return [...items.slice(0, -1), item];
+    }
+  }
+
   return [...items, item];
 }

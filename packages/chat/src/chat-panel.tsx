@@ -124,6 +124,15 @@ export function ChatPanel({
         <Conversation className="flex-1 min-h-0">
           <ConversationContent className="max-w-3xl mx-auto">
             {messages.map((msg, idx) => {
+              if (msg.from === "system") {
+                return (
+                  <div key={msg.key} className="flex justify-center py-2">
+                    <span className="text-xs text-muted-foreground/60 italic">
+                      {msg.content}
+                    </span>
+                  </div>
+                );
+              }
               const isLastMsg = idx === messages.length - 1;
               const streaming = msg.isStreaming && isLastMsg;
               return (

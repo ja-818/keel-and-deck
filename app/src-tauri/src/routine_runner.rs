@@ -233,6 +233,7 @@ pub async fn run_routine(
             source: "routine".into(),
             claude_session_id: None,
         }),
+        None,
     );
 
     let result = join_handle

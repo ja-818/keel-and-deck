@@ -32,7 +32,11 @@ export function SplitView({
         {left}
       </ResizablePanel>
       <ResizableHandle />
-      <ResizablePanel defaultSize={defaultRightSize} minSize={minRightSize}>
+      <ResizablePanel
+        defaultSize={defaultRightSize}
+        minSize={minRightSize}
+        className="overflow-hidden"
+      >
         {right}
       </ResizablePanel>
     </ResizablePanelGroup>

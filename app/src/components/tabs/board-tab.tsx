@@ -9,6 +9,7 @@ import { useActivity, useDeleteActivity, useUpdateActivity, useCreateActivity } 
 import { tauriActivity, tauriChat } from "../../lib/tauri";
 import type { TabProps } from "../../lib/types";
 import houstonIcon from "../../assets/houston-icon.svg";
+import { useDetailPanelContainer } from "../shell/detail-panel-context";
 
 function ThinkingIndicator() {
   return (
@@ -22,7 +23,9 @@ function ThinkingIndicator() {
   );
 }
 
+
 export default function BoardTab({ agent }: TabProps) {
+  const panelContainer = useDetailPanelContainer();
   const path = agent.folderPath;
   const { data: rawItems } = useActivity(path);
   const deleteActivity = useDeleteActivity(path);
@@ -120,6 +123,13 @@ export default function BoardTab({ agent }: TabProps) {
     [rawItems],
   );
 
+  const handleStopSession = useCallback(
+    (sessionKey: string) => {
+      tauriChat.stop(sessionKey).catch(console.error);
+    },
+    [],
+  );
+
   const handleSendMessage = useCallback(
     async (sessionKey: string, text: string) => {
       pushFeedItem(sessionKey, { feed_type: "user_message", data: text });
@@ -141,6 +151,7 @@ export default function BoardTab({ agent }: TabProps) {
       items={items}
       selectedId={selectedId}
       onSelect={setSelectedId}
+      panelContainer={panelContainer}
       feedItems={feedItems}
       isLoading={loadingState}
       sessionKeyFor={sessionKeyFor}
@@ -151,6 +162,7 @@ export default function BoardTab({ agent }: TabProps) {
       onLoadHistory={loadHistory}
       onNewPanelOpenerReady={handleOpenerReady}
       onPanelOpenChange={setMissionPanelOpen}
+      onStopSession={handleStopSession}
       thinkingIndicator={<ThinkingIndicator />}
       panelAgentName={agent.name}
       panelAvatar={

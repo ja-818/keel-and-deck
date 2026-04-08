@@ -16,7 +16,7 @@ export interface ToolEntry {
 
 export interface ChatMessage {
   key: string;
-  from: "user" | "assistant";
+  from: "user" | "assistant" | "system";
   content: string;
   isStreaming: boolean;
   reasoning?: { content: string; isStreaming: boolean };
@@ -105,7 +105,14 @@ export function feedItemsToMessages(items: FeedItem[]): ChatMessage[] {
 
       case "tool_call": {
         const msg = ensureAssistant();
-        msg.tools.push({ name: item.data.name, input: item.data.input });
+        // Deduplicate: the parser emits two tool_calls per tool (null input
+        // on block start, real input on block stop). Replace the placeholder.
+        const lastTool = msg.tools[msg.tools.length - 1];
+        if (lastTool && lastTool.name === item.data.name && lastTool.input == null) {
+          lastTool.input = item.data.input;
+        } else {
+          msg.tools.push({ name: item.data.name, input: item.data.input });
+        }
         if (!msg.content) msg.isStreaming = true;
         break;
       }
@@ -148,8 +155,17 @@ export function feedItemsToMessages(items: FeedItem[]): ChatMessage[] {
         break;
       }
 
-      case "system_message":
+      case "system_message": {
+        flush();
+        messages.push({
+          key: `system-${messages.length}`,
+          from: "system",
+          content: item.data,
+          isStreaming: false,
+          tools: [],
+        });
         break;
+      }
 
       case "final_result":
         flush();

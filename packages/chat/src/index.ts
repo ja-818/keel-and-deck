@@ -164,8 +164,8 @@ export { ChatInput } from "./chat-input";
 export type { ChatInputProps } from "./chat-input";
 export type { AttachMenuItem } from "./chat-input-parts";
 
-export { ToolActivity, ToolsAndCards, feedItemsToMessages } from "./chat-helpers";
-export type { ToolActivityProps, ToolsAndCardsProps } from "./chat-helpers";
+export { ToolActivity, ToolsAndCards, ToolBlock, feedItemsToMessages } from "./chat-helpers";
+export type { ToolActivityProps, ToolsAndCardsProps, ToolBlockProps } from "./chat-helpers";
 
 // === Progress ===
 export { useProgressSteps } from "./use-progress-steps";

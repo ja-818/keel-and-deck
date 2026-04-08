@@ -132,6 +132,7 @@ pub async fn send_message(
             source: "desktop".into(),
             claude_session_id: None,
         }),
+        None,
     );
 
     Ok(session_key)

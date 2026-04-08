@@ -31,6 +31,10 @@ export default function ChatTab({ agent }: TabProps) {
     });
   }, [agent.id, sessionKey, setFeed, clearFeed, agent.folderPath]);
 
+  const handleStop = useCallback(() => {
+    tauriChat.stop(sessionKey).catch(console.error);
+  }, [sessionKey]);
+
   const handleSend = useCallback(
     async (text: string) => {
       if (sendingRef.current) return;
@@ -59,6 +63,7 @@ export default function ChatTab({ agent }: TabProps) {
         feedItems={feedItems ?? []}
         isLoading={isLoading}
         onSend={handleSend}
+        onStop={handleStop}
         placeholder="Ask anything..."
         emptyState={
           <Empty className="border-0">

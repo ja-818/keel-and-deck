@@ -1,4 +1,4 @@
-import { ArrowLeft, Loader2 } from "lucide-react"
+import { XIcon, Loader2 } from "lucide-react"
 import { cn } from "@houston-ai/core"
 
 const STATUS_LABEL: Record<string, string> = {
@@ -43,16 +43,10 @@ export function KanbanDetailPanel({
   const missionLabel = title ? `Mission: ${title}` : subtitle
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div className="flex flex-col h-full min-h-0">
       {/* Header */}
       <div className="shrink-0 px-4 py-3 border-b border-border">
         <div className="flex items-center gap-3">
-          <button
-            onClick={onClose}
-            className="size-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors shrink-0"
-          >
-            <ArrowLeft className="size-4" strokeWidth={1.75} />
-          </button>
           {avatar}
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-foreground">
@@ -78,6 +72,12 @@ export function KanbanDetailPanel({
             <Loader2 className="size-4 animate-spin text-blue-500 shrink-0" />
           )}
           {actions}
+          <button
+            onClick={onClose}
+            className="size-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors shrink-0"
+          >
+            <XIcon className="size-4" strokeWidth={1.75} />
+          </button>
         </div>
       </div>
 

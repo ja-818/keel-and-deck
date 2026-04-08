@@ -5,6 +5,7 @@
 
 use crate::chat_session::ChatSessionState;
 use crate::events::HoustonEvent;
+use crate::session_pids::SessionPidMap;
 use houston_db::Database;
 use houston_sessions::{FeedItem, SessionManager, SessionStatus, SessionUpdate};
 use std::path::PathBuf;
@@ -44,6 +45,7 @@ pub fn spawn_and_monitor(
     system_prompt: Option<String>,
     chat_state: Option<ChatSessionState>,
     persist: Option<PersistOptions>,
+    pid_map: Option<SessionPidMap>,
 ) -> tokio::task::JoinHandle<SessionResult> {
     // Ensure the user's shell PATH is resolved before spawning claude.
     // OnceLock inside init() makes this a no-op after the first call.
@@ -75,6 +77,12 @@ pub fn spawn_and_monitor(
 
         while let Some(update) = rx.recv().await {
             match update {
+                SessionUpdate::ProcessPid(pid) => {
+                    if let Some(ref pm) = pid_map {
+                        pm.insert(key.clone(), pid).await;
+                    }
+                    continue;
+                }
                 SessionUpdate::Feed(ref item) => {
                     if let FeedItem::AssistantText(text) = item {
                         response_text = Some(text.clone());
@@ -144,8 +152,12 @@ pub fn spawn_and_monitor(
                         },
                     );
                 }
-                _ => {}
             }
+        }
+
+        // Clean up PID tracking on completion
+        if let Some(ref pm) = pid_map {
+            pm.remove(&key).await;
         }
 
         SessionResult {

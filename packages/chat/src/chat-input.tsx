@@ -107,6 +107,16 @@ export function ChatInput({
     [],
   );
 
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === "Escape" && status === "streaming" && onStop) {
+        e.preventDefault();
+        onStop();
+      }
+    },
+    [status, onStop],
+  );
+
   const handleSubmit = useCallback(
     (message: PromptInputMessage) => {
       const trimmed = message.text?.trim();
@@ -197,6 +207,7 @@ export function ChatInput({
           <PromptInputBody>
             <PromptInputTextarea
               onChange={handleTextChange}
+              onKeyDown={handleKeyDown}
               value={text}
               placeholder={placeholder}
             />

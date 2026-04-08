@@ -1,66 +1,13 @@
 import { useState, useCallback, useRef, useEffect } from "react"
+import { createPortal } from "react-dom"
 import type { ReactNode } from "react"
 
 import { ChatPanel } from "@houston-ai/chat"
 import type { FeedItem } from "@houston-ai/chat"
+import { SplitView } from "@houston-ai/layout"
 import { KanbanBoard } from "./kanban-board"
 import { KanbanDetailPanel } from "./kanban-detail-panel"
 import type { KanbanItem, KanbanColumn } from "./types"
-
-function ResizablePanel({
-  defaultWidth = 45,
-  minWidth = 380,
-  children,
-}: {
-  defaultWidth?: number
-  minWidth?: number
-  children: ReactNode
-}) {
-  const [width, setWidth] = useState<number | null>(null)
-  const dragging = useRef(false)
-
-  const onPointerDown = useCallback(
-    (e: React.PointerEvent) => {
-      e.preventDefault()
-      dragging.current = true
-      ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
-    },
-    [],
-  )
-
-  const onPointerMove = useCallback(
-    (e: React.PointerEvent) => {
-      if (!dragging.current) return
-      const newWidth = window.innerWidth - e.clientX
-      if (newWidth >= minWidth) setWidth(newWidth)
-    },
-    [minWidth],
-  )
-
-  const onPointerUp = useCallback(() => {
-    dragging.current = false
-  }, [])
-
-  const style = width
-    ? { width: `${width}px` }
-    : { width: `${defaultWidth}%`, minWidth: `${minWidth}px` }
-
-  return (
-    <div
-      className="fixed top-0 right-0 bottom-0 z-50 bg-background border-l border-border flex flex-col"
-      style={style}
-    >
-      {/* Drag handle */}
-      <div
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/10 active:bg-primary/20 transition-colors z-10"
-      />
-      {children}
-    </div>
-  )
-}
 
 export interface AIBoardProps {
   items: KanbanItem[]
@@ -87,6 +34,8 @@ export interface AIBoardProps {
   onLoadHistory?: (sessionKey: string) => Promise<FeedItem[]>
   /** Called with the openNewPanel function so the parent can trigger it externally (e.g. from a header button). */
   onNewPanelOpenerReady?: (opener: () => void) => void
+  /** Custom empty state for the chat panel when no messages exist. */
+  chatEmptyState?: ReactNode
   /** Custom thinking indicator for the chat panel. */
   thinkingIndicator?: ReactNode
   /** Avatar element shown in the detail panel header. */
@@ -95,6 +44,14 @@ export interface AIBoardProps {
   panelAgentName?: string
   /** Called when the detail panel opens or closes. */
   onPanelOpenChange?: (open: boolean) => void
+  /** Called when the user clicks Stop in the chat panel. Receives the active session key. */
+  onStopSession?: (sessionKey: string) => void
+  /**
+   * DOM element to portal the detail panel into. When provided, the panel
+   * renders via createPortal into this element (for app-level layout).
+   * When not provided, falls back to SplitView within AIBoard.
+   */
+  panelContainer?: HTMLElement | null
 }
 
 const DEFAULT_COLUMNS: KanbanColumn[] = [
@@ -122,10 +79,13 @@ export function AIBoard({
   approveStatuses = ["needs_you"],
   onLoadHistory,
   onNewPanelOpenerReady,
+  chatEmptyState,
   thinkingIndicator,
   panelAvatar,
   panelAgentName,
   onPanelOpenChange,
+  onStopSession,
+  panelContainer,
 }: AIBoardProps) {
   const [internalSelectedId, setInternalSelectedId] = useState<string | null>(null)
   const [newPanelOpen, setNewPanelOpen] = useState(false)
@@ -238,30 +198,51 @@ export function AIBoard({
     setSelectedId(null)
   }, [setSelectedId])
 
+  const detailPanel = (
+    <KanbanDetailPanel
+      title={panelTitle}
+      onClose={closePanel}
+      avatar={panelAvatar}
+      agentName={panelAgentName ?? selectedItem?.group}
+    >
+      <div className="flex-1 min-h-0 flex flex-col">
+        <ChatPanel
+          sessionKey={activeSessionKey ?? "new-conversation"}
+          feedItems={activeFeed}
+          isLoading={activeLoading}
+          onSend={handleSend}
+          onStop={activeSessionKey && onStopSession ? () => onStopSession(activeSessionKey) : undefined}
+          placeholder={selectedItem ? "Send a follow-up..." : "What should the agent work on?"}
+          emptyState={activeFeed.length === 0 ? chatEmptyState : undefined}
+          thinkingIndicator={thinkingIndicator}
+        />
+      </div>
+    </KanbanDetailPanel>
+  )
+
+  if (!showPanel) {
+    return <div className="h-full overflow-hidden">{board}</div>
+  }
+
+  // Portal mode: render panel into an app-level container (full-height layout)
+  if (panelContainer) {
+    return (
+      <>
+        <div className="h-full overflow-hidden">{board}</div>
+        {createPortal(detailPanel, panelContainer)}
+      </>
+    )
+  }
+
+  // Fallback: inline SplitView within AIBoard
   return (
-    <div className="h-full overflow-hidden">
-      {board}
-      {showPanel && (
-        <ResizablePanel defaultWidth={45} minWidth={380}>
-          <KanbanDetailPanel
-            title={panelTitle}
-            onClose={closePanel}
-            avatar={panelAvatar}
-            agentName={panelAgentName ?? selectedItem?.group}
-          >
-            <div className="flex-1 min-h-0 flex flex-col">
-              <ChatPanel
-                sessionKey={activeSessionKey ?? "new-conversation"}
-                feedItems={activeFeed}
-                isLoading={activeLoading}
-                onSend={handleSend}
-                placeholder={selectedItem ? "Send a follow-up..." : "What should the agent work on?"}
-                thinkingIndicator={thinkingIndicator}
-              />
-            </div>
-          </KanbanDetailPanel>
-        </ResizablePanel>
-      )}
-    </div>
+    <SplitView
+      left={board}
+      right={detailPanel}
+      defaultLeftSize={55}
+      defaultRightSize={45}
+      minLeftSize={30}
+      minRightSize={25}
+    />
   )
 }

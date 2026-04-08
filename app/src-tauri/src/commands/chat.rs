@@ -31,25 +31,21 @@ pub async fn send_message(
     agent::seed_agent(&working_dir)?;
     let mut system_prompt = agent::build_system_prompt(&working_dir);
 
-    // Append available Composio integrations to the system prompt
-    if let houston_tauri::composio::ComposioResult::Ok { connections } =
-        houston_tauri::composio::list_active_connections().await
-    {
-        if !connections.is_empty() {
-            let names: Vec<&str> = connections.iter().map(|c| c.toolkit.as_str()).collect();
-            system_prompt.push_str(&format!(
-                "\n\n---\n\n# Integrations — Available via Composio\n\n\
-                 The user has these Composio integrations connected: {}.\n\
-                 You can use any of them via the Composio MCP tools.\n\n\
-                 When you use a Composio integration, record it by writing to \
-                 `.houston/integrations.json`. Read the current file first, then \
-                 append your toolkit name with `first_used_at`, `last_used_at` \
-                 (ISO-8601), and `use_count` fields. If the toolkit already \
-                 exists, increment `use_count` and update `last_used_at`.",
-                names.join(", ")
-            ));
-        }
-    }
+    // Append Composio integration guidance to the system prompt.
+    // We do NOT list specific connected services — the agent discovers those
+    // via the Composio MCP tools at runtime. Listing a subset caused the agent
+    // to treat it as exhaustive and refuse to use unlisted services.
+    system_prompt.push_str(
+        "\n\n---\n\n# Integrations — Composio\n\n\
+         The user has Composio set up with connected integrations. \
+         Use the Composio MCP tools (e.g. COMPOSIO_MANAGE_CONNECTIONS) to \
+         discover which services are available and to initiate new connections.\n\n\
+         When you use a Composio integration, record it by writing to \
+         `.houston/integrations.json`. Read the current file first, then \
+         append your toolkit name with `first_used_at`, `last_used_at` \
+         (ISO-8601), and `use_count` fields. If the toolkit already \
+         exists, increment `use_count` and update `last_used_at`.",
+    );
 
     let source = source.unwrap_or_else(|| "desktop".to_string());
     let session_key = session_key.unwrap_or_else(|| "main".to_string());
