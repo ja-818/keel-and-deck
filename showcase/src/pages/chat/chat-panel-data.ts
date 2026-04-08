@@ -36,17 +36,34 @@ function MyChat({ items }: { items: FeedItem[] }) {
 
 export const CHAT_INPUT_CODE = `import { ChatInput } from "@houston-ai/chat"
 
-// onSend now receives both text and any files the user attached
+// Uncontrolled — ChatInput owns its own text and attachments state.
 <ChatInput
   onSend={(text, files) => {
-    if (files.length > 0) {
-      await saveFilesToDisk(files);
-    }
+    if (files.length > 0) await saveFilesToDisk(files);
     sendMessage(text);
   }}
   onStop={() => cancelStream()}
   status="ready"
   placeholder="Ask anything..."
+/>
+
+// Controlled — the parent owns text and attachments state, useful when
+// you need to persist drafts, scope attachments to a conversation id, or
+// share state between siblings. Drag-and-drop is built in either way.
+const [text, setText] = useState("")
+const [files, setFiles] = useState<File[]>([])
+
+<ChatInput
+  value={text}
+  onValueChange={setText}
+  attachments={files}
+  onAttachmentsChange={setFiles}
+  onSend={async () => {
+    const paths = await saveAttachments(scopeId, files)
+    sendMessage(text + buildPathBlock(paths))
+    setText(""); setFiles([])
+  }}
+  status="ready"
 />`;
 
 export const TOOL_ACTIVITY_CODE = `import { ToolActivity } from "@houston-ai/chat"
@@ -144,7 +161,7 @@ interface ToolEntry {
 export const CHAT_PANEL_PROPS: PropDef[] = [
   { name: "sessionKey", type: "string", description: "Unique key to reset internal state when switching sessions" },
   { name: "feedItems", type: "FeedItem[]", description: "Raw stream items from Claude CLI or similar" },
-  { name: "onSend", type: "(text: string, files: File[]) => void", description: "Called when the user submits a message; files contains any attachments from the + button" },
+  { name: "onSend", type: "(text: string, files: File[]) => void", description: "Called when the user submits a message; files contains any attachments from the + button or drag-and-drop" },
   { name: "onStop", type: "() => void", description: "Called when the user clicks stop during streaming" },
   { name: "onBack", type: "() => void", description: "Shows a back button and calls this on click" },
   { name: "isLoading", type: "boolean", description: "Whether the agent is processing (used for status derivation)" },
@@ -157,6 +174,11 @@ export const CHAT_PANEL_PROPS: PropDef[] = [
   { name: "isSpecialTool", type: "(name) => boolean", description: "Identify tools needing custom rendering" },
   { name: "renderToolResult", type: "(tool, index) => ReactNode", description: "Custom renderer for special tool results" },
   { name: "renderMessageAvatar", type: "(msg: ChatMessage) => ReactNode", description: "Render a custom avatar for a message (e.g., ChannelAvatar for Telegram/Slack source)" },
+  { name: "value", type: "string", description: "Controlled composer text. Forwarded to ChatInput. Required pair: onValueChange." },
+  { name: "onValueChange", type: "(value: string) => void", description: "Setter for controlled composer text." },
+  { name: "attachments", type: "File[]", description: "Controlled composer attachments. Forwarded to ChatInput. Required pair: onAttachmentsChange." },
+  { name: "onAttachmentsChange", type: "(files: File[]) => void", description: "Setter for controlled attachments." },
+  { name: "onNotice", type: "(message: string) => void", description: "Called with a short user-facing notice (e.g. 'File already in chat' when a duplicate is dropped). App decides how to display." },
 ];
 
 export const CHAT_INPUT_PROPS: PropDef[] = [
@@ -164,6 +186,11 @@ export const CHAT_INPUT_PROPS: PropDef[] = [
   { name: "onStop", type: "() => void", description: "Called when stop button is clicked" },
   { name: "status", type: '"ready" | "streaming" | "submitted"', default: '"ready"', description: "Controls button states (send/stop)" },
   { name: "placeholder", type: "string", default: '"Type a message..."', description: "Input placeholder text" },
+  { name: "value", type: "string", description: "Controlled text. Omit to use internal state." },
+  { name: "onValueChange", type: "(value: string) => void", description: "Required if value is provided." },
+  { name: "attachments", type: "File[]", description: "Controlled attachments. Omit to use internal state." },
+  { name: "onAttachmentsChange", type: "(files: File[]) => void", description: "Required if attachments is provided." },
+  { name: "onNotice", type: "(message: string) => void", description: "Called with a short user-facing notice (e.g. dedupe). App wires to its toast system." },
 ];
 
 export const TOOL_ACTIVITY_PROPS: PropDef[] = [

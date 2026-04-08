@@ -137,6 +137,41 @@ async fn find_and_join_channel(bot_token: &str, name: &str) -> anyhow::Result<St
     Ok(channel.id)
 }
 
+/// Invite a user to a channel. No-op if already a member.
+pub async fn invite_user(
+    bot_token: &str,
+    channel_id: &str,
+    user_id: &str,
+) -> anyhow::Result<()> {
+    let client = reqwest::Client::new();
+    let resp = client
+        .post(format!("{BASE}/conversations.invite"))
+        .bearer_auth(bot_token)
+        .json(&serde_json::json!({
+            "channel": channel_id,
+            "users": user_id,
+        }))
+        .send()
+        .await
+        .context("conversations.invite request failed")?;
+
+    let result: serde_json::Value = resp
+        .json()
+        .await
+        .context("failed to parse conversations.invite response")?;
+
+    let ok = result["ok"].as_bool().unwrap_or(false);
+    if !ok {
+        let err = result["error"].as_str().unwrap_or("unknown");
+        // already_in_channel is not an error — the user is already there
+        if err != "already_in_channel" {
+            anyhow::bail!("conversations.invite: {err}");
+        }
+    }
+
+    Ok(())
+}
+
 /// Fetch a user's display name and avatar URL.
 pub async fn get_user_info(
     bot_token: &str,

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "../../lib/query-keys";
-import { tauriActivity } from "../../lib/tauri";
+import { tauriActivity, tauriAttachments } from "../../lib/tauri";
 
 export function useActivity(agentPath: string | undefined) {
   return useQuery({
@@ -35,7 +35,11 @@ export function useUpdateActivity(agentPath: string | undefined) {
 export function useDeleteActivity(agentPath: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (activityId: string) => tauriActivity.delete(agentPath!, activityId),
+    mutationFn: async (activityId: string) => {
+      await tauriActivity.delete(agentPath!, activityId);
+      // Wipe any attachments associated with this conversation. Idempotent.
+      await tauriAttachments.delete(`activity-${activityId}`).catch(() => {});
+    },
     onSuccess: () => {
       if (agentPath) qc.invalidateQueries({ queryKey: queryKeys.activity(agentPath) });
     },

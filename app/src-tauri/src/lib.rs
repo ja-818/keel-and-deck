@@ -10,7 +10,7 @@ use houston_tauri::houston_db::Database;
 use houston_tauri::slack_sync::SlackSyncManager;
 use houston_tauri::state::AppState;
 use std::sync::Arc;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use tokio::sync::RwLock;
 
 pub fn run() {
@@ -148,6 +148,10 @@ pub fn run() {
             commands::chat::read_agent_file,
             commands::chat::write_agent_file,
             commands::chat::summarize_activity,
+            // Chat composer attachments — persist user-attached files in the
+            // app cache dir scoped by activity/agent id, paths handed to Claude.
+            commands::attachments::save_attachments,
+            commands::attachments::delete_attachments,
             // Learnings
             commands::memory::load_learnings,
             commands::memory::add_learning,
@@ -219,6 +223,7 @@ pub fn run() {
             commands::slack::get_slack_sync_status,
             // Composio integrations
             houston_tauri::composio_commands::list_composio_connections,
+            houston_tauri::composio_commands::list_composio_apps,
             houston_tauri::composio_commands::connect_composio_app,
             houston_tauri::composio_commands::start_composio_oauth,
             houston_tauri::composio_commands::reopen_composio_oauth,
@@ -227,8 +232,21 @@ pub fn run() {
             logging::write_frontend_log,
             logging::read_recent_logs,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| {
+            // When the app is activated from the background (e.g. clicking a macOS
+            // notification), bring the main window to front and tell the frontend.
+            if let tauri::RunEvent::Resumed = event {
+                tracing::info!("[app] RunEvent::Resumed — bringing window to front");
+                if let Some(window) = app_handle.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.unminimize();
+                    let _ = window.set_focus();
+                }
+                let _ = app_handle.emit("app-activated", ());
+            }
+        });
 }
 
 /// Scan all workspaces/agents for `.houston/slack_sync.json` and reconnect.

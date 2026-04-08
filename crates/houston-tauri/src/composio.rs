@@ -5,6 +5,9 @@
 //! services (Gmail, GitHub, Slack, etc.) the user has connected.
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+use crate::composio_apps::ComposioAppEntry;
 
 // -- Public types --
 
@@ -93,7 +96,7 @@ pub async fn initiate_app_connection(toolkit: &str) -> Result<String, String> {
         .ok_or_else(|| "No authentication URL available".to_string())
 }
 
-async fn get_valid_token() -> Option<String> {
+pub(crate) async fn get_valid_token() -> Option<String> {
     let (token, expired) = read_oauth_token_with_expiry();
     let token = token?;
 
@@ -114,7 +117,7 @@ async fn get_valid_token() -> Option<String> {
 
 // -- Config: read Composio URL from ~/.claude.json --
 
-fn read_composio_url() -> Option<String> {
+pub(crate) fn read_composio_url() -> Option<String> {
     let home = std::env::var("HOME").ok()?;
     let path = std::path::PathBuf::from(home).join(".claude.json");
     let content = std::fs::read_to_string(&path).ok()?;
@@ -234,7 +237,19 @@ async fn call_mcp_tool(
 // -- Fetch connections --
 
 async fn fetch_connections(url: &str, token: &str) -> ComposioResult {
-    let toolkits: Vec<String> = COMMON_TOOLKITS.iter().map(|s| s.to_string()).collect();
+    // Prefer the full catalog (all 982 toolkits) so we catch every connected app.
+    // Fall back to the small COMMON_TOOLKITS list if the catalog fetch failed.
+    let catalog = crate::composio_apps::list_all_apps().await;
+    let toolkits: Vec<String> = if catalog.is_empty() {
+        COMMON_TOOLKITS.iter().map(|s| s.to_string()).collect()
+    } else {
+        catalog.iter().map(|a| a.toolkit.clone()).collect()
+    };
+
+    let catalog_map: HashMap<String, ComposioAppEntry> = catalog
+        .into_iter()
+        .map(|a| (a.toolkit.clone(), a))
+        .collect();
 
     let text = match call_mcp_tool(
         url,
@@ -248,7 +263,7 @@ async fn fetch_connections(url: &str, token: &str) -> ComposioResult {
         Err(e) => return ComposioResult::Error { message: e },
     };
 
-    match parse_composio_json(&text) {
+    match parse_composio_json(&text, &catalog_map) {
         Ok(c) => ComposioResult::Ok { connections: c },
         Err(e) => ComposioResult::Error { message: e },
     }
@@ -256,7 +271,10 @@ async fn fetch_connections(url: &str, token: &str) -> ComposioResult {
 
 // -- Parse the Composio response JSON --
 
-fn parse_composio_json(text: &str) -> Result<Vec<ComposioConnection>, String> {
+fn parse_composio_json(
+    text: &str,
+    catalog: &HashMap<String, ComposioAppEntry>,
+) -> Result<Vec<ComposioConnection>, String> {
     let parsed: serde_json::Value =
         serde_json::from_str(text).map_err(|e| format!("Invalid JSON: {e}"))?;
     let results = parsed
@@ -269,7 +287,6 @@ fn parse_composio_json(text: &str) -> Result<Vec<ComposioConnection>, String> {
         if info.get("status").and_then(|s| s.as_str()) != Some("active") {
             continue;
         }
-        let (display_name, icon_url, fallback_domain) = toolkit_meta(toolkit);
         let email = info
             .get("current_user_info")
             .and_then(|u| {
@@ -278,15 +295,25 @@ fn parse_composio_json(text: &str) -> Result<Vec<ComposioConnection>, String> {
                     .and_then(|e| e.as_str())
             })
             .map(String::from);
-        let logo = if icon_url.is_empty() {
-            format!("https://www.google.com/s2/favicons?domain={fallback_domain}&sz=128")
+
+        // Prefer catalog metadata (covers all 982 toolkits with real names/logos).
+        // Fall back to hardcoded metadata for toolkits not in the catalog.
+        let (display_name, logo, description) = if let Some(entry) = catalog.get(toolkit) {
+            (entry.name.clone(), entry.logo_url.clone(), entry.description.clone())
         } else {
-            icon_url.to_string()
+            let (name, icon_url, fallback_domain) = toolkit_meta(toolkit);
+            let logo = if icon_url.is_empty() {
+                format!("https://www.google.com/s2/favicons?domain={fallback_domain}&sz=128")
+            } else {
+                icon_url.to_string()
+            };
+            (name.to_string(), logo, short_description(toolkit))
         };
+
         connections.push(ComposioConnection {
-            display_name: display_name.to_string(),
+            display_name,
             toolkit: toolkit.clone(),
-            description: short_description(toolkit),
+            description,
             email,
             logo_url: logo,
             connected_at: info

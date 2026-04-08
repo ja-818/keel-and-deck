@@ -29,3 +29,4 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-feature
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 tracing-appender = { workspace = true }
+base64 = "0.22"

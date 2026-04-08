@@ -279,7 +279,7 @@ The hero package. Drop-in chat experience for Claude Code / Codex sessions.
 | Component | What it does |
 |-----------|-------------|
 | `ChatPanel` | Full chat: messages, streaming, thinking, tools, input — one component. Forwards composer controlled props through to `ChatInput`. |
-| `ChatInput` | Composer with send/stop/mic states, auto-expand textarea, file attachments via the + button **and** drag-and-drop. Text and attachments can be controlled via `value`/`onValueChange` and `attachments`/`onAttachmentsChange`, or left uncontrolled. |
+| `ChatInput` | Composer with send/stop/mic states, auto-expand textarea, file attachments via the + button **and** drag-and-drop (drop target is the whole `ChatPanel`). Text and attachments can be controlled via `value`/`onValueChange` and `attachments`/`onAttachmentsChange`, or left uncontrolled. Duplicate files (same name+size+mtime) are silently deduped; the library surfaces a `"File already in chat"` message via the optional `onNotice` callback so the app can show a toast. |
 | `ToolActivity` | Collapsing tool call list with spinners and elapsed time |
 | `ProgressPanel` | Panel for displaying multi-step progress (pairs with `useProgressSteps`) |
 | `feedItemsToMessages()` | Converts Claude CLI FeedItems -> ChatMessages (auto-extracts `[Channel]` prefix into `ChatMessage.source`) |
@@ -333,6 +333,23 @@ const [files, setFiles] = useState<File[]>([])
   ...
 />
 ```
+
+**Drop zone is panel-wide, not composer-only:**
+The drag-and-drop target is `ChatPanel`'s root container, not just the
+composer. An `Empty`-style overlay (`bg-white/80 backdrop-blur-sm`) with a
+`FilesIcon`, "Add anything" title, and "Drop your files in here to add it
+to the conversation" description is rendered while a file drag is over the
+panel. Implementation uses a depth-counted `useFileDropZone` hook so the
+overlay only disappears when the drag actually leaves the outer container.
+Dropped files flow through the same controlled-attachments path as the +
+button, including dedupe.
+
+**Tauri gotcha — window-level drag-drop must be disabled:**
+Tauri 2's webview intercepts OS drag-drop at the window level by default
+and never forwards it to the DOM, so HTML `ondrop` handlers never fire.
+The fix is `"dragDropEnabled": false` in `app/src-tauri/tauri.conf.json`
+under `app.windows[0]`. This has to be set at the window config level,
+not per-component. Without it drag-and-drop silently does nothing.
 
 **Chat composer attachments cache (app convention):**
 - Files attached in the composer are persisted by Rust under

@@ -25,6 +25,7 @@ pub async fn connect_slack(
     sync_mgr: State<'_, Arc<RwLock<SlackSyncManager>>>,
     agent_path: String,
     agent_name: String,
+    agent_color: Option<String>,
 ) -> Result<serde_json::Value, String> {
     // Step 1: OAuth — open browser, user approves, we get bot_token
     let oauth_config = houston_channels::slack::oauth::SlackOAuthConfig {
@@ -58,7 +59,17 @@ pub async fn connect_slack(
         .await
         .map_err(|e| format!("failed to create Slack channel: {e}"))?;
 
+    // Step 3b: Invite the installing user so they're in the channel automatically
+    if !tokens.user_id.is_empty() {
+        if let Err(e) = houston_channels::slack::api::invite_user(&bot_token, &channel_id, &tokens.user_id).await {
+            tracing::warn!("[slack] failed to invite user to channel: {e}");
+        } else {
+            tracing::info!("[slack] invited user {} to #{safe_name}", tokens.user_id);
+        }
+    }
+
     // Step 4: Persist sync config
+    let agent_icon_url = agent_color.as_deref().map(agent_icon_url);
     let config = SlackSyncConfig {
         bot_token: bot_token.clone(),
         app_token: SLACK_APP_TOKEN.to_string(),
@@ -66,6 +77,7 @@ pub async fn connect_slack(
         slack_channel_name: safe_name.clone(),
         user_name: user_name.clone(),
         user_avatar: user_avatar.clone(),
+        agent_icon_url,
         threads: vec![],
     };
     let store = AgentStore::new(&root);
@@ -154,6 +166,13 @@ pub async fn get_slack_sync_status(
     } else {
         Ok(serde_json::json!({ "connected": false }))
     }
+}
+
+/// Maps an agent color hex string to the hosted SVG icon URL at gethouston.ai.
+/// Falls back to None for unknown colors (Slack will use the app default icon).
+fn agent_icon_url(color: &str) -> String {
+    let hex = color.trim_start_matches('#').to_lowercase();
+    format!("https://gethouston.ai/icons/icon-{hex}.svg")
 }
 
 fn slug(name: &str) -> String {

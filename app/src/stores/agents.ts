@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { tauriAgents, tauriPreferences, tauriRoutines, tauriWatcher } from "../lib/tauri";
+import { tauriAgents, tauriAttachments, tauriPreferences, tauriRoutines, tauriWatcher } from "../lib/tauri";
 import type { Agent } from "../lib/types";
 
 interface AgentState {
@@ -61,6 +61,9 @@ export const useAgentStore = create<AgentState>((set, get) => ({
 
   delete: async (workspaceId, id) => {
     await tauriAgents.delete(workspaceId, id);
+    // Wipe any chat composer attachments scoped to this agent's main chat.
+    // Per-activity attachments are wiped via useDeleteActivity / handleDelete.
+    await tauriAttachments.delete(`agent-${id}`).catch(() => {});
     set((s) => {
       const agents = s.agents.filter((a) => a.id !== id);
       const current =

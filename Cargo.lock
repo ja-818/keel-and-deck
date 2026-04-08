@@ -1863,6 +1863,7 @@ dependencies = [
 name = "houston-app"
 version = "0.2.0"
 dependencies = [
+ "base64 0.22.1",
  "chrono",
  "cron",
  "dirs 5.0.1",

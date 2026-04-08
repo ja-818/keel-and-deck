@@ -20,6 +20,18 @@ pub fn reopen_composio_oauth() -> Result<(), String> {
     crate::composio_auth::reopen_oauth_browser()
 }
 
+/// List all available Composio apps (REST API with static catalog fallback).
+#[tauri::command(rename_all = "snake_case")]
+pub async fn list_composio_apps() -> Vec<crate::composio_apps::ComposioAppEntry> {
+    crate::composio_apps::list_all_apps().await
+}
+
+/// Initiate a connection to a Composio app. Returns the redirect URL for authentication.
+#[tauri::command(rename_all = "snake_case")]
+pub async fn connect_composio_app(toolkit: String) -> Result<String, String> {
+    crate::composio::initiate_app_connection(&toolkit).await
+}
+
 /// Complete OAuth by pasting a callback URL manually.
 #[tauri::command(rename_all = "snake_case")]
 pub async fn submit_composio_callback(callback_url: String) -> Result<(), String> {

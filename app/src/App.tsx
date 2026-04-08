@@ -4,6 +4,7 @@ import type { Toast } from "@houston-ai/core";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Check, X, Plus } from "lucide-react";
 import houstonIconWhite from "./assets/houston-icon-white.svg";
+import houstonIcon from "./assets/houston-icon.svg";
 
 import { tauriSlack, tauriSystem } from "./lib/tauri";
 import {
@@ -149,6 +150,7 @@ export default function App() {
                           <SlackButton
                             agentPath={currentAgent.folderPath}
                             agentName={currentAgent.name}
+                            agentColor={currentAgent.color}
                           />
                         )}
                         {onStartMission && (
@@ -213,7 +215,7 @@ export default function App() {
   );
 }
 
-function SlackButton({ agentPath, agentName }: { agentPath: string; agentName: string }) {
+function SlackButton({ agentPath, agentName, agentColor }: { agentPath: string; agentName: string; agentColor?: string }) {
   const [status, setStatus] = useState<"idle" | "connecting" | "connected">("idle");
   const [channelName, setChannelName] = useState<string | null>(null);
   const abortRef = useRef(false);
@@ -234,7 +236,7 @@ function SlackButton({ agentPath, agentName }: { agentPath: string; agentName: s
     abortRef.current = false;
     setStatus("connecting");
     try {
-      const result = await tauriSlack.connect(agentPath, agentName);
+      const result = await tauriSlack.connect(agentPath, agentName, agentColor);
       if (!abortRef.current) {
         setStatus("connected");
         setChannelName(result.channel_name);
@@ -303,16 +305,18 @@ function WelcomeScreen({
   return (
     <div className="h-screen flex flex-col items-center justify-center bg-background text-foreground">
       <Empty className="border-0">
+        <img src={houstonIcon} alt="Houston" className="h-12 w-auto mb-4 mx-auto" />
         <EmptyHeader>
           <EmptyTitle>Welcome to Houston</EmptyTitle>
           <EmptyDescription>
-            Create your first workspace to get started.
+            Ship the impossible!
           </EmptyDescription>
         </EmptyHeader>
         <Button
           className="mt-4 rounded-full"
           onClick={() => setDialogOpen(true)}
         >
+          <Plus className="h-4 w-4" />
           Create your first workspace
         </Button>
       </Empty>

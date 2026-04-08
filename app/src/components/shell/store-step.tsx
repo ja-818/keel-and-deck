@@ -1,7 +1,7 @@
 import { DialogTitle, Input, cn } from "@houston-ai/core";
 import { Search } from "lucide-react";
-import type { AgentDefinition, AgentCategory } from "../../lib/types";
-import { AgentCard } from "./experience-card";
+import type { AgentDefinition, AgentCategory, StoreListing } from "../../lib/types";
+import { AgentCard, StoreAgentCard } from "./experience-card";
 
 const categories: { id: "all" | AgentCategory; label: string }[] = [
   { id: "all", label: "All" },
@@ -19,8 +19,11 @@ interface StoreStepProps {
   onCategoryChange: (cat: "all" | AgentCategory) => void;
   houstonAgents: AgentDefinition[];
   communityAgents: AgentDefinition[];
+  storeCatalog: StoreListing[];
+  installedIds: Set<string>;
   hasResults: boolean;
   onSelect: (id: string) => void;
+  onInstall: (listing: StoreListing) => Promise<void>;
 }
 
 export function StoreStep({
@@ -30,9 +33,35 @@ export function StoreStep({
   onCategoryChange,
   houstonAgents,
   communityAgents,
+  storeCatalog,
+  installedIds,
   hasResults,
   onSelect,
+  onInstall,
 }: StoreStepProps) {
+  // Filter store listings that aren't already in builtin/community lists
+  const localIds = new Set([
+    ...houstonAgents.map((d) => d.config.id),
+    ...communityAgents.map((d) => d.config.id),
+  ]);
+
+  const filteredStore = storeCatalog.filter((s) => {
+    if (localIds.has(s.id)) return false;
+    if (category !== "all" && s.category !== category) return false;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      return (
+        s.name.toLowerCase().includes(q) ||
+        s.description.toLowerCase().includes(q) ||
+        s.tags.some((t) => t.toLowerCase().includes(q))
+      );
+    }
+    return true;
+  });
+
+  const totalResults =
+    houstonAgents.length + communityAgents.length + filteredStore.length;
+
   return (
     <>
       <div className="shrink-0 px-6 pt-6 space-y-4">
@@ -75,40 +104,44 @@ export function StoreStep({
 
       <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-6">
         {houstonAgents.length > 0 && (
-          <section>
-            <p className="text-xs font-medium text-muted-foreground mb-3">
-              By Houston
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              {houstonAgents.map((def) => (
-                <AgentCard
-                  key={def.config.id}
-                  config={def.config}
-                  onSelect={onSelect}
-                />
-              ))}
-            </div>
-          </section>
+          <StoreSection label="By Houston">
+            {houstonAgents.map((def) => (
+              <AgentCard
+                key={def.config.id}
+                config={def.config}
+                onSelect={onSelect}
+              />
+            ))}
+          </StoreSection>
         )}
 
         {communityAgents.length > 0 && (
-          <section>
-            <p className="text-xs font-medium text-muted-foreground mb-3">
-              Community
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              {communityAgents.map((def) => (
-                <AgentCard
-                  key={def.config.id}
-                  config={def.config}
-                  onSelect={onSelect}
-                />
-              ))}
-            </div>
-          </section>
+          <StoreSection label="Community">
+            {communityAgents.map((def) => (
+              <AgentCard
+                key={def.config.id}
+                config={def.config}
+                onSelect={onSelect}
+              />
+            ))}
+          </StoreSection>
         )}
 
-        {!hasResults && (
+        {filteredStore.length > 0 && (
+          <StoreSection label="Houston Store">
+            {filteredStore.map((listing) => (
+              <StoreAgentCard
+                key={listing.id}
+                listing={listing}
+                isInstalled={installedIds.has(listing.id)}
+                onInstall={onInstall}
+                onSelect={onSelect}
+              />
+            ))}
+          </StoreSection>
+        )}
+
+        {totalResults === 0 && !hasResults && (
           <div className="flex items-center justify-center py-16">
             <p className="text-sm text-muted-foreground">
               No agents match your search
@@ -117,5 +150,22 @@ export function StoreStep({
         )}
       </div>
     </>
+  );
+}
+
+function StoreSection({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section>
+      <p className="text-xs font-medium text-muted-foreground mb-3">
+        {label}
+      </p>
+      <div className="grid grid-cols-2 gap-3">{children}</div>
+    </section>
   );
 }

@@ -85,6 +85,58 @@ export const tauriChat = {
     invoke<{ title: string; description: string }>("summarize_activity", { message }),
 };
 
+/**
+ * Composer attachments — persisted under <app cache>/houston/attachments/<scope_id>/.
+ * Files survive app restarts and are deleted when their owning activity/agent
+ * is deleted. Claude reads them via its Read tool from the absolute paths
+ * returned by `save`.
+ */
+async function fileToBase64(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  // Chunked encoding to avoid call-stack overflow on large files.
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(
+      null,
+      bytes.subarray(i, i + chunk) as unknown as number[],
+    );
+  }
+  return btoa(binary);
+}
+
+export const tauriAttachments = {
+  /** Save files for `scopeId`, returns the absolute paths Claude can Read. */
+  save: async (scopeId: string, files: File[]): Promise<string[]> => {
+    if (files.length === 0) return [];
+    const payload = await Promise.all(
+      files.map(async (f) => ({
+        name: f.name,
+        data_base64: await fileToBase64(f),
+      })),
+    );
+    return invoke<string[]>("save_attachments", {
+      scope_id: scopeId,
+      files: payload,
+    });
+  },
+  /** Delete all attachments for `scopeId`. Idempotent. */
+  delete: (scopeId: string) =>
+    invoke<void>("delete_attachments", { scope_id: scopeId }),
+};
+
+/**
+ * Format a prompt with attachment paths appended in a block Claude can parse.
+ * Returns the original text unchanged if there are no paths.
+ */
+export function withAttachmentPaths(text: string, paths: string[]): string {
+  if (paths.length === 0) return text;
+  const list = paths.map((p) => `- ${p}`).join("\n");
+  const block = `[User attached these files. Read them with the Read tool if needed:\n${list}]`;
+  return text.length > 0 ? `${text}\n\n${block}` : block;
+}
+
 export const tauriAgent = {
   readFile: (agentPath: string, name: string) =>
     invoke<string>("read_agent_file", { agent_path: agentPath, name }),
@@ -126,8 +178,16 @@ export const tauriLearnings = {
     invoke<void>("remove_learning", { workspace_path: agentPath, index }),
 };
 
+export interface ComposioAppEntry {
+  toolkit: string;
+  name: string;
+  description: string;
+  logo_url: string;
+}
+
 export const tauriConnections = {
   list: () => invoke<ConnectionsResult>("list_composio_connections"),
+  listApps: () => invoke<ComposioAppEntry[]>("list_composio_apps"),
   connectApp: (toolkit: string) =>
     invoke<string>("connect_composio_app", { toolkit }),
   startOAuth: () => invoke<{ auth_url: string }>("start_composio_oauth"),
@@ -308,10 +368,10 @@ export const tauriPreferences = {
 
 export const tauriSlack = {
   /** One-click: opens browser → user approves → channel created → sync starts. */
-  connect: (agentPath: string, agentName: string) =>
+  connect: (agentPath: string, agentName: string, agentColor?: string) =>
     invoke<{ channel_id: string; channel_name: string; team_name: string }>(
       "connect_slack",
-      { agent_path: agentPath, agent_name: agentName },
+      { agent_path: agentPath, agent_name: agentName, agent_color: agentColor ?? null },
     ),
   disconnect: (agentPath: string) =>
     invoke<void>("disconnect_slack", { agent_path: agentPath }),

@@ -1208,11 +1208,20 @@
   @media (max-width: 600px) {
     .agent-grid { grid-template-columns: 1fr; }
     .stats-row { grid-template-columns: 1fr 1fr; gap: 16px; }
-    .hero h1 { font-size: 40px; }
-    .cta-section h2 { font-size: 32px; }
+    .stats-strip { grid-template-columns: 1fr 1fr; gap: 16px; padding: 40px 24px; }
+    .stats-strip .stat-item .number { font-size: 32px; }
+    .hero h1 { font-size: 28px; }
+    .hero { padding: 120px 24px 60px; }
+    .hero p { font-size: 16px; margin-bottom: 32px; }
+    .cta-section h2 { font-size: 28px; }
+    .cta-section { padding: 80px 24px 120px; }
+    .section-title { font-size: 28px; }
     .hosting-section { padding: 40px 24px; }
-    .hosting-section h3 { font-size: 28px; }
+    .hosting-section h3 { font-size: 24px; }
     .hero-actions { flex-direction: column; align-items: center; }
+    .capabilities-grid { gap: 12px; }
+    .feature-info h3 { font-size: 24px; }
+    footer { padding: 32px 24px; }
   }
 </style>
 </head>
@@ -1529,26 +1538,24 @@
           <span class="tl-yellow"></span>
           <span class="tl-green"></span>
         </div>
-        <span class="title">Houston — Content Writer</span>
+        <span class="title">Houston — Investor Relations</span>
       </div>
       <div class="chat-mockup">
         <div class="chat-msg user">
-          Write a blog post about our product launch. Focus on the problem we solve and why now.
+          We need to prep for our Series A. Build a competitor landscape and draft the investor memo.
         </div>
         <div class="chat-msg assistant">
-          Got it. I'll research your competitors, draft an outline, and write the full post. I'll check in when the outline is ready for your review.
-          <br><br>
-          Starting with competitor research...
+          On it. I'll pull data on the top 8 competitors in the space — pricing, funding, positioning. Then I'll draft the memo with your traction numbers. I'll check in when the landscape is ready.
         </div>
         <div class="chat-msg user" style="display: flex; flex-direction: column; gap: 4px; align-items: flex-end;">
           <div class="channel-badge badge-slack">
             <svg viewBox="0 0 24 24" fill="currentColor" width="10" height="10"><path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zm-1.271 0a2.528 2.528 0 0 1-2.521 2.521 2.528 2.528 0 0 1-2.521-2.521V2.522A2.528 2.528 0 0 1 15.164 0a2.528 2.528 0 0 1 2.521 2.522v6.312zM15.164 18.956a2.528 2.528 0 0 1 2.521 2.522A2.528 2.528 0 0 1 15.164 24a2.528 2.528 0 0 1-2.521-2.522v-2.522h2.521zm0-1.271a2.528 2.528 0 0 1-2.521-2.521 2.528 2.528 0 0 1 2.521-2.521h6.314A2.528 2.528 0 0 1 24 15.164a2.528 2.528 0 0 1-2.522 2.521h-6.314z"/></svg>
             via Slack
           </div>
-          Also make sure to mention the open source angle
+          Focus on the PLG angle — that's our edge
         </div>
         <div class="chat-msg assistant">
-          Noted — I'll weave in the open-source story throughout. The outline is almost ready, give me a few minutes.
+          Got it — I'll lead with your product-led growth metrics. Competitor landscape is done, moving to the memo now.
         </div>
         <div class="typing-dots">
           <span></span>
@@ -1598,30 +1605,30 @@
     <!-- Clean board demo cards -->
     <div style="display: flex; flex-direction: column; gap: 12px; padding: 20px;">
       <div class="board-card active">
-        <div style="font-size: 14px; font-weight: 500; margin-bottom: 6px;">Write launch blog post</div>
-        <div style="font-size: 12px; color: var(--gray-500); margin-bottom: 10px;">Research competitors, draft outline, write full post</div>
+        <div style="font-size: 14px; font-weight: 500; margin-bottom: 6px;">Draft Series A memo</div>
+        <div style="font-size: 12px; color: var(--gray-500); margin-bottom: 10px;">Traction, TAM, go-to-market strategy</div>
         <div style="font-size: 11px; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; background: rgba(59,130,246,0.08); color: #3b82f6;">
           <span style="width: 5px; height: 5px; border-radius: 50%; background: currentColor;"></span>
           Running
         </div>
       </div>
       <div class="board-card active">
-        <div style="font-size: 14px; font-weight: 500; margin-bottom: 6px;">Analyze Q1 metrics</div>
-        <div style="font-size: 12px; color: var(--gray-500); margin-bottom: 10px;">Pull data, create charts, write executive summary</div>
+        <div style="font-size: 14px; font-weight: 500; margin-bottom: 6px;">Outbound sequence for PLG leads</div>
+        <div style="font-size: 12px; color: var(--gray-500); margin-bottom: 10px;">50 leads, 3-email personalized cadence</div>
         <div style="font-size: 11px; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; background: rgba(59,130,246,0.08); color: #3b82f6;">
           <span style="width: 5px; height: 5px; border-radius: 50%; background: currentColor;"></span>
           Running
         </div>
       </div>
       <div class="board-card">
-        <div style="font-size: 14px; font-weight: 500; margin-bottom: 6px;">Competitor analysis</div>
+        <div style="font-size: 14px; font-weight: 500; margin-bottom: 6px;">ICP analysis from CRM data</div>
         <div style="font-size: 12px; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; background: rgba(0,162,64,0.08); color: var(--success);">
           <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><path d="M2 6l3 3 5-5"/></svg>
           Done
         </div>
       </div>
       <div class="board-card" style="border-color: rgba(224,172,0,0.15);">
-        <div style="font-size: 14px; font-weight: 500; margin-bottom: 6px;">Social media calendar</div>
+        <div style="font-size: 14px; font-weight: 500; margin-bottom: 6px;">Weekly KPI report</div>
         <div style="font-size: 12px; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; background: rgba(224,172,0,0.08); color: var(--warning);">
           Needs you
         </div>

@@ -1,8 +1,10 @@
+import { useMemo } from "react";
 import { ConnectionsView } from "@houston-ai/connections";
 import { useConnections, useInvalidateConnections } from "../hooks/queries";
 import { tauriSystem } from "../lib/tauri";
 import { useComposioAuth } from "../hooks/use-composio-auth";
 import { ComposioAuthDialog } from "./composio-auth-dialog";
+import { BrowseAppsSection } from "./tabs/browse-apps-section";
 
 const COMPOSIO_DASHBOARD_URL = "https://dashboard.composio.dev";
 
@@ -14,11 +16,21 @@ export function WorkspaceConnections() {
     invalidate();
   });
 
+  const connectedToolkits = useMemo(
+    () =>
+      new Set(
+        result?.status === "ok"
+          ? result.connections.map((c) => c.toolkit)
+          : [],
+      ),
+    [result],
+  );
+
   return (
     <div className="h-full overflow-auto">
       <div className="max-w-3xl mx-auto w-full px-6 py-6">
         <h1 className="text-[28px] font-normal text-foreground mb-6">
-          Connections
+          Integrations
         </h1>
         <ConnectionsView
           result={result ?? null}
@@ -27,6 +39,9 @@ export function WorkspaceConnections() {
           onManage={() => tauriSystem.openUrl(COMPOSIO_DASHBOARD_URL)}
           onAuth={auth.startAuth}
         />
+        {!loading && result?.status === "ok" && (
+          <BrowseAppsSection connectedToolkits={connectedToolkits} />
+        )}
       </div>
 
       <ComposioAuthDialog

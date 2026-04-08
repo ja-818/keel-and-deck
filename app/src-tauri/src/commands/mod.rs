@@ -1,5 +1,6 @@
 pub mod agent_configs;
 pub mod agents;
+pub mod attachments;
 pub mod chat;
 pub mod memory;
 pub mod preferences;

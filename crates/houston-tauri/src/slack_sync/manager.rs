@@ -93,6 +93,7 @@ impl SlackSyncManager {
         let channel_id = session.config.slack_channel_id.clone();
         let agent_name = session.agent_name.clone();
         let thread_ts = thread.thread_ts.clone();
+        let icon_url = session.config.agent_icon_url.clone();
 
         houston_channels::slack::api::post_message_as(
             &bot_token,
@@ -100,7 +101,7 @@ impl SlackSyncManager {
             text,
             Some(&thread_ts),
             Some(&agent_name),
-            None,
+            icon_url.as_deref(),
         )
         .await
         .map_err(|e| e.to_string())?;

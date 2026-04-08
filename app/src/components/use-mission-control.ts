@@ -3,7 +3,7 @@ import type { KanbanItem } from "@houston-ai/board";
 import type { FeedItem } from "@houston-ai/chat";
 import { useFeedStore } from "../stores/feeds";
 import { useAllConversations } from "../hooks/queries";
-import { tauriActivity, tauriChat } from "../lib/tauri";
+import { tauriActivity, tauriChat, tauriAttachments, withAttachmentPaths } from "../lib/tauri";
 import type { Agent } from "../lib/types";
 
 export function useMissionControl(agents: Agent[]) {
@@ -58,6 +58,8 @@ export function useMissionControl(agents: Agent[]) {
       const agentPath = pathMapRef.current[item.id];
       if (!agentPath) return;
       await tauriActivity.delete(agentPath, item.id);
+      // Drop any cached attachments for this conversation. Idempotent.
+      await tauriAttachments.delete(`activity-${item.id}`).catch(() => {});
       if (selectedId === item.id) setSelectedId(null);
     },
     [selectedId],
@@ -73,14 +75,19 @@ export function useMissionControl(agents: Agent[]) {
   );
 
   const handleSendMessage = useCallback(
-    async (sessionKey: string, text: string) => {
+    async (sessionKey: string, text: string, files: File[]) => {
       const activityId = sessionKey.replace("activity-", "");
       const agentPath = pathMapRef.current[activityId];
       if (!agentPath) return;
-      pushFeedItem(sessionKey, { feed_type: "user_message", data: text });
+      const visible = files.length > 0
+        ? `${text}${text ? "\n\n" : ""}Attached: ${files.map((f) => f.name).join(", ")}`
+        : text;
+      pushFeedItem(sessionKey, { feed_type: "user_message", data: visible });
       setLoading((prev) => ({ ...prev, [sessionKey]: true }));
       tauriActivity.update(agentPath, activityId, { status: "running" }).catch(console.error);
-      tauriChat.send(agentPath, text, sessionKey);
+      const paths = await tauriAttachments.save(`activity-${activityId}`, files);
+      const prompt = withAttachmentPaths(text, paths);
+      tauriChat.send(agentPath, prompt, sessionKey);
     },
     [pushFeedItem],
   );
