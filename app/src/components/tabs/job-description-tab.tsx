@@ -114,7 +114,7 @@ export default function JobDescriptionTab({ agent }: TabProps) {
             onClick={() => setActiveTab(tab.id)}
             className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
               activeTab === tab.id
-                ? "bg-foreground text-background font-medium"
+                ? "bg-gray-200 text-foreground font-medium dark:bg-gray-700"
                 : "text-muted-foreground hover:bg-accent hover:text-foreground"
             }`}
           >
