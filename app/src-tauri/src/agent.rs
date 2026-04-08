@@ -21,6 +21,21 @@ pub fn seed_agent(dir: &Path) -> Result<(), String> {
 pub fn build_system_prompt(dir: &Path) -> String {
     let mut parts = Vec::new();
 
+    // 0. Working directory constraint — MUST be first so the agent sees it immediately
+    let working_dir = dir.to_string_lossy();
+    parts.push(format!(
+        "# Working Directory — MANDATORY\n\n\
+         Your working directory is: `{working_dir}`\n\n\
+         **CRITICAL RULES:**\n\
+         - ALL files you create, read, or modify MUST be within this directory.\n\
+         - NEVER create files outside this directory (not in ~/, ~/.agents/, ~/Development/, /tmp/, or anywhere else).\n\
+         - Skills go in `.agents/skills/` (relative to this directory).\n\
+         - Houston data goes in `.houston/` (relative to this directory).\n\
+         - If you need a new file or folder, create it HERE.\n\
+         - When referencing paths, always use paths relative to or inside `{working_dir}`."
+    ));
+    tracing::info!("[agent] system prompt working_dir={working_dir}");
+
     // 1. Base prompt (read from file, fall back to hardcoded default)
     let system_path = dir.join(".houston/prompts/system.md");
     let base = std::fs::read_to_string(&system_path)
@@ -85,7 +100,9 @@ pub fn build_system_prompt(dir: &Path) -> String {
         }
     }
 
-    parts.join("\n\n---\n\n")
+    let prompt = parts.join("\n\n---\n\n");
+    tracing::debug!("[agent] system prompt assembled ({} chars, {} sections)", prompt.len(), parts.len());
+    prompt
 }
 
 const PROMPT_FILES: [(&str, &str); 1] = [("CLAUDE.md", "CLAUDE.md — Agent Instructions")];
