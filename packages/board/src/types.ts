@@ -3,6 +3,7 @@ import type React from "react"
 export interface KanbanItem {
   id: string
   title: string
+  description?: string
   subtitle?: string
   /** Grouping label displayed above the title (e.g. agent name). */
   group?: string

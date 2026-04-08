@@ -7,6 +7,7 @@ import { SidebarItemRow } from "./sidebar-item-row";
 export interface SidebarItem {
   id: string;
   name: string;
+  icon?: ReactNode;
 }
 
 export interface SidebarNavItemEntry {

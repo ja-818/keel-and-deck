@@ -1,14 +1,34 @@
-import type { FormEvent } from "react";
-import { DialogTitle, Button, Input } from "@houston-ai/core";
-import { ArrowLeft } from "lucide-react";
+import { type FormEvent, useEffect } from "react";
+import { DialogTitle, Button, Input, cn } from "@houston-ai/core";
+import { ArrowLeft, Check } from "lucide-react";
 import type { AgentDefinition } from "../../lib/types";
-import { getAgentIcon, getAgentIconStyle } from "./experience-card";
+import { getHoustonLogo, isLightColor } from "./experience-card";
+
+/** Blue–orange spectrum: 5 dark (white logo) + 5 light (black logo) */
+const AGENT_COLORS = [
+  // Dark — green to yellow (white helmet)
+  "#0f3d20", // deep green
+  "#162d4a", // deep blue
+  "#2d0550", // deep purple
+  "#6b1a1a", // deep red
+  "#7c3510", // deep orange
+  "#6b5010", // deep yellow
+  // Light — yellow to green (black helmet)
+  "#fef3c7", // light yellow
+  "#fed7aa", // light orange
+  "#fecdd3", // light red
+  "#e8d5f5", // light purple
+  "#dbeafe", // light blue
+  "#d5f5e3", // light green
+];
 
 interface NamingStepProps {
   selectedAgent: AgentDefinition | undefined;
   name: string;
+  color: string | undefined;
   error: string | null;
   onNameChange: (value: string) => void;
+  onColorChange: (value: string) => void;
   onBack: () => void;
   onSubmit: (e: FormEvent) => void;
 }
@@ -16,13 +36,22 @@ interface NamingStepProps {
 export function NamingStep({
   selectedAgent,
   name,
+  color,
   error,
   onNameChange,
+  onColorChange,
   onBack,
   onSubmit,
 }: NamingStepProps) {
-  const Icon = getAgentIcon(selectedAgent?.config.icon);
-  const style = getAgentIconStyle(selectedAgent?.config.icon);
+  // Pick a random color on mount if none selected
+  useEffect(() => {
+    if (!color) {
+      const idx = Math.floor(Math.random() * AGENT_COLORS.length);
+      onColorChange(AGENT_COLORS[idx]);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const logo = getHoustonLogo(color);
 
   return (
     <div className="flex flex-col items-center justify-center flex-1 px-6 py-16">
@@ -35,19 +64,46 @@ export function NamingStep({
 
       <DialogTitle className="sr-only">Name your Agent</DialogTitle>
 
-      {selectedAgent && (
-        <div className="flex flex-col items-center gap-4 mb-8">
-          <div className={`flex h-16 w-16 items-center justify-center rounded-full ${style.bg}`}>
-            <Icon className={`h-7 w-7 ${style.fg}`} />
-          </div>
-          <div className="text-center">
-            <p className="text-lg font-semibold">{selectedAgent.config.name}</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Name your new Agent
-            </p>
-          </div>
+      {/* Avatar preview */}
+      <div className="flex flex-col items-center gap-4 mb-8">
+        <div
+          className="h-20 w-20 shrink-0 rounded-full flex items-center justify-center transition-colors duration-200"
+          style={{ backgroundColor: color ?? "#f5f5f5" }}
+        >
+          <img src={logo} alt="" className="h-12 w-12 object-contain" />
         </div>
-      )}
+
+        <div className="text-center">
+          <p className="text-lg font-semibold">
+            {selectedAgent?.config.name ?? "New Agent"}
+          </p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Pick a color and name your agent
+          </p>
+        </div>
+      </div>
+
+      {/* Color palette */}
+      <div className="flex items-center gap-2 mb-6">
+        {AGENT_COLORS.map((c) => (
+          <button
+            key={c}
+            type="button"
+            onClick={() => onColorChange(c)}
+            className={cn(
+              "h-7 w-7 rounded-full flex items-center justify-center transition-all duration-150",
+              color === c
+                ? "ring-2 ring-offset-2 ring-foreground/30"
+                : "hover:scale-110",
+            )}
+            style={{ backgroundColor: c }}
+          >
+            {color === c && (
+              <Check className={cn("h-3.5 w-3.5", isLightColor(c) ? "text-gray-700" : "text-white")} />
+            )}
+          </button>
+        ))}
+      </div>
 
       <form onSubmit={onSubmit} className="w-full max-w-sm space-y-4">
         <Input

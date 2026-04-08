@@ -13,14 +13,15 @@ import {
   DropdownMenuItem,
 } from "@houston-ai/core";
 import { ChevronDown, Plus } from "lucide-react";
-import houstonIcon from "../assets/houston-icon.svg";
 import houstonIconWhite from "../assets/houston-icon-white.svg";
+import { getHoustonLogo } from "./shell/experience-card";
 import { useAgentStore } from "../stores/agents";
 import { useUIStore } from "../stores/ui";
 import { tauriChat } from "../lib/tauri";
 import { useMissionControl } from "./use-mission-control";
 import { MissionControlNewDialog } from "./mission-control-new-dialog";
 import { useDetailPanelContainer } from "./shell/detail-panel-context";
+import { AgentMiniAvatar } from "./shell/experience-card";
 
 const MC_COLUMNS: KanbanColumnConfig[] = [
   { id: "running", label: "Running", statuses: ["running", "queue"] },
@@ -46,15 +47,32 @@ export function Dashboard() {
     [],
   );
 
-  const filteredItems = useMemo(
-    () =>
-      filterPath
-        ? mc.items.filter(
-            (i) => i.metadata?.agentPath === filterPath,
-          )
-        : mc.items,
-    [mc.items, filterPath],
-  );
+  // Build agentPath → color lookup from agent instances
+  const colorByPath = useMemo(() => {
+    const map: Record<string, string | undefined> = {};
+    for (const a of agents) {
+      map[a.folderPath] = a.color;
+    }
+    return map;
+  }, [agents]);
+
+  const filteredItems = useMemo(() => {
+    const base = filterPath
+      ? mc.items.filter((i) => i.metadata?.agentPath === filterPath)
+      : mc.items;
+    return base.map((item) => ({
+      ...item,
+      icon: <AgentMiniAvatar color={colorByPath[item.metadata?.agentPath as string]} />,
+    }));
+  }, [mc.items, filterPath, colorByPath]);
+
+  const selectedItem = mc.selectedId
+    ? mc.items.find((i) => i.id === mc.selectedId)
+    : null;
+  const selectedColor = selectedItem
+    ? colorByPath[selectedItem.metadata?.agentPath as string]
+    : undefined;
+  const selectedLogo = getHoustonLogo(selectedColor);
 
   if (agents.length === 0) {
     return (
@@ -123,7 +141,9 @@ export function Dashboard() {
                   <DropdownMenuItem
                     key={a.id}
                     onClick={() => setFilterPath(a.folderPath)}
+                    className="gap-2"
                   >
+                    <AgentMiniAvatar color={a.color} />
                     {a.name}
                   </DropdownMenuItem>
                 ))}
@@ -158,14 +178,23 @@ export function Dashboard() {
           panelContainer={panelContainer}
           onPanelOpenChange={setMissionPanelOpen}
           onStopSession={handleStopSession}
+          panelAgentName={selectedItem?.subtitle}
           panelAvatar={
-            <span className="size-10 rounded-full ring-1 ring-border flex items-center justify-center shrink-0">
-              <img src={houstonIcon} alt="Houston" className="size-6" />
+            <span
+              className="size-10 rounded-full flex items-center justify-center shrink-0"
+              style={{ backgroundColor: selectedColor ?? "#e5e5e5" }}
+            >
+              <img src={selectedLogo} alt="Houston" className="size-6 object-contain" />
             </span>
           }
           thinkingIndicator={
             <div className="py-2 flex items-center gap-2">
-              <img src={houstonIcon} alt="Houston" className="size-6 rounded-full animate-pulse" />
+              <span
+                className="size-6 rounded-full flex items-center justify-center animate-pulse"
+                style={{ backgroundColor: selectedColor ?? "#e5e5e5" }}
+              >
+                <img src={selectedLogo} alt="" className="size-3.5 object-contain" />
+              </span>
             </div>
           }
         />

@@ -31,8 +31,8 @@ export function useMissionControl(agents: Agent[]) {
         return {
           id: c.id,
           title: c.title,
+          description: c.description,
           subtitle: c.agent_name,
-          group: c.agent_name,
           status: c.status!,
           updatedAt: c.updated_at ?? new Date().toISOString(),
           metadata: { agentPath: c.agent_path },

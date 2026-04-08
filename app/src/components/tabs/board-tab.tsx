@@ -9,50 +9,19 @@ import { useActivity, useDeleteActivity, useUpdateActivity, useCreateActivity } 
 import { tauriActivity, tauriChat } from "../../lib/tauri";
 import { useFileToolRenderer } from "../../hooks/use-file-tool-renderer";
 import type { TabProps } from "../../lib/types";
-import houstonIcon from "../../assets/houston-icon.svg";
 import { useDetailPanelContainer } from "../shell/detail-panel-context";
+import { getHoustonLogo } from "../shell/experience-card";
 
-/** Extract a concise title from an assistant response. */
-function extractTitle(text: string): string | null {
-  let clean = text
-    .replace(/^#+\s+/gm, "")
-    .replace(/\*\*/g, "")
-    .replace(/\*/g, "")
-    .replace(/^\s*[-*]\s+/gm, "")
-    .trim();
-
-  // Strip filler openings
-  clean = clean.replace(
-    /^(I'll|I will|Let me|Sure,?\s*|OK,?\s*|Okay,?\s*|Alright,?\s*|Of course,?\s*)/i,
-    "",
-  ).trim();
-
-  if (clean.length < 10) return null;
-
-  // First sentence or first line
-  const sentenceEnd = clean.search(/[.!?]\s/);
-  if (sentenceEnd > 10 && sentenceEnd < 100) {
-    clean = clean.substring(0, sentenceEnd + 1);
-  } else {
-    const lineEnd = clean.indexOf("\n");
-    if (lineEnd > 10 && lineEnd < 100) {
-      clean = clean.substring(0, lineEnd);
-    }
-  }
-
-  if (clean.length > 80) clean = clean.substring(0, 77) + "...";
-
-  return clean.length >= 10 ? clean : null;
-}
-
-function ThinkingIndicator() {
+function ThinkingIndicator({ color }: { color?: string }) {
+  const logo = getHoustonLogo(color);
   return (
     <div className="py-2 flex items-center gap-2">
-      <img
-        src={houstonIcon}
-        alt="Houston"
-        className="size-6 rounded-full animate-pulse"
-      />
+      <span
+        className="size-6 rounded-full flex items-center justify-center animate-pulse"
+        style={{ backgroundColor: color ?? "#e5e5e5" }}
+      >
+        <img src={logo} alt="" className="size-3.5 object-contain" />
+      </span>
     </div>
   );
 }
@@ -99,32 +68,25 @@ export default function BoardTab({ agent }: TabProps) {
   const [loadingState, setLoading] = useState<Record<string, boolean>>({});
   const summarizedIds = useRef<Set<string>>(new Set());
 
-  // Auto-summarize titles for running activities when first assistant text arrives
+  // Call Haiku to generate a concise title + description when an activity starts running
   useEffect(() => {
     if (!rawItems) return;
     for (const activity of rawItems) {
       if (activity.status !== "running") continue;
       if (summarizedIds.current.has(activity.id)) continue;
-
-      const sk = activity.session_key ?? `activity-${activity.id}`;
-      const feed = feedItems[sk];
-      if (!feed) continue;
-
-      const assistantItem = feed.find(
-        (f) =>
-          (f.feed_type === "assistant_text" || f.feed_type === "assistant_text_streaming") &&
-          typeof f.data === "string" &&
-          f.data.length > 20,
-      );
-      if (!assistantItem) continue;
-
       summarizedIds.current.add(activity.id);
-      const title = extractTitle(assistantItem.data as string);
-      if (title && title !== activity.title) {
-        tauriActivity.update(path, activity.id, { title }).catch(console.error);
-      }
+
+      const message = activity.description || activity.title;
+      tauriChat
+        .summarize(message)
+        .then(({ title, description }) => {
+          tauriActivity
+            .update(path, activity.id, { title, description })
+            .catch(console.error);
+        })
+        .catch(console.error);
     }
-  }, [rawItems, feedItems, path]);
+  }, [rawItems, path]);
 
   // Register the "Start a Mission" handler in the UI store for the TabBar
   const handleOpenerReady = useCallback(
@@ -228,11 +190,14 @@ export default function BoardTab({ agent }: TabProps) {
       onStopSession={handleStopSession}
       isSpecialTool={isSpecialTool}
       renderToolResult={renderToolResult}
-      thinkingIndicator={<ThinkingIndicator />}
+      thinkingIndicator={<ThinkingIndicator color={agent.color} />}
       panelAgentName={agent.name}
       panelAvatar={
-        <span className="size-10 rounded-full ring-1 ring-border flex items-center justify-center shrink-0">
-          <img src={houstonIcon} alt="Houston" className="size-6" />
+        <span
+          className="size-10 rounded-full flex items-center justify-center shrink-0"
+          style={{ backgroundColor: agent.color ?? "#e5e5e5" }}
+        >
+          <img src={getHoustonLogo(agent.color)} alt="Houston" className="size-6 object-contain" />
         </span>
       }
     />

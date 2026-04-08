@@ -6,6 +6,7 @@ import { useWorkspaceStore } from "../../stores/workspaces";
 import { useAgentStore } from "../../stores/agents";
 import { useAgentCatalogStore } from "../../stores/agent-catalog";
 import { useUIStore } from "../../stores/ui";
+import { AgentMiniAvatar } from "./experience-card";
 
 export function Sidebar({ children }: { children: ReactNode }) {
   const workspaces = useWorkspaceStore((s) => s.workspaces);
@@ -31,7 +32,11 @@ export function Sidebar({ children }: { children: ReactNode }) {
     return bTime.localeCompare(aTime);
   });
 
-  const items = sorted.map((a) => ({ id: a.id, name: a.name }));
+  const items = sorted.map((a) => ({
+    id: a.id,
+    name: a.name,
+    icon: <AgentMiniAvatar color={a.color} />,
+  }));
   const isTopLevel = viewMode === "dashboard" || viewMode === "connections";
 
   const handleWorkspaceSwitch = async (wsId: string) => {
@@ -99,7 +104,7 @@ export function Sidebar({ children }: { children: ReactNode }) {
           },
           {
             id: "connections",
-            label: "Apps",
+            label: "Integrations",
             icon: <Blend className="h-4 w-4" />,
             onClick: () => setViewMode("connections"),
           },

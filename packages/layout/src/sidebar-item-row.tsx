@@ -62,11 +62,12 @@ export function SidebarItemRow({
           onClick={() => onSelect(item.id)}
           onKeyDown={(e) => onKeyDown(e, item.id)}
           className={cn(
-            "flex-1 text-left px-3 py-1.5 text-[13px] truncate min-w-0",
+            "flex-1 flex items-center gap-2 text-left px-3 py-1.5 text-[13px] truncate min-w-0",
             isActive ? "text-foreground" : "text-accent-foreground",
           )}
         >
-          {item.name}
+          {item.icon}
+          <span className="truncate">{item.name}</span>
         </button>
       )}
 

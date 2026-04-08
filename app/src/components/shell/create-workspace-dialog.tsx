@@ -22,6 +22,7 @@ export function CreateAgentDialog() {
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const [color, setColor] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<"all" | AgentCategory>("all");
@@ -30,6 +31,7 @@ export function CreateAgentDialog() {
     setStep(1);
     setSelectedConfigId(null);
     setName("");
+    setColor(undefined);
     setError(null);
     setSearch("");
     setCategory("all");
@@ -45,7 +47,7 @@ export function CreateAgentDialog() {
     const trimmed = name.trim();
     if (!trimmed || !selectedConfigId || !currentWorkspace) return;
     try {
-      const agent = await createAgent(currentWorkspace.id, trimmed, selectedConfigId, selectedDef?.config.claudeMd);
+      const agent = await createAgent(currentWorkspace.id, trimmed, selectedConfigId, color, selectedDef?.config.claudeMd);
       // For blank agents, kick off the onboarding conversation
       if (selectedConfigId === "blank") {
         tauriChat.send(
@@ -126,8 +128,10 @@ Do NOT consider setup complete until both CLAUDE.md and at least one skill have 
           <NamingStep
             selectedAgent={selectedDef}
             name={name}
+            color={color}
             error={error}
             onNameChange={setName}
+            onColorChange={setColor}
             onBack={() => setStep(1)}
             onSubmit={handleSubmit}
           />

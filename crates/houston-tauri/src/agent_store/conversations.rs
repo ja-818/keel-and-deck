@@ -30,6 +30,7 @@ pub fn list(root: &Path) -> Result<Vec<ConversationEntry>, String> {
         entries.push(ConversationEntry {
             id: format!("primary:{agent_path_str}"),
             title: "Primary chat".to_string(),
+            description: None,
             status: None,
             entry_type: "primary".to_string(),
             session_key: "main".to_string(),
@@ -51,6 +52,7 @@ pub fn list(root: &Path) -> Result<Vec<ConversationEntry>, String> {
         entries.push(ConversationEntry {
             id: entry.id.clone(),
             title: entry.title,
+            description: Some(entry.description).filter(|d| !d.is_empty()),
             status: Some(entry.status),
             entry_type: "activity".to_string(),
             session_key: format!("activity-{}", entry.id),

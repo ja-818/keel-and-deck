@@ -10,6 +10,7 @@ use super::workspaces::workspace_folder;
 pub struct AgentMeta {
     pub id: String,
     pub config_id: String,
+    pub color: Option<String>,
     pub created_at: String,
     pub last_opened_at: Option<String>,
 }
@@ -22,6 +23,7 @@ pub struct Agent {
     pub name: String,
     pub folder_path: String,
     pub config_id: String,
+    pub color: Option<String>,
     pub created_at: String,
     pub last_opened_at: Option<String>,
 }
@@ -72,6 +74,7 @@ fn meta_to_agent(folder: &Path, meta: &AgentMeta) -> Agent {
         name,
         folder_path: folder.to_string_lossy().to_string(),
         config_id: meta.config_id.clone(),
+        color: meta.color.clone(),
         created_at: meta.created_at.clone(),
         last_opened_at: meta.last_opened_at.clone(),
     }
@@ -156,6 +159,7 @@ pub fn create_agent(
     workspace_id: String,
     name: String,
     config_id: String,
+    color: Option<String>,
     claude_md: Option<String>,
 ) -> Result<Agent, String> {
     let ws_dir = resolve_ws_folder(&root.0, &workspace_id)?;
@@ -176,6 +180,7 @@ pub fn create_agent(
     let meta = AgentMeta {
         id: Uuid::new_v4().to_string(),
         config_id,
+        color,
         created_at: now.clone(),
         last_opened_at: Some(now),
     };

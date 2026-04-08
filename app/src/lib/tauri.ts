@@ -63,8 +63,8 @@ export const tauriWorkspaces = {
 export const tauriAgents = {
   list: (workspaceId: string) =>
     invoke<Agent[]>("list_agents", { workspace_id: workspaceId }),
-  create: (workspaceId: string, name: string, configId: string, claudeMd?: string) =>
-    invoke<Agent>("create_agent", { workspace_id: workspaceId, name, config_id: configId, claude_md: claudeMd }),
+  create: (workspaceId: string, name: string, configId: string, color?: string, claudeMd?: string) =>
+    invoke<Agent>("create_agent", { workspace_id: workspaceId, name, config_id: configId, color, claude_md: claudeMd }),
   delete: (workspaceId: string, id: string) =>
     invoke<void>("delete_agent", { workspace_id: workspaceId, id }),
   rename: (workspaceId: string, id: string, newName: string) =>
@@ -81,6 +81,8 @@ export const tauriChat = {
       "load_chat_history",
       { agent_path: agentPath, session_key: sessionKey },
     ),
+  summarize: (message: string) =>
+    invoke<{ title: string; description: string }>("summarize_activity", { message }),
 };
 
 export const tauriAgent = {
@@ -189,6 +191,7 @@ export const tauriStore = {
 interface RawConversation {
   id: string;
   title: string;
+  description?: string;
   status?: string;
   type: "primary" | "activity";
   session_key: string;
