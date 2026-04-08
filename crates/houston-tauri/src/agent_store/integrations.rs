@@ -3,10 +3,11 @@
 //! Tracks which Composio integrations (toolkits) an agent has used,
 //! along with first/last usage timestamps and a use count.
 //!
-//! The agent may write this file as either:
-//!   - An array: `[{ toolkit, first_used_at, ... }]`  (our canonical format)
-//!   - A map:    `{ "gmail": { first_used_at, ... } }` (agent self-report format)
-//! We accept both on read and always write back the array format.
+//! The agent may write this file in three formats, all of which we accept:
+//!   - Array:   `[{ toolkit, first_used_at, ... }]`                  (canonical)
+//!   - Map:     `{ "gmail": { first_used_at, ... } }`                (simple self-report)
+//!   - Wrapper: `{ "integrations": [{ toolkit, status, ... }] }`     (rich self-report)
+//! We always normalize to the array format on disk.
 
 use super::helpers::{houston_dir, write_json};
 use super::types::TrackedIntegration;
@@ -25,12 +26,44 @@ struct MapEntry {
     use_count: u32,
 }
 
+/// An entry in the wrapper format ({"integrations": [...]}). Unknown fields like
+/// `status` and `account` are ignored. PENDING entries have null timestamps.
+#[derive(serde::Deserialize)]
+struct WrapperEntry {
+    toolkit: String,
+    #[serde(default)]
+    first_used_at: Option<String>,
+    #[serde(default)]
+    last_used_at: Option<String>,
+    #[serde(default)]
+    use_count: u32,
+}
+
+#[derive(serde::Deserialize)]
+struct WrapperFormat {
+    integrations: Vec<WrapperEntry>,
+}
+
 fn default_one() -> u32 {
     1
 }
 
+impl WrapperEntry {
+    fn into_tracked(self) -> Option<TrackedIntegration> {
+        // Skip entries without real timestamps (PENDING connections have null).
+        let first_used_at = self.first_used_at?;
+        let last_used_at = self.last_used_at?;
+        Some(TrackedIntegration {
+            toolkit: self.toolkit,
+            first_used_at,
+            last_used_at,
+            use_count: if self.use_count == 0 { 1 } else { self.use_count },
+        })
+    }
+}
+
 /// List all tracked integrations for this agent.
-/// Accepts both array and map formats on disk.
+/// Accepts array, wrapper, and map formats on disk.
 pub fn list(root: &Path) -> Result<Vec<TrackedIntegration>, String> {
     let path = houston_dir(root).join(FILE);
     if !path.exists() {
@@ -41,6 +74,18 @@ pub fn list(root: &Path) -> Result<Vec<TrackedIntegration>, String> {
 
     // Try array format first (our canonical format)
     if let Ok(items) = serde_json::from_str::<Vec<TrackedIntegration>>(&contents) {
+        return Ok(items);
+    }
+
+    // Try wrapper format: { "integrations": [{ toolkit, status, first_used_at, ... }] }
+    if let Ok(wrapper) = serde_json::from_str::<WrapperFormat>(&contents) {
+        let items: Vec<TrackedIntegration> = wrapper
+            .integrations
+            .into_iter()
+            .filter_map(WrapperEntry::into_tracked)
+            .collect();
+        // Migrate to canonical array format on disk
+        let _ = write_json(root, FILE, &items);
         return Ok(items);
     }
 
