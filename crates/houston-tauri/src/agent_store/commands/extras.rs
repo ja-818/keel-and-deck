@@ -1,4 +1,4 @@
-//! Skill, log, and config Tauri commands.
+//! Log and config Tauri commands.
 //! All mutation commands emit events for AI-native reactivity.
 
 use super::resolve_agent_dir;
@@ -6,55 +6,6 @@ use crate::events::HoustonEvent;
 use crate::agent_store::types::*;
 use crate::agent_store::AgentStore;
 use tauri::Emitter;
-
-// -- Skills --
-
-#[tauri::command(rename_all = "snake_case")]
-pub async fn list_skills(
-    agent_path: String,
-) -> Result<Vec<Skill>, String> {
-    let root = resolve_agent_dir(&agent_path)?;
-    AgentStore::new(&root).list_skills()
-}
-
-#[tauri::command(rename_all = "snake_case")]
-pub async fn read_skill(
-    agent_path: String,
-    name: String,
-) -> Result<Skill, String> {
-    let root = resolve_agent_dir(&agent_path)?;
-    AgentStore::new(&root).read_skill(&name)
-}
-
-#[tauri::command(rename_all = "snake_case")]
-pub async fn write_skill(
-    app_handle: tauri::AppHandle,
-    agent_path: String,
-    name: String,
-    instructions: String,
-    learnings: String,
-) -> Result<(), String> {
-    let root = resolve_agent_dir(&agent_path)?;
-    AgentStore::new(&root).write_skill(&name, &instructions, &learnings)?;
-    let _ = app_handle.emit("houston-event", HoustonEvent::SkillsChanged {
-        agent_path: agent_path.clone(),
-    });
-    Ok(())
-}
-
-#[tauri::command(rename_all = "snake_case")]
-pub async fn delete_skill(
-    app_handle: tauri::AppHandle,
-    agent_path: String,
-    name: String,
-) -> Result<(), String> {
-    let root = resolve_agent_dir(&agent_path)?;
-    AgentStore::new(&root).delete_skill(&name)?;
-    let _ = app_handle.emit("houston-event", HoustonEvent::SkillsChanged {
-        agent_path: agent_path.clone(),
-    });
-    Ok(())
-}
 
 // -- Log --
 

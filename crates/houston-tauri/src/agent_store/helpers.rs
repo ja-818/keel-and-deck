@@ -10,10 +10,13 @@ pub fn houston_dir(root: &Path) -> PathBuf {
     root.join(".houston")
 }
 
-/// Creates `.houston/` and `.houston/skills/` if they don't exist.
+/// Creates `.houston/` if it doesn't exist.
+///
+/// Skills live under `.agents/skills/` (skill.sh / Claude Code convention),
+/// not `.houston/skills/`. Do not create `.houston/skills/` here.
 pub fn ensure_houston_dir(root: &Path) -> Result<(), String> {
     let dir = houston_dir(root);
-    fs::create_dir_all(dir.join("skills"))
+    fs::create_dir_all(&dir)
         .map_err(|e| format!("Failed to create .houston directory: {e}"))?;
     Ok(())
 }

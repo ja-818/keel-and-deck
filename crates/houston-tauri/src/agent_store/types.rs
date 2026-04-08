@@ -188,6 +188,9 @@ pub struct SlackSyncConfig {
     /// The installing user's Slack avatar URL.
     #[serde(default)]
     pub user_avatar: Option<String>,
+    /// Icon URL for the agent's avatar in Slack messages (colored Houston helmet).
+    #[serde(default)]
+    pub agent_icon_url: Option<String>,
     pub threads: Vec<SlackThread>,
 }
 
@@ -208,15 +211,6 @@ pub struct TrackedIntegration {
     pub first_used_at: String,
     pub last_used_at: String,
     pub use_count: u32,
-}
-
-// -- Skills --
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Skill {
-    pub name: String,
-    pub instructions: String,
-    pub learnings: String,
 }
 
 // -- Log --

@@ -84,7 +84,6 @@ export function SkillsGrid({
               </h2>
               {canAdd && (
                 <Button
-                  variant="outline"
                   size="sm"
                   onClick={() => setDialogOpen(true)}
                   className="rounded-full"

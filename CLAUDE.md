@@ -364,4 +364,4 @@ Houston hosts multiple "agent definitions" — configurable AI agent manifests.
 - All workspaces: `~/Documents/Houston/{workspace-name}/`
 - Agent directories: `~/Documents/Houston/{workspace-name}/{agent-name}/`
 - Agent metadata: `.houston/agent.json`
-- Agent data: `.houston/activity.json`, `.houston/skills/`, etc.
+- Agent data: `.houston/activity.json`, `.agents/skills/<name>/SKILL.md` (skill.sh / Claude Code convention, mirrored to `.claude/skills/<name>` via symlink), etc.

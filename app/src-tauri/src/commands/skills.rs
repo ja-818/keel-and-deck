@@ -53,6 +53,12 @@ fn remove_claude_symlink(workspace_path: &str, skill_name: &str) {
 pub async fn list_skills(workspace_path: String) -> Result<Vec<SkillSummaryResponse>, String> {
     let dir = skills_dir(&workspace_path);
     let summaries = houston_skills::list_skills(&dir).map_err(|e| e.to_string())?;
+    // Keep `.claude/skills/<name>` symlinks in sync with the canonical
+    // `.agents/skills/<name>` directories so Claude Code can discover skills
+    // natively. Idempotent — only creates missing links.
+    for summary in &summaries {
+        ensure_claude_symlink(&workspace_path, &summary.name);
+    }
     Ok(summaries
         .into_iter()
         .map(|s| SkillSummaryResponse {

@@ -14,7 +14,6 @@ pub mod integrations;
 pub mod log;
 pub mod routine_runs;
 pub mod routines;
-pub mod skills;
 pub mod activity;
 pub mod types;
 
@@ -127,20 +126,6 @@ impl AgentStore {
     }
     pub fn remove_integration(&self, toolkit: &str) -> Result<(), String> {
         integrations::remove(&self.root, toolkit)
-    }
-
-    // -- Skills --
-    pub fn list_skills(&self) -> Result<Vec<Skill>, String> {
-        skills::list(&self.root)
-    }
-    pub fn read_skill(&self, name: &str) -> Result<Skill, String> {
-        skills::read(&self.root, name)
-    }
-    pub fn write_skill(&self, name: &str, instructions: &str, learnings: &str) -> Result<(), String> {
-        skills::write(&self.root, name, instructions, learnings)
-    }
-    pub fn delete_skill(&self, name: &str) -> Result<(), String> {
-        skills::delete(&self.root, name)
     }
 
     // -- Log --

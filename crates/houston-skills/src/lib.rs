@@ -1,7 +1,9 @@
 //! Hermes-style self-improving skills for AI agents.
 //!
 //! Skills are directories containing a `SKILL.md` file with frontmatter metadata
-//! and a markdown body. Stored under a skills directory (typically `.houston/skills/`).
+//! and a markdown body. Stored under `.agents/skills/<name>/SKILL.md` — the
+//! skill.sh / Claude Code convention. A `.claude/skills/<name>` symlink is
+//! typically created alongside so Claude Code can discover skills natively.
 
 pub mod format;
 pub mod index;
@@ -58,10 +60,15 @@ pub struct CreateSkillInput {
 // ── Public API ─────────────────────────────────────────────────────
 
 /// List all skills. Returns name + description only (progressive disclosure).
+///
+/// Auto-migrates any top-level `*.md` files into the canonical
+/// `<name>/SKILL.md` directory layout before scanning, so users can drop a
+/// flat markdown file into the skills directory and have it just work.
 pub fn list_skills(skills_dir: &Path) -> Result<Vec<SkillSummary>, SkillError> {
     if !skills_dir.exists() {
         return Ok(Vec::new());
     }
+    migrate_flat_files(skills_dir)?;
     let entries = std::fs::read_dir(skills_dir).map_err(|e| SkillError::Io(e.to_string()))?;
     let mut summaries = Vec::new();
     for entry in entries.flatten() {
@@ -80,6 +87,52 @@ pub fn list_skills(skills_dir: &Path) -> Result<Vec<SkillSummary>, SkillError> {
     }
     summaries.sort_by(|a, b| a.name.cmp(&b.name));
     Ok(summaries)
+}
+
+/// Convert any top-level `<name>.md` files in `skills_dir` into the canonical
+/// `<name>/SKILL.md` directory layout. Idempotent: skips files for which a
+/// directory of the same stem already exists.
+///
+/// This lets users (or agents) drop a flat markdown skill file into
+/// `.agents/skills/` and have Houston migrate it on the next list call.
+fn migrate_flat_files(skills_dir: &Path) -> Result<(), SkillError> {
+    let entries = std::fs::read_dir(skills_dir).map_err(|e| SkillError::Io(e.to_string()))?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        if path.extension().and_then(|e| e.to_str()) != Some("md") {
+            continue;
+        }
+        let Some(stem) = path.file_stem().and_then(|s| s.to_str()) else {
+            continue;
+        };
+        // Skip dotfiles or hidden files
+        if stem.starts_with('.') {
+            continue;
+        }
+        let target_dir = skills_dir.join(stem);
+        if target_dir.exists() {
+            // A directory with this name already exists — leave the flat file
+            // alone to avoid clobbering user data. Log and skip.
+            tracing::warn!(
+                "[houston-skills] skipping migration of {}: target {} exists",
+                path.display(),
+                target_dir.display()
+            );
+            continue;
+        }
+        std::fs::create_dir_all(&target_dir).map_err(|e| SkillError::Io(e.to_string()))?;
+        let target = target_dir.join("SKILL.md");
+        std::fs::rename(&path, &target).map_err(|e| SkillError::Io(e.to_string()))?;
+        tracing::info!(
+            "[houston-skills] migrated flat skill {} -> {}",
+            path.display(),
+            target.display()
+        );
+    }
+    Ok(())
 }
 
 /// Load a skill's full content. Updates `last_used` in frontmatter.
@@ -307,5 +360,50 @@ mod tests {
         let tmp = TempDir::new().unwrap();
         let result = delete_skill(tmp.path(), "nope");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn list_migrates_flat_md_files() {
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path();
+        // Drop a flat skill file with valid SKILL.md frontmatter
+        let flat = dir.join("research.md");
+        std::fs::write(
+            &flat,
+            "---\nname: research\ndescription: do research\nversion: 1\ntags: []\n---\n\n## Procedure\n\nResearch things\n",
+        )
+        .unwrap();
+
+        let skills = list_skills(dir).unwrap();
+
+        // Flat file should have been migrated and now appear in the listing
+        assert_eq!(skills.len(), 1);
+        assert_eq!(skills[0].name, "research");
+        assert!(!flat.exists(), "flat file should be moved");
+        assert!(
+            dir.join("research").join("SKILL.md").exists(),
+            "directory layout should be created"
+        );
+    }
+
+    #[test]
+    fn migration_skips_when_directory_exists() {
+        let tmp = TempDir::new().unwrap();
+        let dir = tmp.path();
+        // Pre-existing skill directory
+        create_skill(dir, CreateSkillInput {
+            name: "shared".into(),
+            description: "Original".into(),
+            content: "body".into(),
+            tags: vec![],
+        }).unwrap();
+        // Drop a conflicting flat file
+        let flat = dir.join("shared.md");
+        std::fs::write(&flat, "---\nname: shared\ndescription: clobber\nversion: 1\ntags: []\n---\n\nbody\n").unwrap();
+
+        let _ = list_skills(dir).unwrap();
+
+        // The flat file should be left alone (not silently overwriting the dir)
+        assert!(flat.exists(), "flat file should not be removed when target dir exists");
     }
 }

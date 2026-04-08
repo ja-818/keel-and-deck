@@ -26,8 +26,8 @@ pub fn build_system_prompt(dir: &Path) -> String {
         }
     }
 
-    // 4. Skills index
-    let skills_dir = dir.join(".houston/skills");
+    // 4. Skills index (.agents/skills — skill.sh / Claude Code convention)
+    let skills_dir = dir.join(".agents/skills");
     if let Ok(index) = houston_skills::build_skills_index(&skills_dir) {
         if !index.is_empty() {
             parts.push(index);

@@ -180,7 +180,7 @@ Agent prompts are stored in `.houston/prompts/` and assembled at runtime into th
 1. `.houston/prompts/system.md` — base prompt
 2. `.houston/prompts/self-improvement.md` — learning directives
 3. `.houston/memory/` — learnings snapshot
-4. `.houston/skills/` — skills index
+4. `.agents/skills/` — skills index (skill.sh / Claude Code convention)
 5. `CLAUDE.md` — agent instructions
 
 Both prompt files are seeded on agent creation via `seed_file()` (write-once, never overwrite).
@@ -204,17 +204,26 @@ Every Houston app project stores agent-visible data in a `.houston/` folder alon
     routines.json       -- Routine[] (id, name, description, trigger_type, trigger_config, status, approval_mode, claude_session_id)
     channels.json       -- ChannelEntry[] (id, channel_type, name, token)
     goals.json          -- Goal[] (id, title, status)
-    skills/             -- One .md file per skill (instructions + learnings sections)
-      research.md
-      writing.md
     prompts/            -- Editable system prompt components
       system.md         -- Base system prompt
       self-improvement.md -- Self-improvement guidance
     log.jsonl           -- Append-only session audit trail (session_id, activity_id, status, duration_ms, cost_usd, timestamp)
     config.json         -- ProjectConfig (name, claude_model, claude_effort)
+  .agents/
+    skills/             -- One directory per skill (skill.sh / Claude Code convention)
+      research/
+        SKILL.md        -- YAML frontmatter (name, description, version, tags) + body
+      writing/
+        SKILL.md
+  .claude/
+    skills/             -- Symlinks to ../../.agents/skills/<name> so Claude Code discovers skills natively
+      research -> ../../.agents/skills/research
+      writing -> ../../.agents/skills/writing
   CLAUDE.md             -- Agent instructions (agent root)
   .claude_session_id    -- Persisted session ID for --resume across app restarts
 ```
+
+**Skills format & discovery:** Skills live at `.agents/skills/<name>/SKILL.md` — the skill.sh convention, also what Claude Code looks for. Houston mirrors each skill as a symlink under `.claude/skills/<name>` so Claude Code picks them up natively. Flat `.md` files dropped directly under `.agents/skills/` are auto-migrated into `<name>/SKILL.md` directory layout on the next `list_skills` call.
 
 ### Activity statuses
 `"queue"`, `"running"`, `"needs_you"`, `"done"`, `"cancelled"`
@@ -229,9 +238,9 @@ Every Houston app project stores agent-visible data in a `.houston/` folder alon
 
 Houston is an AI-native workspace. **Users and LLMs are equal participants** — both can read and write all workspace data, and all changes from either must be immediately visible to both.
 
-**Two writers to `.houston/` files:**
+**Two writers to agent files:**
 1. **The frontend** (via Tauri commands) — user clicks "Create Activity" -> Tauri command -> Rust writes file
-2. **Claude CLI agents** (direct file writes) — agent decides to install a skill -> writes directly to `.houston/skills/`
+2. **Claude CLI agents** (direct file writes) — agent decides to install a skill -> writes directly to `.agents/skills/<name>/SKILL.md`
 
 **Three-layer reactivity stack:**
 1. **TanStack Query (frontend)** — all `.houston/` data fetching uses `useQuery` with query keys like `["activity", agentPath]`. Automatic dedup, background refresh, stale-while-revalidate.
@@ -269,8 +278,8 @@ The hero package. Drop-in chat experience for Claude Code / Codex sessions.
 
 | Component | What it does |
 |-----------|-------------|
-| `ChatPanel` | Full chat: messages, streaming, thinking, tools, input — one component |
-| `ChatInput` | Input with send/stop/mic states, auto-expand textarea |
+| `ChatPanel` | Full chat: messages, streaming, thinking, tools, input — one component. Forwards composer controlled props through to `ChatInput`. |
+| `ChatInput` | Composer with send/stop/mic states, auto-expand textarea, file attachments via the + button **and** drag-and-drop. Text and attachments can be controlled via `value`/`onValueChange` and `attachments`/`onAttachmentsChange`, or left uncontrolled. |
 | `ToolActivity` | Collapsing tool call list with spinners and elapsed time |
 | `ProgressPanel` | Panel for displaying multi-step progress (pairs with `useProgressSteps`) |
 | `feedItemsToMessages()` | Converts Claude CLI FeedItems -> ChatMessages (auto-extracts `[Channel]` prefix into `ChatMessage.source`) |
@@ -294,13 +303,52 @@ The hero package. Drop-in chat experience for Claude Code / Codex sessions.
 <ChatPanel
   sessionKey="session-1"
   feedItems={items}
-  onSend={(text) => sendToAgent(text)}
+  onSend={(text, files) => sendToAgent(text, files)}
   isLoading={isStreaming}
   renderMessageAvatar={(msg) =>
     msg.source ? <ChannelAvatar source={msg.source} /> : undefined
   }
 />
 ```
+
+**Composer attachments — controlled mode:**
+When the parent owns composer state (e.g. to scope file uploads to a
+specific conversation id), pass `value`/`onValueChange` and
+`attachments`/`onAttachmentsChange`. The Houston app does this in
+`chat-tab.tsx` so that uploaded files can be persisted under
+`<app cache>/houston/attachments/agent-<id>/` before sending.
+
+```tsx
+const [text, setText] = useState("")
+const [files, setFiles] = useState<File[]>([])
+
+<ChatPanel
+  value={text} onValueChange={setText}
+  attachments={files} onAttachmentsChange={setFiles}
+  onSend={async () => {
+    const paths = await tauriAttachments.save(`agent-${id}`, files)
+    sendToAgent(withAttachmentPaths(text, paths))
+    setText(""); setFiles([])
+  }}
+  ...
+/>
+```
+
+**Chat composer attachments cache (app convention):**
+- Files attached in the composer are persisted by Rust under
+  `<app cache dir>/houston/attachments/<scope_id>/<filename>`
+  via the `save_attachments` Tauri command (base64 over IPC).
+- `scope_id` is `agent-<agent-id>` for the main chat tab and
+  `activity-<activity-id>` for board/AIBoard conversations.
+- The absolute paths returned by `save_attachments` are appended to the
+  prompt sent to Claude as `[User attached these files. Read them with
+  the Read tool if needed: ...]`. Claude consumes them via its built-in
+  `Read` tool — there is no Claude CLI flag for direct file attachment.
+- Files survive app restarts so the user can attach, walk away, come
+  back, and Claude can still read the original paths via `--resume`.
+- Cleanup: `useDeleteActivity`, `handleDelete` (board), and
+  `useAgentStore.delete` all call `tauriAttachments.delete(scope_id)`
+  so attachments die with their owning conversation/agent.
 
 **ChatSidebar is fully props-driven:**
 ```tsx

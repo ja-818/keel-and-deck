@@ -104,7 +104,7 @@ pub enum HoustonEvent {
     IntegrationsChanged {
         agent_path: String,
     },
-    /// Skills changed (.houston/skills/).
+    /// Skills changed (.agents/skills/ — skill.sh / Claude Code convention).
     SkillsChanged {
         agent_path: String,
     },
