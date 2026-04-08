@@ -9,6 +9,7 @@ import type { ReactNode } from "react";
 import { FilesIcon } from "lucide-react";
 import {
   Conversation,
+  ConversationAutoScroll,
   ConversationContent,
   ConversationScrollButton,
 } from "./ai-elements/conversation";
@@ -85,6 +86,7 @@ export function ChatMessages({
   );
   return (
     <Conversation className="flex-1 min-h-0">
+      <ConversationAutoScroll status={status} />
       <ConversationContent className="max-w-3xl mx-auto">
         {messages.map((msg, idx) => {
           if (msg.from === "system") {

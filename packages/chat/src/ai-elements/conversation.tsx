@@ -5,7 +5,7 @@ import { cn } from "@houston-ai/core";
 import type { UIMessage } from "ai";
 import { ArrowDownIcon, DownloadIcon } from "lucide-react";
 import type { ComponentProps } from "react";
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 
 export type ConversationProps = ComponentProps<typeof StickToBottom>;
@@ -98,6 +98,33 @@ export const ConversationScrollButton = ({
       </Button>
     )
   );
+};
+
+export type ConversationAutoScrollProps = {
+  status: "ready" | "streaming" | "submitted";
+};
+
+/**
+ * Mount inside a <Conversation> to auto-scroll to the bottom on two events:
+ * - User sends a message (status → "submitted"): re-enables sticky + scrolls down
+ * - Agent finishes (status → "ready"): scrolls to bottom one final time
+ */
+export const ConversationAutoScroll = ({ status }: ConversationAutoScrollProps) => {
+  const { scrollToBottom } = useStickToBottomContext();
+  const prevStatusRef = useRef(status);
+
+  useEffect(() => {
+    const prev = prevStatusRef.current;
+    prevStatusRef.current = status;
+
+    if (status === "submitted" && prev !== "submitted") {
+      scrollToBottom();
+    } else if (status === "ready" && prev !== "ready") {
+      scrollToBottom();
+    }
+  }, [status, scrollToBottom]);
+
+  return null;
 };
 
 const getMessageText = (message: UIMessage): string =>
