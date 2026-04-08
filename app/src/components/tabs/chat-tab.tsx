@@ -9,9 +9,11 @@ import {
 } from "@houston-ai/core";
 import { useFeedStore } from "../../stores/feeds";
 import { tauriChat } from "../../lib/tauri";
+import { useFileToolRenderer } from "../../hooks/use-file-tool-renderer";
 import type { TabProps } from "../../lib/types";
 
 export default function ChatTab({ agent }: TabProps) {
+  const { isSpecialTool, renderToolResult } = useFileToolRenderer(agent.folderPath);
   // Session key is agent-scoped to prevent cross-agent event bleeding
   const sessionKey = agent.id;
   const feedItems = useFeedStore((s) => s.items[sessionKey]);
@@ -64,6 +66,8 @@ export default function ChatTab({ agent }: TabProps) {
         isLoading={isLoading}
         onSend={handleSend}
         onStop={handleStop}
+        isSpecialTool={isSpecialTool}
+        renderToolResult={renderToolResult}
         placeholder="Ask anything..."
         emptyState={
           <Empty className="border-0">

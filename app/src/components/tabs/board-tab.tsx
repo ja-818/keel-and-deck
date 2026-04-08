@@ -7,9 +7,43 @@ import { useFeedStore } from "../../stores/feeds";
 import { useUIStore } from "../../stores/ui";
 import { useActivity, useDeleteActivity, useUpdateActivity, useCreateActivity } from "../../hooks/queries";
 import { tauriActivity, tauriChat } from "../../lib/tauri";
+import { useFileToolRenderer } from "../../hooks/use-file-tool-renderer";
 import type { TabProps } from "../../lib/types";
 import houstonIcon from "../../assets/houston-icon.svg";
 import { useDetailPanelContainer } from "../shell/detail-panel-context";
+
+/** Extract a concise title from an assistant response. */
+function extractTitle(text: string): string | null {
+  let clean = text
+    .replace(/^#+\s+/gm, "")
+    .replace(/\*\*/g, "")
+    .replace(/\*/g, "")
+    .replace(/^\s*[-*]\s+/gm, "")
+    .trim();
+
+  // Strip filler openings
+  clean = clean.replace(
+    /^(I'll|I will|Let me|Sure,?\s*|OK,?\s*|Okay,?\s*|Alright,?\s*|Of course,?\s*)/i,
+    "",
+  ).trim();
+
+  if (clean.length < 10) return null;
+
+  // First sentence or first line
+  const sentenceEnd = clean.search(/[.!?]\s/);
+  if (sentenceEnd > 10 && sentenceEnd < 100) {
+    clean = clean.substring(0, sentenceEnd + 1);
+  } else {
+    const lineEnd = clean.indexOf("\n");
+    if (lineEnd > 10 && lineEnd < 100) {
+      clean = clean.substring(0, lineEnd);
+    }
+  }
+
+  if (clean.length > 80) clean = clean.substring(0, 77) + "...";
+
+  return clean.length >= 10 ? clean : null;
+}
 
 function ThinkingIndicator() {
   return (
@@ -27,6 +61,7 @@ function ThinkingIndicator() {
 export default function BoardTab({ agent }: TabProps) {
   const panelContainer = useDetailPanelContainer();
   const path = agent.folderPath;
+  const { isSpecialTool, renderToolResult } = useFileToolRenderer(path);
   const { data: rawItems } = useActivity(path);
   const deleteActivity = useDeleteActivity(path);
   const updateActivity = useUpdateActivity(path);
@@ -62,6 +97,34 @@ export default function BoardTab({ agent }: TabProps) {
   const feedItems = useFeedStore((s) => s.items);
   const pushFeedItem = useFeedStore((s) => s.pushFeedItem);
   const [loadingState, setLoading] = useState<Record<string, boolean>>({});
+  const summarizedIds = useRef<Set<string>>(new Set());
+
+  // Auto-summarize titles for running activities when first assistant text arrives
+  useEffect(() => {
+    if (!rawItems) return;
+    for (const activity of rawItems) {
+      if (activity.status !== "running") continue;
+      if (summarizedIds.current.has(activity.id)) continue;
+
+      const sk = activity.session_key ?? `activity-${activity.id}`;
+      const feed = feedItems[sk];
+      if (!feed) continue;
+
+      const assistantItem = feed.find(
+        (f) =>
+          (f.feed_type === "assistant_text" || f.feed_type === "assistant_text_streaming") &&
+          typeof f.data === "string" &&
+          f.data.length > 20,
+      );
+      if (!assistantItem) continue;
+
+      summarizedIds.current.add(activity.id);
+      const title = extractTitle(assistantItem.data as string);
+      if (title && title !== activity.title) {
+        tauriActivity.update(path, activity.id, { title }).catch(console.error);
+      }
+    }
+  }, [rawItems, feedItems, path]);
 
   // Register the "Start a Mission" handler in the UI store for the TabBar
   const handleOpenerReady = useCallback(
@@ -163,6 +226,8 @@ export default function BoardTab({ agent }: TabProps) {
       onNewPanelOpenerReady={handleOpenerReady}
       onPanelOpenChange={setMissionPanelOpen}
       onStopSession={handleStopSession}
+      isSpecialTool={isSpecialTool}
+      renderToolResult={renderToolResult}
       thinkingIndicator={<ThinkingIndicator />}
       panelAgentName={agent.name}
       panelAvatar={

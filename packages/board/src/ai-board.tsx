@@ -3,7 +3,7 @@ import { createPortal } from "react-dom"
 import type { ReactNode } from "react"
 
 import { ChatPanel } from "@houston-ai/chat"
-import type { FeedItem } from "@houston-ai/chat"
+import type { FeedItem, ToolsAndCardsProps } from "@houston-ai/chat"
 import { SplitView } from "@houston-ai/layout"
 import { KanbanBoard } from "./kanban-board"
 import { KanbanDetailPanel } from "./kanban-detail-panel"
@@ -46,6 +46,12 @@ export interface AIBoardProps {
   onPanelOpenChange?: (open: boolean) => void
   /** Called when the user clicks Stop in the chat panel. Receives the active session key. */
   onStopSession?: (sessionKey: string) => void
+  /** Predicate to identify tools that should use custom rendering. */
+  isSpecialTool?: ToolsAndCardsProps["isSpecialTool"]
+  /** Custom renderer for special tool results. */
+  renderToolResult?: ToolsAndCardsProps["renderToolResult"]
+  /** Custom tool name → human label mappings. */
+  toolLabels?: ToolsAndCardsProps["toolLabels"]
   /**
    * DOM element to portal the detail panel into. When provided, the panel
    * renders via createPortal into this element (for app-level layout).
@@ -86,6 +92,9 @@ export function AIBoard({
   onPanelOpenChange,
   onStopSession,
   panelContainer,
+  isSpecialTool,
+  renderToolResult,
+  toolLabels,
 }: AIBoardProps) {
   const [internalSelectedId, setInternalSelectedId] = useState<string | null>(null)
   const [newPanelOpen, setNewPanelOpen] = useState(false)
@@ -177,8 +186,17 @@ export function AIBoard({
     onPanelOpenChange?.(!!showPanel)
   }, [!!showPanel, onPanelOpenChange]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const closePanel = useCallback(() => {
+    setNewPanelOpen(false)
+    setSelectedId(null)
+  }, [setSelectedId])
+
+  const handleBoardClick = useCallback(() => {
+    if (showPanel) closePanel()
+  }, [showPanel, closePanel])
+
   const board = (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" onClick={handleBoardClick}>
       <KanbanBoard
         columns={resolvedColumns}
         items={items}
@@ -192,11 +210,6 @@ export function AIBoard({
       />
     </div>
   )
-
-  const closePanel = useCallback(() => {
-    setNewPanelOpen(false)
-    setSelectedId(null)
-  }, [setSelectedId])
 
   const detailPanel = (
     <KanbanDetailPanel
@@ -215,6 +228,9 @@ export function AIBoard({
           placeholder={selectedItem ? "Send a follow-up..." : "What should the agent work on?"}
           emptyState={activeFeed.length === 0 ? chatEmptyState : undefined}
           thinkingIndicator={thinkingIndicator}
+          isSpecialTool={isSpecialTool}
+          renderToolResult={renderToolResult}
+          toolLabels={toolLabels}
         />
       </div>
     </KanbanDetailPanel>
