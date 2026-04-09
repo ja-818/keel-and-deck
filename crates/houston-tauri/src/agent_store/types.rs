@@ -39,7 +39,7 @@ pub struct ActivityUpdate {
 
 // -- Conversations --
 
-/// A unified conversation entry — either the primary chat or an activity conversation.
+/// A conversation entry. Every conversation is an activity with a UUID-scoped session_key.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConversationEntry {
     pub id: String,
@@ -48,10 +48,10 @@ pub struct ConversationEntry {
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<String>,
-    /// `"primary"` for the agent's main chat, `"activity"` for activity conversations.
+    /// Always `"activity"` now. Kept as a field for future extensibility.
     #[serde(rename = "type")]
     pub entry_type: String,
-    /// Session key used to address this conversation (e.g. `"main"`, `"activity-{id}"`).
+    /// Session key used to address this conversation (e.g. `"activity-{id}"`).
     pub session_key: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<String>,

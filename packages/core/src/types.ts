@@ -7,11 +7,20 @@
 export type HoustonEvent =
   | {
       type: "FeedItem";
-      data: { session_key: string; item: { feed_type: string; data: unknown } };
+      data: {
+        agent_path: string;
+        session_key: string;
+        item: { feed_type: string; data: unknown };
+      };
     }
   | {
       type: "SessionStatus";
-      data: { session_key: string; status: string; error: string | null };
+      data: {
+        agent_path: string;
+        session_key: string;
+        status: string;
+        error: string | null;
+      };
     }
   | {
       type: "IssueStatusChanged";

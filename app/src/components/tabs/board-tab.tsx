@@ -15,6 +15,11 @@ import { getHoustonLogo } from "../shell/experience-card";
 // Module-level so it persists across component remounts (tab switches)
 const summarizedActivityIds = new Set<string>();
 
+// Stable empty reference so the feed store selector doesn't return a new
+// object every render when this agent has no feeds yet (which would otherwise
+// trigger "getSnapshot should be cached" / infinite loop in React).
+const EMPTY_FEED_BUCKET: Record<string, never> = Object.freeze({});
+
 function ThinkingIndicator({ color }: { color?: string }) {
   const logo = getHoustonLogo(color);
   return (
@@ -77,7 +82,13 @@ export default function BoardTab({ agent }: TabProps) {
     }
   }, [pendingId, clearPending, selectedId, missionPanelOpen]);
 
-  const feedItems = useFeedStore((s) => s.items);
+  // Scope to this agent only — cross-agent bleeding is structurally blocked
+  // because AIBoard can only see this agent's slice of the feed store.
+  // Return the bucket directly (may be undefined) and fall back to a stable
+  // EMPTY_FEED_BUCKET constant below. Selectors must return stable references
+  // or React will loop.
+  const feedBucket = useFeedStore((s) => s.items[path]);
+  const feedItems = feedBucket ?? EMPTY_FEED_BUCKET;
   const pushFeedItem = useFeedStore((s) => s.pushFeedItem);
   const [loadingState, setLoading] = useState<Record<string, boolean>>({});
   // Call Haiku once per activity to generate a concise title + description.
@@ -151,7 +162,7 @@ export default function BoardTab({ agent }: TabProps) {
       const visible = files.length > 0
         ? `${text}${text ? "\n\n" : ""}Attached: ${files.map((f) => f.name).join(", ")}`
         : text;
-      pushFeedItem(sessionKey, { feed_type: "user_message", data: visible });
+      pushFeedItem(path, sessionKey, { feed_type: "user_message", data: visible });
       setLoading((prev) => ({ ...prev, [sessionKey]: true }));
       await updateActivity.mutateAsync({ activityId: item.id, update: { status: "running" } });
       const paths = await tauriAttachments.save(`activity-${item.id}`, files);
@@ -173,9 +184,9 @@ export default function BoardTab({ agent }: TabProps) {
 
   const handleStopSession = useCallback(
     (sessionKey: string) => {
-      tauriChat.stop(sessionKey).catch(console.error);
+      tauriChat.stop(path, sessionKey).catch(console.error);
     },
-    [],
+    [path],
   );
 
   const handleSendMessage = useCallback(
@@ -183,7 +194,7 @@ export default function BoardTab({ agent }: TabProps) {
       const visible = files.length > 0
         ? `${text}${text ? "\n\n" : ""}Attached: ${files.map((f) => f.name).join(", ")}`
         : text;
-      pushFeedItem(sessionKey, { feed_type: "user_message", data: visible });
+      pushFeedItem(path, sessionKey, { feed_type: "user_message", data: visible });
       setLoading((prev) => ({ ...prev, [sessionKey]: true }));
       // Find the activity ID from the session key to update its status
       const activity = (rawItems ?? []).find(

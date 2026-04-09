@@ -42,9 +42,13 @@ export function Dashboard() {
 
   const handleStopSession = useCallback(
     (sessionKey: string) => {
-      tauriChat.stop(sessionKey).catch(console.error);
+      const activityId = sessionKey.replace("activity-", "");
+      const item = mc.items.find((i) => i.id === activityId);
+      const agentPath = item?.metadata?.agentPath as string | undefined;
+      if (!agentPath) return;
+      tauriChat.stop(agentPath, sessionKey).catch(console.error);
     },
-    [],
+    [mc.items],
   );
 
   // Build agentPath → color lookup from agent instances

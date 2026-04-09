@@ -166,28 +166,41 @@ fn read_oauth_token_with_expiry() -> (Option<String>, bool) {
         None => return (None, false),
     };
 
+    // Multiple `composio|<hash>` entries can exist after re-auth. Pick the one with
+    // the latest expiration — that's the most recent sign-in. Earlier logic returned
+    // on the first entry encountered, which was often stale (empty token) and caused
+    // the UI to stay stuck in `needs_auth` after the user re-signed in.
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    let mut best: Option<(String, u64)> = None;
     for (key, info) in mcp_oauth {
-        if key.starts_with("composio") {
-            let token = info
-                .get("accessToken")
-                .and_then(|t| t.as_str())
-                .filter(|s| !s.is_empty())
-                .map(String::from);
+        if !key.starts_with("composio") {
+            continue;
+        }
+        let token = info
+            .get("accessToken")
+            .and_then(|t| t.as_str())
+            .filter(|s| !s.is_empty());
+        let Some(token) = token else { continue };
 
-            let now = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_secs();
-            let expires_at = info
-                .get("expiresAt")
-                .and_then(|e| e.as_u64())
-                .unwrap_or(u64::MAX);
-            let expired = now >= expires_at;
+        let expires_at = info
+            .get("expiresAt")
+            .and_then(|e| e.as_u64())
+            .unwrap_or(u64::MAX);
 
-            return (token, expired);
+        // Prefer the entry with the latest expiration (newest sign-in).
+        if best.as_ref().map_or(true, |(_, e)| expires_at > *e) {
+            best = Some((token.to_string(), expires_at));
         }
     }
-    (None, false)
+
+    match best {
+        Some((token, expires_at)) => (Some(token), now >= expires_at),
+        None => (None, false),
+    }
 }
 
 // -- MCP JSON-RPC helper --
@@ -237,11 +250,21 @@ async fn call_mcp_tool(
 // -- Fetch connections --
 
 async fn fetch_connections(url: &str, token: &str) -> ComposioResult {
-    // Prefer the full catalog (all 982 toolkits) so we catch every connected app.
-    // Fall back to the small COMMON_TOOLKITS list if the catalog fetch failed.
+    // Pass the full 982-app catalog to COMPOSIO_MANAGE_CONNECTIONS to discover
+    // every active connection — including obscure toolkits the user has linked
+    // outside of popular categories.
+    //
+    // Side effect: for each non-active toolkit we pass, Composio generates a
+    // temporary (10-minute) auth `redirect_url` in the response. These are not
+    // permanent — they expire quickly — so we just ignore the `initiated` entries
+    // and only keep `active` ones. Heavy caching (prewarm on launch + TanStack
+    // Query 1h staleTime) means this expensive call only runs once per session.
     let catalog = crate::composio_apps::list_all_apps().await;
+    // Fall back to a minimal list if the catalog fetch failed (network issue, etc.)
+    // so the user still sees their most common connections instead of an error.
     let toolkits: Vec<String> = if catalog.is_empty() {
-        COMMON_TOOLKITS.iter().map(|s| s.to_string()).collect()
+        tracing::warn!("[composio] Catalog empty, using fallback toolkit list");
+        FALLBACK_TOOLKITS.iter().map(|s| s.to_string()).collect()
     } else {
         catalog.iter().map(|a| a.toolkit.clone()).collect()
     };
@@ -284,6 +307,8 @@ fn parse_composio_json(
 
     let mut connections = Vec::new();
     for (toolkit, info) in results {
+        // Only keep active connections — skip `initiated` entries which are
+        // just temporary auth links Composio created as a side effect.
         if info.get("status").and_then(|s| s.as_str()) != Some("active") {
             continue;
         }
@@ -328,19 +353,19 @@ fn parse_composio_json(
 
 // -- Toolkit metadata --
 
-const COMMON_TOOLKITS: &[&str] = &[
-    "gmail",
-    "googledrive",
-    "googlecalendar",
-    "googlesheets",
-    "slack",
-    "github",
-    "notion",
-    "linear",
-    "discord",
-    "trello",
-    "outlook",
-    "airtable",
+/// Fallback list used only when the full 982-app catalog fetch fails.
+/// Covers the most common user connections as a safety net.
+const FALLBACK_TOOLKITS: &[&str] = &[
+    "gmail", "googledrive", "googlecalendar", "googlesheets", "googledocs",
+    "outlook", "microsoft_teams", "onedrive",
+    "slack", "discord", "telegram",
+    "linkedin", "twitter",
+    "github", "gitlab", "notion", "airtable",
+    "linear", "jira", "asana", "trello",
+    "hubspot", "salesforce",
+    "stripe", "shopify",
+    "dropbox", "figma",
+    "exa", "tavily", "firecrawl",
 ];
 
 fn toolkit_meta(tk: &str) -> (&str, &str, &str) {

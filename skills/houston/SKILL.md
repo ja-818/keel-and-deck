@@ -65,7 +65,8 @@ Agent-visible data lives in `.houston/` workspace files (JSON + markdown), not i
     skills/             # Agent skill instructions (one .md per skill)
     log.jsonl           # Session audit trail
     config.json         # ProjectConfig (name, model, effort)
-  .claude_session_id    # Persisted session ID for --resume
+    sessions/
+      {session_key}.sid # Per-conversation Claude session id for --resume
   CLAUDE.md             # Agent instructions
 ```
 
@@ -156,56 +157,51 @@ The wrapper is the only place where Zustand meets @houston-ai. The library never
 
 ## Starting Claude Sessions
 
-### spawn_and_monitor (one-shot)
+### spawn_and_monitor
 
-For tasks or actions that send one prompt and wait for completion:
+Every Claude session goes through `spawn_and_monitor`. Each session is scoped by
+`(agent_path, session_key)` — session keys must be globally unique (e.g.
+`activity-{uuid}`, `routine-{id}-run-{n}`, `chat-{agent_id}`). There is no
+shared "main" session key.
 
 ```rust
 use houston_tauri::session_runner::{spawn_and_monitor, PersistOptions};
 use houston_tauri::chat_session::ChatSessionState;
+use houston_tauri::agent_sessions::AgentSessionMap;
+
+let agent_key = format!("{agent_path}:{session_key}");
+let chat_state = agent_sessions
+    .get_for_session(&agent_key, &agent_path, &session_key)
+    .await;
+let resume_id = chat_state.get().await;
 
 let handle = spawn_and_monitor(
     &app_handle,
-    "task-123".into(),           // session_key for events
-    user_prompt,                  // the message
+    agent_path.clone(),           // carried on emitted events for FE scoping
+    session_key.clone(),          // e.g. "activity-{uuid}"
+    user_prompt.clone(),
     resume_id,                    // Some(id) for --resume, None for new
-    Some(working_dir.clone()),    // Claude process cwd
-    Some(system_prompt),          // system instructions
-    Some(chat_state),             // tracks session ID
-    Some(PersistOptions {         // saves feed to SQLite
-        db, project_id, feed_key: "main".into(),
-        source: "desktop".into(), claude_session_id: None,
+    working_dir,                  // Claude process cwd
+    Some(system_prompt),
+    Some(chat_state),
+    Some(PersistOptions {
+        db,
+        source: "desktop".into(),
+        user_message: Some(user_prompt),   // persisted when SessionId arrives
+        claude_session_id: None,
     }),
+    Some(pid_map),
 );
 let result = handle.await.unwrap();
-// result.claude_session_id -- save for --resume next time
-```
-
-### SessionQueue (conversational)
-
-For chat-style interactions where messages queue while Claude is busy:
-
-```rust
-use houston_tauri::session_queue::{SessionQueue, SessionQueueConfig};
-
-let queue = SessionQueue::new(app_handle, SessionQueueConfig {
-    session_key: "main".into(),
-    working_dir: Some(dir),
-    system_prompt: Some(prompt),
-    model: None,
-    effort: None,
-    chat_state: Some(state),
-    persist: Some(opts),
-});
-
-// Messages queue up and process sequentially with automatic --resume
-queue.send("Build the login page".into())?;
-queue.send("Now add tests".into())?;  // waits for first to finish
+// result.claude_session_id is also written to .houston/sessions/{session_key}.sid
 ```
 
 ## Subscribing to Events
 
-Use `useSessionEvents` from `@houston-ai/core` for real-time streaming:
+Use `useSessionEvents` from `@houston-ai/core` for real-time streaming. Feed
+events carry both `agent_path` and `session_key`, so the frontend feed store
+should be nested `Record<agentPath, Record<sessionKey, FeedItem[]>>` to make
+cross-agent bleeding structurally impossible.
 
 ```tsx
 import { useSessionEvents } from "@houston-ai/core"
@@ -213,8 +209,9 @@ import { listen } from "@tauri-apps/api/event"
 
 useSessionEvents({
   listen,
-  onFeedItem: (feedKey, item) => store.addFeedItem(item),
-  getActiveSessionId: () => store.activeSessionId,
+  onFeedItem: (agentPath, sessionKey, item) =>
+    store.pushFeedItem(agentPath, sessionKey, item),
+  getActiveSession: () => store.active,   // { agentPath, sessionKey } | null
   onEvent: (event) => {
     switch (event.type) {
       case "ChannelMessageReceived": /* route to agent */ break
@@ -272,7 +269,8 @@ Override `--color-primary` in your CSS:
 5. **`streamdown/styles.css`** -- must be imported by the app if using ChatPanel.
 6. **`expand_tilde()`** -- required for user-facing paths in Rust.
 7. **`claude_path::init()`** -- called automatically by `spawn_and_monitor()`.
-8. **Session ID persists to disk** -- `.claude_session_id` written by session_runner and session_queue for `--resume`.
+8. **Session ID persists per conversation** -- `session_runner` writes `.houston/sessions/{session_key}.sid` under the agent folder. No shared "main" file. Every conversation scoped independently.
+9. **Session keys must be globally unique** -- use `activity-{uuid}`, `routine-{id}-run-{n}`, or similar. Never reuse strings like `"main"` or `"onboarding"` across agents — the frontend feed store is scoped by `(agent_path, session_key)`, but unique session keys are still the contract.
 
 ## Deeper Skill References
 

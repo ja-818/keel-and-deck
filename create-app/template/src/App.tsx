@@ -23,7 +23,9 @@ import { ConnectionsTab } from "./components/connections-tab";
 import { ChannelsTab } from "./components/channels-tab";
 import { CreateAgentDialog } from "./components/create-agent-dialog";
 
-const MAIN_KEY = "main";
+// Free-form primary chat lives under a stable per-agent session key.
+// Activity/task/routine conversations use their own UUID-scoped keys.
+const chatKey = (agentPath: string) => `chat:${agentPath}`;
 
 const TABS = [
   { id: "chat" as const, label: "Chat" },
@@ -38,7 +40,10 @@ const TABS = [
 export function App() {
   const { agents, current, ready, loadAgents, setCurrentAgent, renameAgent, deleteAgent } =
     useAgentStore();
-  const mainFeed = useFeedStore((s) => s.items[MAIN_KEY]);
+  const sessionKey = current ? chatKey(current.path) : null;
+  const mainFeed = useFeedStore((s) =>
+    current && sessionKey ? s.items[current.path]?.[sessionKey] : undefined,
+  );
   const pushFeedItem = useFeedStore((s) => s.pushFeedItem);
   const setFeed = useFeedStore((s) => s.setFeed);
   const clearFeed = useFeedStore((s) => s.clearFeed);
@@ -57,23 +62,23 @@ export function App() {
 
   // Load chat history when switching agents
   useEffect(() => {
-    if (!current) return;
-    clearFeed(MAIN_KEY);
-    tauriChat.loadHistory(current.path).then((rows) => {
-      if (rows.length > 0) setFeed(MAIN_KEY, rows as FeedItem[]);
+    if (!current || !sessionKey) return;
+    clearFeed(current.path, sessionKey);
+    tauriChat.loadHistory(current.path, sessionKey).then((rows) => {
+      if (rows.length > 0) setFeed(current.path, sessionKey, rows as FeedItem[]);
     });
-  }, [current, setFeed, clearFeed]);
+  }, [current, sessionKey, setFeed, clearFeed]);
 
   const handleSend = useCallback(
     async (text: string) => {
-      if (!current || sendingRef.current) return;
+      if (!current || !sessionKey || sendingRef.current) return;
       sendingRef.current = true;
       setIsLoading(true);
-      pushFeedItem(MAIN_KEY, { feed_type: "user_message", data: text });
+      pushFeedItem(current.path, sessionKey, { feed_type: "user_message", data: text });
       try {
-        await tauriChat.send(current.path, text);
+        await tauriChat.send(current.path, sessionKey, text);
       } catch (err) {
-        pushFeedItem(MAIN_KEY, {
+        pushFeedItem(current.path, sessionKey, {
           feed_type: "system_message",
           data: `Failed to start session: ${err}`,
         });
@@ -82,7 +87,7 @@ export function App() {
         sendingRef.current = false;
       }
     },
-    [current, pushFeedItem],
+    [current, sessionKey, pushFeedItem],
   );
 
   if (!ready) {
@@ -143,6 +148,7 @@ export function App() {
               <NoAgentSelected />
             ) : viewMode === "chat" ? (
               <ChatView
+                sessionKey={sessionKey ?? "chat"}
                 feedItems={mainFeed ?? []}
                 isLoading={isLoading}
                 onSend={handleSend}
@@ -172,10 +178,12 @@ export function App() {
 }
 
 function ChatView({
+  sessionKey,
   feedItems,
   isLoading,
   onSend,
 }: {
+  sessionKey: string;
   feedItems: FeedItem[];
   isLoading: boolean;
   onSend: (text: string) => void;
@@ -183,7 +191,7 @@ function ChatView({
   return (
     <div className="h-full flex flex-col max-w-3xl mx-auto">
       <ChatPanel
-        sessionKey={MAIN_KEY}
+        sessionKey={sessionKey}
         feedItems={feedItems}
         isLoading={isLoading}
         onSend={(text) => onSend(text)}

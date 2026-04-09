@@ -24,10 +24,14 @@ export type TauriListenFn = <T>(
 export interface SessionEventsHandlers {
   /** The Tauri `listen` function — import from `@tauri-apps/api/event`. */
   listen: TauriListenFn;
-  /** Called for every FeedItem event. Receives (feedKey, item). */
-  onFeedItem: (feedKey: string, item: { feed_type: string; data: unknown }) => void;
-  /** Returns the current active session ID for desktop-duplicate filtering. */
-  getActiveSessionId?: () => string | null;
+  /** Called for every FeedItem event. Receives (agentPath, sessionKey, item). */
+  onFeedItem: (
+    agentPath: string,
+    sessionKey: string,
+    item: { feed_type: string; data: unknown },
+  ) => void;
+  /** Returns the active (agentPath, sessionKey) pair for desktop-dupe filtering. */
+  getActiveSession?: () => { agentPath: string; sessionKey: string } | null;
   /** Called for app-specific events not handled by the base hook. */
   onEvent?: (event: HoustonEvent) => void;
 }
@@ -36,7 +40,7 @@ export interface SessionEventsHandlers {
  * Subscribe to "houston-event" from the Rust backend.
  *
  * Core events handled:
- * - FeedItem → calls `onFeedItem("main", item)`, with desktop-dupe filtering
+ * - FeedItem → calls `onFeedItem(agent_path, session_key, item)`, with desktop-dupe filtering
  * - SessionStatus → pushes system_message on error
  * - Toast → console.log
  *
@@ -53,19 +57,24 @@ export function useSessionEvents(handlers: SessionEventsHandlers): void {
 
       switch (payload.type) {
         case "FeedItem": {
-          const feedKey = payload.data.session_key ?? "main";
-          const activeId = h.getActiveSessionId?.() ?? null;
+          const { agent_path, session_key } = payload.data;
+          const active = h.getActiveSession?.() ?? null;
           const isDesktopDupe =
-            feedKey === activeId &&
+            active?.agentPath === agent_path &&
+            active?.sessionKey === session_key &&
             (payload.data.item as { feed_type: string }).feed_type === "user_message";
           if (!isDesktopDupe) {
-            h.onFeedItem(feedKey, payload.data.item as { feed_type: string; data: unknown });
+            h.onFeedItem(
+              agent_path,
+              session_key,
+              payload.data.item as { feed_type: string; data: unknown },
+            );
           }
           break;
         }
         case "SessionStatus":
           if (payload.data.status === "error" && payload.data.error) {
-            h.onFeedItem("main", {
+            h.onFeedItem(payload.data.agent_path, payload.data.session_key, {
               feed_type: "system_message",
               data: `Session error: ${payload.data.error}`,
             });

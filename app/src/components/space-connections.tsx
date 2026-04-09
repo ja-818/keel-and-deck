@@ -5,6 +5,7 @@ import { tauriSystem } from "../lib/tauri";
 import { useComposioAuth } from "../hooks/use-composio-auth";
 import { ComposioAuthDialog } from "./composio-auth-dialog";
 import { BrowseAppsSection } from "./tabs/browse-apps-section";
+import { LoadingState } from "./tabs/integrations-states";
 
 const COMPOSIO_DASHBOARD_URL = "https://dashboard.composio.dev";
 
@@ -32,13 +33,17 @@ export function WorkspaceConnections() {
         <h1 className="text-[28px] font-normal text-foreground mb-6">
           Integrations
         </h1>
-        <ConnectionsView
-          result={result ?? null}
-          loading={loading}
-          onRetry={() => refetch()}
-          onManage={() => tauriSystem.openUrl(COMPOSIO_DASHBOARD_URL)}
-          onAuth={auth.startAuth}
-        />
+        {loading ? (
+          <LoadingState />
+        ) : (
+          <ConnectionsView
+            result={result ?? null}
+            loading={false}
+            onRetry={() => refetch()}
+            onManage={() => tauriSystem.openUrl(COMPOSIO_DASHBOARD_URL)}
+            onAuth={auth.startAuth}
+          />
+        )}
         {!loading && result?.status === "ok" && (
           <BrowseAppsSection connectedToolkits={connectedToolkits} />
         )}

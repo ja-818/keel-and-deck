@@ -61,11 +61,16 @@ export const tauriWorkspaces = {
     invoke<void>("rename_workspace", { id, new_name: newName }),
 };
 
+export interface CreateAgentResult {
+  agent: Agent;
+  onboardingActivityId: string | null;
+}
+
 export const tauriAgents = {
   list: (workspaceId: string) =>
     invoke<Agent[]>("list_agents", { workspace_id: workspaceId }),
   create: (workspaceId: string, name: string, configId: string, color?: string, claudeMd?: string) =>
-    invoke<Agent>("create_agent", { workspace_id: workspaceId, name, config_id: configId, color, claude_md: claudeMd }),
+    invoke<CreateAgentResult>("create_agent", { workspace_id: workspaceId, name, config_id: configId, color, claude_md: claudeMd }),
   delete: (workspaceId: string, id: string) =>
     invoke<void>("delete_agent", { workspace_id: workspaceId, id }),
   rename: (workspaceId: string, id: string, newName: string) =>
@@ -73,11 +78,13 @@ export const tauriAgents = {
 };
 
 export const tauriChat = {
-  send: (agentPath: string, prompt: string, sessionKey?: string) =>
+  send: (agentPath: string, prompt: string, sessionKey: string) =>
     invoke<string>("send_message", { agent_path: agentPath, prompt, session_key: sessionKey }),
-  stop: (sessionKey: string) =>
-    invoke<void>("stop_session", { session_key: sessionKey }),
-  loadHistory: (agentPath: string, sessionKey?: string) =>
+  startOnboarding: (agentPath: string, sessionKey: string) =>
+    invoke<void>("start_onboarding_session", { agent_path: agentPath, session_key: sessionKey }),
+  stop: (agentPath: string, sessionKey: string) =>
+    invoke<void>("stop_session", { agent_path: agentPath, session_key: sessionKey }),
+  loadHistory: (agentPath: string, sessionKey: string) =>
     invoke<Array<{ feed_type: string; data: unknown }>>(
       "load_chat_history",
       { agent_path: agentPath, session_key: sessionKey },

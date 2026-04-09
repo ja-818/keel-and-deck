@@ -73,7 +73,7 @@ interface Workspace {
 }
 ```
 
-- **Storage:** `~/Documents/Houston/workspaces.json` (index) + one directory per workspace (`~/Documents/Houston/{WorkspaceName}/`)
+- **Storage:** `~/.houston/workspaces.json` (index) + one directory per workspace (`~/.houston/workspaces/{WorkspaceName}/`)
 - **First launch:** welcome screen prompts user to create their first workspace
 - **Hierarchy:** Workspace > Agent (many agents per workspace)
 - **Rust commands:** `list_workspaces`, `create_workspace`, `rename_workspace`, `delete_workspace` (in `app/src-tauri/src/commands/workspaces.rs`)
@@ -197,7 +197,7 @@ Every Houston app project stores agent-visible data in a `.houston/` folder alon
 ### File structure
 
 ```
-~/Documents/Houston/{WorkspaceName}/{AgentName}/
+~/.houston/workspaces/{WorkspaceName}/{AgentName}/
   .houston/
     agent.json          -- AgentMeta (id, manifest_id, created_at, last_opened_at)
     activity.json       -- Activity[] (id, title, description, status, claude_session_id, updated_at?)
@@ -220,7 +220,8 @@ Every Houston app project stores agent-visible data in a `.houston/` folder alon
       research -> ../../.agents/skills/research
       writing -> ../../.agents/skills/writing
   CLAUDE.md             -- Agent instructions (agent root)
-  .claude_session_id    -- Persisted session ID for --resume across app restarts
+    sessions/
+      {session_key}.sid -- One file per conversation, stores its Claude session id for --resume
 ```
 
 **Skills format & discovery:** Skills live at `.agents/skills/<name>/SKILL.md` — the skill.sh convention, also what Claude Code looks for. Houston mirrors each skill as a symlink under `.claude/skills/<name>` so Claude Code picks them up natively. Flat `.md` files dropped directly under `.agents/skills/` are auto-migrated into `<name>/SKILL.md` directory layout on the next `list_skills` call.
@@ -444,18 +445,16 @@ Utilities: `formatSize()`, `formatFinderDate()`, `getKind()` — Finder-style fo
 ### houston-db
 Database layer (libsql/SQLite). Minimal — most persistence lives in file-based `.houston/` agent storage.
 
-**Permanent modules:**
-- `repo_chat_feed` — the only data table. Unified conversation table for UI replay on app restart.
+**Modules:**
+- `repo_chat_feed` — the chat_feed table. Session-keyed by `claude_session_id` only. No legacy v1 `project_id`/`feed_key` columns.
+- `repo_search` — FTS5 search over chat_feed by session id.
 
 **Chat feed persistence** (`repo_chat_feed.rs`):
-- v1 methods (project_id + feed_key keyed): `add_chat_feed_item()`, `list_chat_feed()`, `clear_chat_feed()`
-- Session-keyed methods: `add_chat_feed_item_by_session()`, `list_chat_feed_by_session()`, `clear_chat_feed_by_session()`
+- `add_chat_feed_item_by_session(claude_session_id, feed_type, data_json, source)`
+- `list_chat_feed_by_session(claude_session_id)`
+- `clear_chat_feed_by_session(claude_session_id)`
 
-**Legacy modules** (kept for backward compat):
-- `repo_projects`, `repo_issues`, `repo_issue_deps`, `repo_issues_update`, `issue_types`, `models`
-- Re-exports: `Database`, `IssueStatus`, `Issue`, `Project`, `Session`, `SessionEvent`, `ChatFeedRow`
-
-**Deleted repos** (legacy): `repo_routines`, `repo_routine_runs`, `repo_session_events`, `repo_sessions`, `repo_issue_feed`
+**Re-exports:** `Database`, `ChatFeedRow`, `SearchResult`, `SessionMetadata`, `SessionSearchResult`, `sanitize_fts_query`.
 
 ### houston-sessions
 Claude CLI session management. Spawns `claude -p --output-format stream-json`, parses NDJSON output, manages concurrency.
@@ -472,12 +471,11 @@ Tauri-specific helpers. The largest crate — provides session lifecycle, agent 
 | `supervisor.rs` | Session supervisor for concurrent Claude sessions |
 | `paths.rs` | `expand_tilde()` — resolves `~` in user-facing paths |
 | `chat_session.rs` | `ChatSessionState` — `Arc<Mutex<Option<String>>>` for session ID tracking. Enables `--resume` for conversation continuity. |
-| `agent_sessions.rs` | `AgentSessionMap` — per-agent session state with disk persistence. Loads/saves `.claude_session_id` from agent folder. Conversations survive app restarts. |
+| `agent_sessions.rs` | `AgentSessionMap` — per-`(agent_path, session_key)` session state with disk persistence. Loads/saves `.houston/sessions/{session_key}.sid` under the agent folder. Every conversation is independently scoped — there is no shared "main" file. |
 | `agent.rs` | `seed_file()` (write-once templates), `build_system_prompt()` (assemble from agent files), `list_files()` / `read_file()` |
 | `agent_commands.rs` | Pre-built Tauri commands for file operations: `list_project_files`, `open_file`, `reveal_file`, `delete_file`, `import_files`, `create_agent_folder`, `reveal_agent`, `write_file_bytes`, `read_project_file`, `load_chat_feed`, `load_session_feed` |
 | `agent_store/` | File-backed CRUD for `.houston/` agent data. `AgentStore` struct + 23 Tauri commands. Sub-modules: activity, routines, goals, channels, skills, log, config, types, helpers, commands/ |
-| `session_runner.rs` | `spawn_and_monitor()` — generic session lifecycle: spawn Claude CLI, emit events, track session ID, persist feed items, write `.claude_session_id` to disk. Auto-calls `claude_path::init()`. Returns `JoinHandle<SessionResult>`. |
-| `session_queue.rs` | `SessionQueue` — message queue for sequential Claude sessions with automatic `--resume`. Messages queue while Claude is busy and process in order. |
+| `session_runner.rs` | `spawn_and_monitor()` — generic session lifecycle: spawn Claude CLI, emit `HoustonEvent::FeedItem { agent_path, session_key, item }` and `HoustonEvent::SessionStatus { agent_path, session_key, ... }`, persist feed items by `claude_session_id`, write `.houston/sessions/{session_key}.sid` to disk. Auto-calls `claude_path::init()`. Returns `JoinHandle<SessionResult>`. |
 | `channel_manager.rs` | `ChannelManager` — starts/stops channel adapters, routes all incoming messages into one `mpsc::UnboundedReceiver<RoutedMessage>`. |
 | `tray.rs` | System tray integration utilities |
 | `agent_watcher.rs` | File watcher on `.houston/` directory for agent file changes |
@@ -576,34 +574,29 @@ Between packages, use **package imports**: `import { cn, Button } from "@houston
 ### Session Runner (`spawn_and_monitor`)
 ```rust
 let handle = spawn_and_monitor(
-    &app_handle, session_key, prompt, resume_id,
+    &app_handle, agent_path, session_key, prompt, resume_id,
     working_dir, system_prompt,
     Some(chat_state),   // ChatSessionState for session ID tracking
-    Some(PersistOptions { db, project_id, feed_key, source,
-        claude_session_id: None }),  // set automatically on SessionId update
+    Some(PersistOptions {
+        db,
+        source,
+        user_message: Some(prompt.clone()),   // persisted by runner on SessionId arrival
+        claude_session_id: None,              // set automatically on SessionId update
+    }),
+    Some(pid_map),
 );
 ```
-Auto-calls `claude_path::init()` (idempotent via `OnceLock`). Auto-emits `HoustonEvent::FeedItem` and `HoustonEvent::SessionStatus`. Tracks session ID via `ChatSessionState`. Persists non-streaming feed items to DB using session-keyed persistence when `claude_session_id` is set, falls back to project-keyed. Writes `.claude_session_id` to the working directory for `--resume` on restart. Returns `SessionResult { response_text, claude_session_id, error }`.
-
-### Session Queue
-```rust
-let queue = SessionQueue::new(app_handle, SessionQueueConfig {
-    session_key, working_dir, system_prompt,
-    model: None, effort: None,
-    chat_state: Some(state), persist: Some(opts),
-});
-queue.send("Do something").await;  // queues if Claude is busy
-```
-Sequential message processing with automatic `--resume`. Messages queue up while Claude is running and process in order. Writes `.claude_session_id` to disk.
+Auto-calls `claude_path::init()` (idempotent via `OnceLock`). Emits `HoustonEvent::FeedItem { agent_path, session_key, item }` and `HoustonEvent::SessionStatus { agent_path, session_key, ... }` — events carry `agent_path` so the frontend feed store can scope buckets per agent, making cross-agent message bleeding structurally impossible. Persists feed items to DB keyed by `claude_session_id` once the session ID arrives; the initial user message is buffered in `PersistOptions.user_message` and written at the same moment. Writes `.houston/sessions/{session_key}.sid` under the agent folder for `--resume` on restart. Returns `SessionResult { response_text, claude_session_id, error }`.
 
 ### Agent Session Map
 ```rust
 let session_map: AgentSessionMap = Default::default();
-let state = session_map.get_for_agent("project-1", &app_state).await;
-// On first access, loads .claude_session_id from disk
-// After session completes:
-session_map.persist("project-1", &app_state).await;
+let state = session_map
+    .get_for_session(&format!("{agent_path}:{session_key}"), &agent_path, &session_key)
+    .await;
+// On first access, loads .houston/sessions/{session_key}.sid from disk
 ```
+One `ChatSessionState` per `(agent_path, session_key)` pair. No shared "main" file — every conversation is independently scoped. `remove_agent(&format!("{agent_path}:"))` drops all in-memory state for a deleted agent.
 
 ### Channel Manager
 ```rust
@@ -656,7 +649,7 @@ All operations use atomic temp-file + rename to prevent corruption. Types define
 
 ## Logging & Debugging
 
-All logging writes to files at `~/Library/Application Support/houston/logs/`:
+All logging writes to files at `~/.houston/logs/`:
 
 | File | Source | What |
 |------|--------|------|
@@ -683,9 +676,9 @@ All logging writes to files at `~/Library/Application Support/houston/logs/`:
 6. **`expand_tilde()` is required for user-facing paths.** Rust's `PathBuf` does not expand `~`.
 7. **`send_typing()` is a default no-op on Channel trait.** Only Telegram implements it. Safe to call on any channel.
 8. **`claude_path::init()` is automatic.** Called by `spawn_and_monitor()` (idempotent via `OnceLock`). Apps don't need to call it manually.
-9. **Session ID persists to disk.** Both `spawn_and_monitor` and `session_queue` write `.claude_session_id` to the agent folder. `AgentSessionMap` loads it on startup for `--resume`.
+9. **Session ID persists per conversation.** `spawn_and_monitor` writes `.houston/sessions/{session_key}.sid` under the agent folder for every session. There is no shared "main" `.claude_session_id` file — every session_key is independently scoped. `AgentSessionMap` loads the per-session file on first access for `--resume`.
 10. **Agents read/write `.houston/` files directly.** Apps use `agent_store` Tauri commands. There is no CLI intermediary for agent data.
-11. **Legacy DB repos are deprecated.** `repo_projects` and `repo_issues` exist for backward compat. Do not add new features to them.
+11. **Session key → (agent_path, session_key) scoping.** `HoustonEvent::FeedItem` and `SessionStatus` events carry both `agent_path` and `session_key`. The frontend feed store is nested `Record<agentPath, Record<sessionKey, FeedItem[]>>` so cross-agent bleeding is structurally impossible. Never use a bare session_key (like the old `"main"`) as a global namespace.
 12. **`useSessionEvents` vs `useHoustonEvent`:** Prefer `useSessionEvents` for session-related events (FeedItem, SessionStatus, Toast). It uses ref-based handlers to avoid the race condition where handler recreation tears down and re-registers the listener, causing missed events. `useHoustonEvent` is lower-level for one-off event subscriptions.
 
 ---

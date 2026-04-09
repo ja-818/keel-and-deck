@@ -52,11 +52,20 @@ export interface ChannelEntry {
 export type HoustonEvent =
   | {
       type: "FeedItem";
-      data: { session_key: string; item: import("@houston-ai/chat").FeedItem };
+      data: {
+        agent_path: string;
+        session_key: string;
+        item: import("@houston-ai/chat").FeedItem;
+      };
     }
   | {
       type: "SessionStatus";
-      data: { session_key: string; status: string; error: string | null };
+      data: {
+        agent_path: string;
+        session_key: string;
+        status: string;
+        error: string | null;
+      };
     }
   | {
       type: "Toast";

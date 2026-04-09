@@ -28,6 +28,15 @@ pub struct Agent {
     pub last_opened_at: Option<String>,
 }
 
+/// Result of `create_agent` — the new agent plus (optionally) the id of a
+/// seeded onboarding activity that the caller should open a conversation with.
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateAgentResult {
+    pub agent: Agent,
+    pub onboarding_activity_id: Option<String>,
+}
+
 /// Managed Tauri state: path to ~/Documents/Houston/.
 pub struct WorkspaceRoot(pub PathBuf);
 
@@ -161,7 +170,7 @@ pub fn create_agent(
     config_id: String,
     color: Option<String>,
     claude_md: Option<String>,
-) -> Result<Agent, String> {
+) -> Result<CreateAgentResult, String> {
     let ws_dir = resolve_ws_folder(&root.0, &workspace_id)?;
     let folder = ws_dir.join(&name);
 
@@ -198,13 +207,16 @@ pub fn create_agent(
     // Seed prompt files
     crate::agent::seed_agent(&folder)?;
 
-    // Seed onboarding activity for blank agents
+    // Seed onboarding activity for blank agents with a unique id per agent,
+    // so session keys can never collide between agents.
+    let mut onboarding_activity_id: Option<String> = None;
     if meta.config_id == "blank" {
+        let activity_id = Uuid::new_v4().to_string();
         let onboarding = serde_json::json!([{
-            "id": "onboarding",
+            "id": activity_id,
             "title": "Set up your agent",
             "description": "I'll walk you through configuring your job description, connecting tools, and setting up routines.",
-            "status": "needs_you",
+            "status": "running",
             "updated_at": &meta.created_at
         }]);
         seed_json_if_missing(
@@ -212,12 +224,16 @@ pub fn create_agent(
             "activity.json",
             &serde_json::to_string(&onboarding).unwrap_or_else(|_| "[]".to_string()),
         )?;
+        onboarding_activity_id = Some(activity_id);
     } else {
         seed_json_if_missing(&houston, "activity.json", "[]")?;
     }
     seed_json_if_missing(&houston, "config.json", "{}")?;
 
-    Ok(meta_to_agent(&folder, &meta))
+    Ok(CreateAgentResult {
+        agent: meta_to_agent(&folder, &meta),
+        onboarding_activity_id,
+    })
 }
 
 #[tauri::command(rename_all = "snake_case")]

@@ -1,24 +1,18 @@
 //! User-attached file storage for chat composer.
 //!
-//! Files attached in the chat composer are persisted under the OS app cache
-//! directory, scoped by an opaque `scope_id` chosen by the caller (e.g.
-//! `"activity-<id>"` for board conversations or `"agent-<id>"` for an
-//! agent's main chat). When the owning activity/agent is deleted, the
-//! caller invokes `delete_attachments(scope_id)` to wipe the directory.
+//! Files attached in the chat composer are persisted under `~/.houston/cache/attachments/`,
+//! scoped by an opaque `scope_id` chosen by the caller (e.g. `"activity-<id>"` for board
+//! conversations or `"agent-<id>"` for an agent's main chat). When the owning activity/agent
+//! is deleted, the caller invokes `delete_attachments(scope_id)` to wipe the directory.
 //!
-//! Files persist across app restarts so a user can attach something, walk
-//! away, come back days later, and Claude can still read the path the
-//! original prompt referenced via `--resume`.
+//! Files persist across app restarts so a user can attach something, walk away, come back
+//! days later, and Claude can still read the path the original prompt referenced via `--resume`.
 //!
-//! Storage path:
-//!   <app_cache_dir>/houston/attachments/<scope_id>/<filename>
-//!
-//! The cache root is OS-conventional (`~/Library/Caches/houston` on macOS).
+//! Storage path: `~/.houston/cache/attachments/<scope_id>/<filename>`
 
 use base64::Engine;
 use serde::Deserialize;
 use std::path::PathBuf;
-use tauri::Manager;
 
 #[derive(Deserialize)]
 pub struct AttachmentInput {
@@ -28,15 +22,14 @@ pub struct AttachmentInput {
 }
 
 /// Resolve the attachments root for a given scope, creating it if missing.
-fn scope_dir(app: &tauri::AppHandle, scope_id: &str) -> Result<PathBuf, String> {
+fn scope_dir(scope_id: &str) -> Result<PathBuf, String> {
     if scope_id.is_empty() || scope_id.contains('/') || scope_id.contains("..") {
         return Err(format!("invalid scope_id: {scope_id}"));
     }
-    let cache = app
-        .path()
-        .app_cache_dir()
-        .map_err(|e| format!("app_cache_dir: {e}"))?;
-    let dir = cache.join("attachments").join(scope_id);
+    let dir = houston_tauri::houston_db::db::houston_dir()
+        .join("cache")
+        .join("attachments")
+        .join(scope_id);
     std::fs::create_dir_all(&dir).map_err(|e| format!("create_dir_all: {e}"))?;
     Ok(dir)
 }
@@ -61,11 +54,10 @@ fn sanitize_filename(name: &str) -> String {
 /// caller is responsible for choosing scope ids that won't collide.
 #[tauri::command(rename_all = "snake_case")]
 pub async fn save_attachments(
-    app: tauri::AppHandle,
     scope_id: String,
     files: Vec<AttachmentInput>,
 ) -> Result<Vec<String>, String> {
-    let dir = scope_dir(&app, &scope_id)?;
+    let dir = scope_dir(&scope_id)?;
     let engine = base64::engine::general_purpose::STANDARD;
     let mut paths = Vec::with_capacity(files.len());
     for file in files {
@@ -87,18 +79,14 @@ pub async fn save_attachments(
 
 /// Delete the entire attachments directory for a scope. Idempotent.
 #[tauri::command(rename_all = "snake_case")]
-pub async fn delete_attachments(
-    app: tauri::AppHandle,
-    scope_id: String,
-) -> Result<(), String> {
+pub async fn delete_attachments(scope_id: String) -> Result<(), String> {
     if scope_id.is_empty() || scope_id.contains('/') || scope_id.contains("..") {
         return Err(format!("invalid scope_id: {scope_id}"));
     }
-    let cache = app
-        .path()
-        .app_cache_dir()
-        .map_err(|e| format!("app_cache_dir: {e}"))?;
-    let dir = cache.join("attachments").join(&scope_id);
+    let dir = houston_tauri::houston_db::db::houston_dir()
+        .join("cache")
+        .join("attachments")
+        .join(&scope_id);
     if dir.exists() {
         std::fs::remove_dir_all(&dir)
             .map_err(|e| format!("remove_dir_all {}: {e}", dir.display()))?;

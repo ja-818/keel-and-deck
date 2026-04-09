@@ -1,12 +1,11 @@
 import { useCallback, useMemo } from "react";
-import { Loader2 } from "lucide-react";
-import { useConnections, useAgentIntegrations, useInvalidateConnections } from "../../hooks/queries";
+import { useConnections, useAgentIntegrations, useResetConnections } from "../../hooks/queries";
 import { tauriSystem } from "../../lib/tauri";
 import { useComposioAuth } from "../../hooks/use-composio-auth";
 import { ComposioAuthDialog } from "../composio-auth-dialog";
 import { BrowseAppsSection } from "./browse-apps-section";
 import {
-  NotConfiguredState, NeedsAuthState, ErrorState,
+  LoadingState, NotConfiguredState, NeedsAuthState, ErrorState,
   UsedSection, AvailableSection,
 } from "./integrations-states";
 import type { TabProps } from "../../lib/types";
@@ -17,8 +16,8 @@ const COMPOSIO_DASHBOARD_URL = "https://dashboard.composio.dev";
 export default function IntegrationsTab({ agent }: TabProps) {
   const { data: result, isLoading: connectionsLoading, refetch } = useConnections();
   const { data: tracked, isLoading: trackedLoading } = useAgentIntegrations(agent.folderPath);
-  const invalidate = useInvalidateConnections();
-  const auth = useComposioAuth(() => invalidate());
+  const reset = useResetConnections();
+  const auth = useComposioAuth(() => reset());
 
   const handleManage = useCallback(() => {
     tauriSystem.openUrl(COMPOSIO_DASHBOARD_URL);
@@ -43,14 +42,7 @@ export default function IntegrationsTab({ agent }: TabProps) {
   return (
     <div className="h-full overflow-auto">
       <div className="max-w-3xl mx-auto w-full px-6 py-6">
-        {loading && (
-          <div className="flex flex-col items-center justify-center py-24 gap-3">
-            <Loader2 className="size-5 text-muted-foreground/60 animate-spin" />
-            <p className="text-[13px] text-muted-foreground">
-              Loading integrations...
-            </p>
-          </div>
-        )}
+        {loading && <LoadingState />}
 
         {!loading && result?.status === "not_configured" && (
           <NotConfiguredState onAuth={auth.startAuth} />

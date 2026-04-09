@@ -1,19 +1,27 @@
-//! Per-agent session state with disk persistence.
+//! Per-session Claude session ID tracking with disk persistence.
 //!
-//! Each agent maintains its own Claude session ID for `--resume`.
-//! The session ID is persisted to `.claude_session_id` in the workspace folder
-//! so it survives app restarts.
+//! Every `(agent_path, session_key)` pair maintains its own Claude session ID
+//! so `--resume` continues the right conversation across app restarts. The ID
+//! is persisted to `.houston/sessions/{session_key}.sid` under the agent
+//! working directory. There is no shared "main" session file — every
+//! conversation is independently scoped.
 
 use crate::chat_session::ChatSessionState;
 use crate::paths::expand_tilde;
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-const SESSION_FILE: &str = ".claude_session_id";
+/// Return the disk path where a given session_key's Claude session ID is persisted.
+pub fn session_id_path(agent_path: &Path, session_key: &str) -> PathBuf {
+    agent_path
+        .join(".houston")
+        .join("sessions")
+        .join(format!("{session_key}.sid"))
+}
 
-/// Managed Tauri state: one `ChatSessionState` per agent key.
+/// Managed Tauri state: one `ChatSessionState` per `(agent_path, session_key)`.
 /// Persists session IDs to disk so conversations survive app restarts.
 #[derive(Default, Clone)]
 pub struct AgentSessionMap {
@@ -21,15 +29,17 @@ pub struct AgentSessionMap {
 }
 
 impl AgentSessionMap {
-    /// Get (or lazily create) the `ChatSessionState` for a given agent.
+    /// Get (or lazily create) the `ChatSessionState` for a given session.
     /// On first access, loads the persisted session ID from disk if available.
     ///
-    /// `agent_key` is an arbitrary unique identifier for the agent (e.g. project_id).
-    /// `workspace_path` is the filesystem path where `.claude_session_id` is stored.
-    pub async fn get_for_agent(
+    /// `agent_key` is an arbitrary unique identifier combining agent + session
+    /// (e.g. `"{agent_path}:{session_key}"`).
+    /// `agent_path` is the filesystem path where `.houston/sessions/{session_key}.sid` is stored.
+    pub async fn get_for_session(
         &self,
         agent_key: &str,
-        workspace_path: &str,
+        agent_path: &str,
+        session_key: &str,
     ) -> ChatSessionState {
         // Fast path: already in memory.
         {
@@ -39,21 +49,15 @@ impl AgentSessionMap {
             }
         }
 
-        // Slow path: create and try to load from disk.
-        // Only load the shared .claude_session_id for the "main" session.
-        // Activity sessions (activity-{id}) must start fresh — they each get
-        // their own Claude session, not the agent's primary one.
+        // Slow path: create and try to load the per-session ID from disk.
         let state = ChatSessionState::default();
 
-        let is_activity = agent_key.contains(":activity-");
-        if !is_activity {
-            let workspace_dir = expand_tilde(&PathBuf::from(workspace_path));
-            let session_file = workspace_dir.join(SESSION_FILE);
-            if let Ok(id) = std::fs::read_to_string(&session_file) {
-                let id = id.trim().to_string();
-                if !id.is_empty() {
-                    state.set(id).await;
-                }
+        let agent_dir = expand_tilde(&PathBuf::from(agent_path));
+        let sid_file = session_id_path(&agent_dir, session_key);
+        if let Ok(id) = std::fs::read_to_string(&sid_file) {
+            let id = id.trim().to_string();
+            if !id.is_empty() {
+                state.set(id).await;
             }
         }
 
@@ -63,30 +67,10 @@ impl AgentSessionMap {
             .clone()
     }
 
-    /// Save the current session ID to disk after a session completes.
-    pub async fn persist(
-        &self,
-        agent_key: &str,
-        workspace_path: &str,
-    ) {
-        let session_id = {
-            let map = self.inner.read().await;
-            match map.get(agent_key) {
-                Some(state) => state.get().await,
-                None => None,
-            }
-        };
-
-        if let Some(id) = session_id {
-            let workspace_dir = expand_tilde(&PathBuf::from(workspace_path));
-            let session_file = workspace_dir.join(SESSION_FILE);
-            std::fs::write(&session_file, &id).ok();
-        }
-    }
-
-    /// Remove session state for a deleted agent.
-    pub async fn remove_agent(&self, agent_key: &str) {
+    /// Remove in-memory session state for a deleted agent.
+    /// `agent_key_prefix` should match the `"{agent_path}:"` prefix used when storing.
+    pub async fn remove_agent(&self, agent_key_prefix: &str) {
         let mut map = self.inner.write().await;
-        map.remove(agent_key);
+        map.retain(|k, _| !k.starts_with(agent_key_prefix));
     }
 }

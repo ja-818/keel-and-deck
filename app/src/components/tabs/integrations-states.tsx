@@ -1,9 +1,47 @@
+import { useEffect, useRef } from "react";
 import { ExternalLink } from "lucide-react";
 import {
   Empty, EmptyHeader, EmptyTitle, EmptyDescription,
 } from "@houston-ai/core";
 import { ConnectionRow } from "@houston-ai/connections";
 import type { Connection } from "@houston-ai/connections";
+import houstonBlack from "../../assets/houston-black.svg";
+
+export function LoadingState() {
+  const barRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Next frame: flip width to 100% so the transition actually animates.
+    const raf = requestAnimationFrame(() => {
+      if (barRef.current) barRef.current.style.width = "100%";
+    });
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  return (
+    <Empty className="border-0">
+      <img
+        src={houstonBlack}
+        alt="Houston"
+        className="h-12 w-auto mb-2 animate-pulse"
+      />
+      <EmptyHeader>
+        <EmptyTitle>Loading your integrations</EmptyTitle>
+        <EmptyDescription>
+          This can take up to two minutes on first load. Hang tight —
+          we're checking every connected app.
+        </EmptyDescription>
+      </EmptyHeader>
+      <div className="w-48 h-[2px] rounded-full bg-black/10 overflow-hidden">
+        <div
+          ref={barRef}
+          className="h-full bg-black rounded-full"
+          style={{ width: "0%", transition: "width 120s linear" }}
+        />
+      </div>
+    </Empty>
+  );
+}
 
 export function NotConfiguredState({ onAuth }: { onAuth: () => void }) {
   return (

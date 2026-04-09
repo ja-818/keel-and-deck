@@ -2,34 +2,68 @@ import { create } from "zustand";
 import { mergeFeedItem } from "@houston-ai/chat";
 import type { FeedItem } from "@houston-ai/chat";
 
+/**
+ * Feed store — nested by agent path, then by session key.
+ *
+ * This layout makes cross-agent bleeding structurally impossible: no code
+ * path can accidentally read or write another agent's feed items because
+ * you always need both keys to address a bucket. When an agent is deleted,
+ * `clearAgent(agentPath)` drops all its sessions in one call.
+ */
 interface FeedState {
-  items: Record<string, FeedItem[]>;
-  pushFeedItem: (sessionKey: string, item: FeedItem) => void;
-  setFeed: (sessionKey: string, items: FeedItem[]) => void;
-  clearFeed: (sessionKey: string) => void;
+  items: Record<string, Record<string, FeedItem[]>>;
+  pushFeedItem: (agentPath: string, sessionKey: string, item: FeedItem) => void;
+  setFeed: (agentPath: string, sessionKey: string, items: FeedItem[]) => void;
+  clearFeed: (agentPath: string, sessionKey: string) => void;
+  clearAgent: (agentPath: string) => void;
 }
 
 export const useFeedStore = create<FeedState>((set) => ({
   items: {},
 
-  pushFeedItem: (sessionKey, item) => {
-    console.log("[feed:push]", sessionKey, item.feed_type, item);
-    return set((s) => ({
-      items: {
-        ...s.items,
-        [sessionKey]: mergeFeedItem(s.items[sessionKey] ?? [], item),
-      },
-    }));
+  pushFeedItem: (agentPath, sessionKey, item) => {
+    return set((s) => {
+      const agentBucket = s.items[agentPath] ?? {};
+      const nextSession = mergeFeedItem(agentBucket[sessionKey] ?? [], item);
+      return {
+        items: {
+          ...s.items,
+          [agentPath]: {
+            ...agentBucket,
+            [sessionKey]: nextSession,
+          },
+        },
+      };
+    });
   },
 
-  setFeed: (sessionKey, items) =>
+  setFeed: (agentPath, sessionKey, items) =>
     set((s) => ({
-      items: { ...s.items, [sessionKey]: items },
+      items: {
+        ...s.items,
+        [agentPath]: {
+          ...(s.items[agentPath] ?? {}),
+          [sessionKey]: items,
+        },
+      },
     })),
 
-  clearFeed: (sessionKey) =>
+  clearFeed: (agentPath, sessionKey) =>
     set((s) => {
-      const { [sessionKey]: _, ...rest } = s.items;
+      const agentBucket = s.items[agentPath];
+      if (!agentBucket) return s;
+      const { [sessionKey]: _, ...rest } = agentBucket;
+      return {
+        items: {
+          ...s.items,
+          [agentPath]: rest,
+        },
+      };
+    }),
+
+  clearAgent: (agentPath) =>
+    set((s) => {
+      const { [agentPath]: _, ...rest } = s.items;
       return { items: rest };
     }),
 }));

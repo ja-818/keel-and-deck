@@ -21,7 +21,7 @@ export function useAllConversations(agentPaths: string[]) {
 export function useChatHistory(agentPath: string | undefined, sessionKey: string | undefined) {
   return useQuery({
     queryKey: queryKeys.chatHistory(agentPath ?? "", sessionKey ?? ""),
-    queryFn: () => tauriChat.loadHistory(agentPath!, sessionKey),
+    queryFn: () => tauriChat.loadHistory(agentPath!, sessionKey!),
     enabled: !!agentPath && !!sessionKey,
   });
 }

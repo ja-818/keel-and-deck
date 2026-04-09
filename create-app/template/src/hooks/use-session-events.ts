@@ -14,14 +14,22 @@ export function useSessionEvents() {
 
       switch (payload.type) {
         case "FeedItem":
-          handlerRef.current(payload.data.session_key, payload.data.item);
+          handlerRef.current(
+            payload.data.agent_path,
+            payload.data.session_key,
+            payload.data.item,
+          );
           break;
         case "SessionStatus":
           if (payload.data.status === "error" && payload.data.error) {
-            handlerRef.current(payload.data.session_key, {
-              feed_type: "system_message",
-              data: `Session error: ${payload.data.error}`,
-            });
+            handlerRef.current(
+              payload.data.agent_path,
+              payload.data.session_key,
+              {
+                feed_type: "system_message",
+                data: `Session error: ${payload.data.error}`,
+              },
+            );
           }
           break;
         case "Toast":

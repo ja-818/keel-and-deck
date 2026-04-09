@@ -114,7 +114,6 @@ impl Database {
                 FROM chat_feed_fts
                 JOIN chat_feed cf ON cf.id = chat_feed_fts.rowid
                 WHERE chat_feed_fts MATCH ?1
-                AND cf.claude_session_id IS NOT NULL
                 GROUP BY cf.claude_session_id
                 ORDER BY MIN(chat_feed_fts.rank)
                 LIMIT ?2",
@@ -219,8 +218,7 @@ impl Database {
                     MAX(timestamp) as last_timestamp,
                     COUNT(*) as message_count
                 FROM chat_feed
-                WHERE claude_session_id IS NOT NULL
-                AND claude_session_id != ''
+                WHERE claude_session_id != ''
                 GROUP BY claude_session_id
                 ORDER BY MAX(timestamp) DESC
                 LIMIT ?1",

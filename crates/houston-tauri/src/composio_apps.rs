@@ -5,7 +5,6 @@
 //! Public page — no auth required. Returns empty vec on any failure.
 
 use serde::{Deserialize, Serialize};
-use tokio::sync::OnceCell;
 
 const TOOLKITS_URL: &str = "https://composio.dev/toolkits";
 const USER_AGENT: &str =
@@ -19,38 +18,44 @@ pub struct ComposioAppEntry {
     pub logo_url: String,
 }
 
-static CATALOG: OnceCell<Vec<ComposioAppEntry>> = OnceCell::const_new();
+// We use a Mutex<Option<...>> rather than OnceCell because we want to be able to
+// retry on failure — a transient network error shouldn't poison the cache for the
+// whole session.
+static CATALOG: tokio::sync::Mutex<Option<Vec<ComposioAppEntry>>> =
+    tokio::sync::Mutex::const_new(None);
 
-/// Returns the cached catalog, fetching it on first call.
-async fn get_catalog() -> &'static Vec<ComposioAppEntry> {
-    CATALOG
-        .get_or_init(|| async {
-            match fetch_from_public_page().await {
-                Ok(apps) if !apps.is_empty() => {
-                    tracing::info!("[composio] Fetched {} apps from public page", apps.len());
-                    apps
-                }
-                Ok(_) => {
-                    tracing::warn!("[composio] Public page returned empty app list");
-                    Vec::new()
-                }
-                Err(e) => {
-                    tracing::warn!("[composio] Failed to fetch apps: {e}");
-                    Vec::new()
-                }
-            }
-        })
-        .await
-}
-
-/// Returns a clone of the cached catalog (for the frontend Tauri command).
+/// Returns the cached catalog, fetching it on first call. Retries on next call
+/// if the previous attempt failed (empty result is not cached).
 pub async fn list_all_apps() -> Vec<ComposioAppEntry> {
-    get_catalog().await.clone()
-}
+    {
+        let guard = CATALOG.lock().await;
+        if let Some(cached) = guard.as_ref() {
+            if !cached.is_empty() {
+                return cached.clone();
+            }
+        }
+    }
 
-/// Returns all toolkit slugs from the catalog.
-pub async fn all_slugs() -> Vec<String> {
-    get_catalog().await.iter().map(|a| a.toolkit.clone()).collect()
+    let apps = match fetch_from_public_page().await {
+        Ok(apps) if !apps.is_empty() => {
+            tracing::info!("[composio] Fetched {} apps from public page", apps.len());
+            apps
+        }
+        Ok(_) => {
+            tracing::warn!("[composio] Public page returned empty app list");
+            Vec::new()
+        }
+        Err(e) => {
+            tracing::warn!("[composio] Failed to fetch apps: {e}");
+            Vec::new()
+        }
+    };
+
+    // Only cache non-empty results so transient failures can be retried.
+    if !apps.is_empty() {
+        *CATALOG.lock().await = Some(apps.clone());
+    }
+    apps
 }
 
 async fn fetch_from_public_page() -> Result<Vec<ComposioAppEntry>, String> {

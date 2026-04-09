@@ -7,7 +7,21 @@ import { tauriActivity, tauriChat, tauriAttachments, withAttachmentPaths } from 
 import type { Agent } from "../lib/types";
 
 export function useMissionControl(agents: Agent[]) {
-  const feedItems = useFeedStore((s) => s.items);
+  // Mission control is cross-agent. Flatten the nested feed store into a
+  // single sessionKey → items map, filtered to the agents on this view.
+  const allItems = useFeedStore((s) => s.items);
+  const agentPaths = useMemo(() => agents.map((a) => a.folderPath), [agents]);
+  const feedItems = useMemo(() => {
+    const out: Record<string, FeedItem[]> = {};
+    for (const ap of agentPaths) {
+      const bucket = allItems[ap];
+      if (!bucket) continue;
+      for (const [sk, items] of Object.entries(bucket)) {
+        out[sk] = items;
+      }
+    }
+    return out;
+  }, [allItems, agentPaths]);
   const pushFeedItem = useFeedStore((s) => s.pushFeedItem);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -82,7 +96,7 @@ export function useMissionControl(agents: Agent[]) {
       const visible = files.length > 0
         ? `${text}${text ? "\n\n" : ""}Attached: ${files.map((f) => f.name).join(", ")}`
         : text;
-      pushFeedItem(sessionKey, { feed_type: "user_message", data: visible });
+      pushFeedItem(agentPath, sessionKey, { feed_type: "user_message", data: visible });
       setLoading((prev) => ({ ...prev, [sessionKey]: true }));
       tauriActivity.update(agentPath, activityId, { status: "running" }).catch(console.error);
       const paths = await tauriAttachments.save(`activity-${activityId}`, files);
@@ -97,7 +111,7 @@ export function useMissionControl(agents: Agent[]) {
       const title = text.length > 80 ? text.slice(0, 77) + "..." : text;
       const item = await tauriActivity.create(agentPath, title, text);
       const sessionKey = `activity-${item.id}`;
-      pushFeedItem(sessionKey, { feed_type: "user_message", data: text });
+      pushFeedItem(agentPath, sessionKey, { feed_type: "user_message", data: text });
       setLoading((prev) => ({ ...prev, [sessionKey]: true }));
       await tauriActivity.update(agentPath, item.id, { status: "running" });
       tauriChat.send(agentPath, text, sessionKey);

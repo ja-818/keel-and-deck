@@ -28,7 +28,7 @@ import { useWorkspaceStore } from "./stores/workspaces";
 import { useAgentStore } from "./stores/agents";
 import { useAgentCatalogStore } from "./stores/agent-catalog";
 import { useUIStore } from "./stores/ui";
-import { useActivity } from "./hooks/queries";
+import { useActivity, useConnections, useComposioApps } from "./hooks/queries";
 import { Sidebar } from "./components/shell/sidebar";
 import { CreateAgentDialog } from "./components/shell/create-workspace-dialog";
 import { AgentRenderer } from "./components/shell/experience-renderer";
@@ -40,6 +40,9 @@ export default function App() {
   useHoustonInit();
   useSessionEvents();
   useAgentInvalidation();
+  // Prefetch Composio data on launch so the integrations tab opens instantly.
+  useConnections();
+  useComposioApps();
 
   // Intercept all link clicks and open in system browser
   useEffect(() => {
@@ -53,6 +56,16 @@ export default function App() {
     };
     document.addEventListener("click", handler);
     return () => document.removeEventListener("click", handler);
+  }, []);
+
+  // Suppress the native WebView context menu (Reload / Back / Forward) in
+  // production builds — it's a developer affordance that shouldn't be exposed
+  // to end users. Left enabled in dev so Inspect Element still works.
+  useEffect(() => {
+    if (!import.meta.env.PROD) return;
+    const handler = (e: MouseEvent) => e.preventDefault();
+    document.addEventListener("contextmenu", handler);
+    return () => document.removeEventListener("contextmenu", handler);
   }, []);
 
   const wsLoading = useWorkspaceStore((s) => s.loading);
@@ -141,6 +154,8 @@ export default function App() {
                       id: t.id,
                       label: t.label,
                       badge: t.badge === "activity" ? needsYouCount : undefined,
+                      disabled: t.disabled,
+                      chip: t.chip,
                     }))}
                     activeTab={viewMode}
                     onTabChange={setViewMode}

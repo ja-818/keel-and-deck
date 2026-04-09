@@ -1,14 +1,13 @@
-//! Unified conversation listing: primary chat + activity conversations.
+//! Unified conversation listing: activity conversations only.
+//!
+//! The legacy "primary chat" (session_key = "main") has been removed. Every
+//! conversation is an activity with a UUID-scoped session_key.
 
 use super::activity;
 use super::types::ConversationEntry;
-use std::fs;
 use std::path::Path;
 
-/// Return every conversation in a single agent.
-///
-/// The first entry is the primary chat (`session_key = "main"`).
-/// Activity conversations follow, ordered by most-recently-updated first.
+/// Return every conversation in a single agent, ordered by most-recently-updated first.
 pub fn list(root: &Path) -> Result<Vec<ConversationEntry>, String> {
     let agent_path_str = root.to_string_lossy().to_string();
     let agent_name_str = root
@@ -16,31 +15,6 @@ pub fn list(root: &Path) -> Result<Vec<ConversationEntry>, String> {
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_default();
 
-    let mut entries = Vec::new();
-
-    // Primary chat — use .claude_session_id mtime as updated_at.
-    let session_file = root.join(".claude_session_id");
-    let primary_updated = fs::metadata(&session_file)
-        .ok()
-        .and_then(|m| m.modified().ok())
-        .map(|t| chrono::DateTime::<chrono::Utc>::from(t).to_rfc3339());
-
-    // Only include primary chat if it has been used
-    if primary_updated.is_some() {
-        entries.push(ConversationEntry {
-            id: format!("primary:{agent_path_str}"),
-            title: "Primary chat".to_string(),
-            description: None,
-            status: None,
-            entry_type: "primary".to_string(),
-            session_key: "main".to_string(),
-            updated_at: primary_updated,
-            agent_path: agent_path_str.clone(),
-            agent_name: agent_name_str.clone(),
-        });
-    }
-
-    // Activity conversations — sorted by updated_at descending.
     let mut activities = activity::list(root).unwrap_or_default();
     activities.sort_by(|a, b| {
         let a_time = a.updated_at.as_deref().unwrap_or("");
@@ -48,8 +22,9 @@ pub fn list(root: &Path) -> Result<Vec<ConversationEntry>, String> {
         b_time.cmp(a_time)
     });
 
-    for entry in activities {
-        entries.push(ConversationEntry {
+    let entries = activities
+        .into_iter()
+        .map(|entry| ConversationEntry {
             id: entry.id.clone(),
             title: entry.title,
             description: Some(entry.description).filter(|d| !d.is_empty()),
@@ -59,8 +34,8 @@ pub fn list(root: &Path) -> Result<Vec<ConversationEntry>, String> {
             updated_at: entry.updated_at,
             agent_path: agent_path_str.clone(),
             agent_name: agent_name_str.clone(),
-        });
-    }
+        })
+        .collect();
 
     Ok(entries)
 }

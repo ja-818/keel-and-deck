@@ -19,15 +19,16 @@ export const tauriAgents = {
 };
 
 export const tauriChat = {
-  send: (workspacePath: string, prompt: string) =>
+  send: (workspacePath: string, sessionKey: string, prompt: string) =>
     invoke<string>("send_message", {
       workspacePath,
+      sessionKey,
       prompt,
     }),
-  loadHistory: (workspacePath: string) =>
+  loadHistory: (workspacePath: string, sessionKey: string) =>
     invoke<Array<{ feed_type: string; data: unknown }>>(
       "load_chat_history",
-      { workspacePath },
+      { workspacePath, sessionKey },
     ),
 };
 

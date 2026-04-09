@@ -213,24 +213,24 @@ pub async fn run_routine(
         run.session_key
     );
     let chat_state = agent_sessions
-        .get_for_agent(&agent_key, agent_path)
+        .get_for_session(&agent_key, agent_path, &run.session_key)
         .await;
     let resume_id = chat_state.get().await;
 
     // Spawn session and wait for completion
     let join_handle = houston_tauri::session_runner::spawn_and_monitor(
         app_handle,
+        agent_path.to_string(),
         run.session_key.clone(),
-        prompt,
+        prompt.clone(),
         resume_id,
-        Some(working_dir.clone()),
+        working_dir.clone(),
         Some(system_prompt),
         Some(chat_state),
         Some(PersistOptions {
             db: state.db.clone(),
-            project_id: agent_key,
-            feed_key: run.session_key.clone(),
             source: "routine".into(),
+            user_message: Some(prompt),
             claude_session_id: None,
         }),
         None,

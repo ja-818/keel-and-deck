@@ -50,10 +50,10 @@ pub async fn send_message(
     );
 
     let source = source.unwrap_or_else(|| "desktop".to_string());
-    let session_key = session_key.unwrap_or_else(|| "main".to_string());
+    let session_key = session_key.ok_or_else(|| "session_key is required".to_string())?;
     let agent_key = format!("{}:{}", working_dir.to_string_lossy(), session_key);
     let chat_state = agent_sessions
-        .get_for_agent(&agent_key, &agent_path)
+        .get_for_session(&agent_key, &agent_path, &session_key)
         .await;
     let resume_id = chat_state.get().await;
     tracing::debug!(
@@ -61,22 +61,12 @@ pub async fn send_message(
         resume_id, agent_key
     );
 
-    let _ = state
-        .db
-        .add_chat_feed_item(
-            &agent_key,
-            &session_key,
-            "user_message",
-            &serde_json::Value::String(prompt.clone()).to_string(),
-            &source,
-        )
-        .await;
-
     // If message came from Slack, emit a FeedItem so the Houston UI shows it
     if source == "slack" {
         let _ = app_handle.emit(
             "houston-event",
             houston_tauri::events::HoustonEvent::FeedItem {
+                agent_path: agent_path.clone(),
                 session_key: session_key.clone(),
                 item: houston_sessions::FeedItem::UserMessage(prompt.clone()),
             },
@@ -127,17 +117,17 @@ pub async fn send_message(
 
     houston_tauri::session_runner::spawn_and_monitor(
         &app_handle,
+        agent_path.clone(),
         session_key.clone(),
-        prompt,
+        prompt.clone(),
         resume_id,
-        Some(working_dir),
+        working_dir,
         Some(system_prompt),
         Some(chat_state),
         Some(PersistOptions {
             db: state.db.clone(),
-            project_id: agent_key,
-            feed_key: session_key.clone(),
-            source: "desktop".into(),
+            source: source.clone(),
+            user_message: Some(prompt),
             claude_session_id: None,
         }),
         Some(pid_map.inner().clone()),
@@ -150,53 +140,28 @@ pub async fn send_message(
 pub async fn load_chat_history(
     state: State<'_, AppState>,
     agent_path: String,
-    session_key: Option<String>,
+    session_key: String,
 ) -> Result<Vec<serde_json::Value>, String> {
     let working_dir = expand_tilde(&PathBuf::from(&agent_path));
-    let session_file = working_dir.join(".claude_session_id");
+    let sid_path = houston_tauri::agent_sessions::session_id_path(&working_dir, &session_key);
 
-    let base_key = working_dir.to_string_lossy().to_string();
-    let sk = session_key.as_deref().unwrap_or("main");
+    let Some(claude_session_id) = std::fs::read_to_string(&sid_path)
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+    else {
+        return Ok(Vec::new());
+    };
 
-    let agent_key = format!("{base_key}:{sk}");
-    let mut v1_rows = state
+    let mut rows = state
         .db
-        .list_chat_feed(&agent_key, sk)
+        .list_chat_feed_by_session(&claude_session_id)
         .await
         .map_err(|e| e.to_string())?;
 
-    if sk != "main" {
-        let legacy_key = format!("{base_key}:main");
-        let legacy_rows = state
-            .db
-            .list_chat_feed(&legacy_key, "main")
-            .await
-            .unwrap_or_default();
-        v1_rows.extend(legacy_rows);
-    }
+    rows.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
 
-    let old_rows = state
-        .db
-        .list_chat_feed(&base_key, "main")
-        .await
-        .unwrap_or_default();
-    v1_rows.extend(old_rows);
-
-    if let Ok(id) = std::fs::read_to_string(&session_file) {
-        let id = id.trim().to_string();
-        if !id.is_empty() {
-            let v2_rows = state
-                .db
-                .list_chat_feed_by_session(&id)
-                .await
-                .map_err(|e| e.to_string())?;
-            v1_rows.extend(v2_rows);
-        }
-    }
-
-    v1_rows.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
-
-    Ok(v1_rows
+    Ok(rows
         .into_iter()
         .map(|row| {
             serde_json::json!({
@@ -237,9 +202,75 @@ pub async fn write_agent_file(
 }
 
 #[tauri::command(rename_all = "snake_case")]
+pub async fn start_onboarding_session(
+    app_handle: tauri::AppHandle,
+    state: State<'_, AppState>,
+    agent_sessions: State<'_, AgentSessionMap>,
+    pid_map: State<'_, SessionPidMap>,
+    agent_path: String,
+    session_key: String,
+) -> Result<(), String> {
+    let working_dir = expand_tilde(&PathBuf::from(&agent_path));
+    agent::seed_agent(&working_dir)?;
+    let mut system_prompt = agent::build_system_prompt(&working_dir);
+
+    system_prompt.push_str(
+        "\n\n---\n\n# Onboarding\n\n\
+         This is a brand new agent with no configuration yet. \
+         Welcome the user and briefly tell them what they can provide to get this agent working:\n\n\
+         - A job description — What role do you want me to perform? \
+           e.g. SDR, Executive assistant, Customer Support Agent, Engineer.\n\
+         - Tools and integrations — Need Gmail or Slack? You can ask me to connect any tool \
+           that has an API or an MCP, and those that don't have one, we'll find a way around.\n\
+         - Routines (anything to run on a schedule)\n\n\
+         Keep it short and warm. End with something like \
+         \"Or if you'd rather skip setup and jump straight in, just tell me what you need — \
+         we can figure it out as we go.\"\n\n\
+         IMPORTANT — Setup validation: Once the user provides their job description, \
+         you MUST write BOTH of these before setup is complete:\n\
+         1. Update CLAUDE.md at the workspace root with the agent's role, responsibilities, \
+            and rules based on what the user described.\n\
+         2. Create at least one skill file in .agents/skills/ \
+            (e.g. .agents/skills/core-workflow.md) with an ## Instructions section covering \
+            the agent's primary workflow. Use the skill.sh convention: each skill is a markdown \
+            file with ## Instructions and ## Learnings sections.\n\n\
+         Do NOT consider setup complete until both CLAUDE.md and at least one skill have been \
+         written. If the user skips the description and jumps straight to a task, still write \
+         a CLAUDE.md and skill based on what you can infer from the task.",
+    );
+
+    let agent_key = format!("{}:{}", working_dir.to_string_lossy(), session_key);
+    let chat_state = agent_sessions
+        .get_for_session(&agent_key, &agent_path, &session_key)
+        .await;
+    let resume_id = chat_state.get().await;
+
+    houston_tauri::session_runner::spawn_and_monitor(
+        &app_handle,
+        agent_path.clone(),
+        session_key.clone(),
+        ".".to_string(),
+        resume_id,
+        working_dir,
+        Some(system_prompt),
+        Some(chat_state),
+        Some(PersistOptions {
+            db: state.db.clone(),
+            source: "desktop".to_string(),
+            user_message: None,
+            claude_session_id: None,
+        }),
+        Some(pid_map.inner().clone()),
+    );
+
+    Ok(())
+}
+
+#[tauri::command(rename_all = "snake_case")]
 pub async fn stop_session(
     app_handle: tauri::AppHandle,
     pid_map: State<'_, SessionPidMap>,
+    agent_path: String,
     session_key: String,
 ) -> Result<(), String> {
     if let Some(pid) = pid_map.remove(&session_key).await {
@@ -255,6 +286,7 @@ pub async fn stop_session(
         let _ = app_handle.emit(
             "houston-event",
             HoustonEvent::FeedItem {
+                agent_path: agent_path.clone(),
                 session_key: session_key.clone(),
                 item: houston_sessions::FeedItem::SystemMessage(
                     "Stopped by user".into(),
@@ -264,6 +296,7 @@ pub async fn stop_session(
         let _ = app_handle.emit(
             "houston-event",
             HoustonEvent::SessionStatus {
+                agent_path,
                 session_key,
                 status: "completed".into(),
                 error: None,

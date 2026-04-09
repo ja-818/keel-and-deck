@@ -15,14 +15,14 @@ use tokio::sync::RwLock;
 
 pub fn run() {
     // Initialize logging before anything else
-    let data_dir = houston_tauri::houston_db::db::default_data_dir("houston");
-    logging::init(&data_dir);
+    let houston = houston_tauri::houston_db::db::houston_dir();
+    logging::init(&houston);
 
     tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {
-            let data_dir = houston_tauri::houston_db::db::default_data_dir("houston");
-            let db_path = data_dir.join("houston.db");
+            let houston = houston_tauri::houston_db::db::houston_dir();
+            let db_path = houston.join("db").join("houston.db");
 
             let db = tauri::async_runtime::block_on(async {
                 Database::connect(&db_path)
@@ -30,8 +30,7 @@ pub fn run() {
                     .expect("Failed to open database")
             });
 
-            let docs = dirs::document_dir().expect("No Documents directory found");
-            let root = docs.join("Houston");
+            let root = houston.join("workspaces");
             std::fs::create_dir_all(&root).ok();
 
             app.manage(AppState {
@@ -91,9 +90,10 @@ pub fn run() {
                         Err(_) => return,
                     };
                     let agent_path = parsed["agent_path"].as_str().unwrap_or("").to_string();
-                    let session_key = parsed["session_key"].as_str().unwrap_or("main").to_string();
+                    let session_key = parsed["session_key"].as_str().unwrap_or("").to_string();
                     let text = parsed["text"].as_str().unwrap_or("").to_string();
-                    if agent_path.is_empty() || text.is_empty() {
+                    if agent_path.is_empty() || session_key.is_empty() || text.is_empty() {
+                        tracing::warn!("[slack-inbound] missing agent_path, session_key, or text — dropping");
                         return;
                     }
                     let h = handle.clone();
@@ -150,6 +150,7 @@ pub fn run() {
             commands::store::uninstall_store_agent,
             // Chat commands (send_message, load_chat_history, file read/write)
             commands::chat::send_message,
+            commands::chat::start_onboarding_session,
             commands::chat::stop_session,
             commands::chat::load_chat_history,
             commands::chat::read_agent_file,

@@ -15,12 +15,14 @@ import type { TabProps } from "../../lib/types";
 
 export default function ChatTab({ agent }: TabProps) {
   const { isSpecialTool, renderToolResult, renderTurnSummary } = useFileToolRenderer(agent.folderPath);
-  // Session key is agent-scoped to prevent cross-agent event bleeding
-  const sessionKey = agent.id;
+  // Free-form chat tab gets its own UUID-scoped session key per agent.
+  // Must be stable across renders so streaming events land in the same bucket.
+  const sessionKey = `chat-${agent.id}`;
+  const agentPath = agent.folderPath;
   // Attachments scope: keyed by agent so they survive restarts and are
   // wiped only when the agent is deleted.
   const attachmentScope = `agent-${agent.id}`;
-  const feedItems = useFeedStore((s) => s.items[sessionKey]);
+  const feedItems = useFeedStore((s) => s.items[agentPath]?.[sessionKey]);
   const pushFeedItem = useFeedStore((s) => s.pushFeedItem);
   const setFeed = useFeedStore((s) => s.setFeed);
   const clearFeed = useFeedStore((s) => s.clearFeed);
@@ -38,17 +40,17 @@ export default function ChatTab({ agent }: TabProps) {
   useEffect(() => {
     if (loadedRef.current === agent.id) return;
     loadedRef.current = agent.id;
-    clearFeed(sessionKey);
+    clearFeed(agentPath, sessionKey);
     setComposerText("");
     setComposerFiles([]);
-    tauriChat.loadHistory(agent.folderPath, sessionKey).then((rows) => {
-      if (rows.length > 0) setFeed(sessionKey, rows as FeedItem[]);
+    tauriChat.loadHistory(agentPath, sessionKey).then((rows) => {
+      if (rows.length > 0) setFeed(agentPath, sessionKey, rows as FeedItem[]);
     });
-  }, [agent.id, sessionKey, setFeed, clearFeed, agent.folderPath]);
+  }, [agent.id, sessionKey, agentPath, setFeed, clearFeed]);
 
   const handleStop = useCallback(() => {
-    tauriChat.stop(sessionKey).catch(console.error);
-  }, [sessionKey]);
+    tauriChat.stop(agentPath, sessionKey).catch(console.error);
+  }, [agentPath, sessionKey]);
 
   const handleOpenLink = useCallback((url: string) => {
     tauriSystem.openUrl(url).catch(console.error);
@@ -64,16 +66,16 @@ export default function ChatTab({ agent }: TabProps) {
       const visible = files.length > 0
         ? `${text}${text ? "\n\n" : ""}Attached: ${files.map((f) => f.name).join(", ")}`
         : text;
-      pushFeedItem(sessionKey, { feed_type: "user_message", data: visible });
+      pushFeedItem(agentPath, sessionKey, { feed_type: "user_message", data: visible });
       // Clear composer immediately so the user sees the send.
       setComposerText("");
       setComposerFiles([]);
       try {
         const paths = await tauriAttachments.save(attachmentScope, files);
         const prompt = withAttachmentPaths(text, paths);
-        await tauriChat.send(agent.folderPath, prompt, sessionKey);
+        await tauriChat.send(agentPath, prompt, sessionKey);
       } catch (err) {
-        pushFeedItem(sessionKey, {
+        pushFeedItem(agentPath, sessionKey, {
           feed_type: "system_message",
           data: `Failed to start session: ${err}`,
         });
@@ -82,7 +84,7 @@ export default function ChatTab({ agent }: TabProps) {
         sendingRef.current = false;
       }
     },
-    [agent.folderPath, sessionKey, attachmentScope, pushFeedItem],
+    [agentPath, sessionKey, attachmentScope, pushFeedItem],
   );
 
   return (

@@ -10,11 +10,13 @@ use serde::Serialize;
 pub enum HoustonEvent {
     /// A feed item from a running session.
     FeedItem {
+        agent_path: String,
         session_key: String,
         item: FeedItem,
     },
     /// Session status changed (starting, running, completed, error).
     SessionStatus {
+        agent_path: String,
         session_key: String,
         status: String,
         error: Option<String>,

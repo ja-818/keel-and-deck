@@ -9,7 +9,20 @@ export function useConnections() {
   });
 }
 
+export function useComposioApps() {
+  return useQuery({
+    queryKey: ["composio-apps"],
+    queryFn: () => tauriConnections.listApps(),
+    staleTime: 1000 * 60 * 60,
+  });
+}
+
 export function useInvalidateConnections() {
   const qc = useQueryClient();
   return () => qc.invalidateQueries({ queryKey: queryKeys.connections() });
+}
+
+export function useResetConnections() {
+  const qc = useQueryClient();
+  return () => qc.resetQueries({ queryKey: queryKeys.connections() });
 }

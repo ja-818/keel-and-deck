@@ -34,7 +34,7 @@ pub fn init(data_dir: &Path) {
 }
 
 fn logs_dir() -> PathBuf {
-    houston_tauri::houston_db::db::default_data_dir("houston").join("logs")
+    houston_tauri::houston_db::db::houston_dir().join("logs")
 }
 
 fn frontend_log_path() -> PathBuf {

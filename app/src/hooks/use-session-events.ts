@@ -59,6 +59,16 @@ async function sendNotification(
         if (pendingNavTimer) clearTimeout(pendingNavTimer);
         pendingNavTimer = setTimeout(() => { pendingNotificationNav = null; }, 5 * 60 * 1000);
         logger.debug(`[notification] pending nav set: agentId=${nav.agentId} activityId=${nav.activityId}`);
+
+        // If the window is already focused, no focus-change event will fire when
+        // the user clicks the banner. Navigate immediately using Tauri's reliable
+        // isFocused() (unlike document.hasFocus() which is broken in WKWebView).
+        const { getCurrentWindow } = await import("@tauri-apps/api/window");
+        const focused = await getCurrentWindow().isFocused();
+        if (focused) {
+          logger.debug("[notification] window already focused (Tauri) — navigating immediately");
+          consumePendingNav();
+        }
       }
     }
   } catch (e) {
@@ -105,14 +115,15 @@ export function useSessionEvents() {
       switch (payload.type) {
         case "FeedItem":
           h.pushFeedItem(
+            payload.data.agent_path,
             payload.data.session_key,
             payload.data.item as FeedItem,
           );
           break;
         case "SessionStatus": {
-          const { status, error, session_key } = payload.data;
+          const { status, error, session_key, agent_path } = payload.data;
           if (status === "error" && error) {
-            h.pushFeedItem(session_key, {
+            h.pushFeedItem(agent_path, session_key, {
               feed_type: "system_message",
               data: `Session error: ${error}`,
             } as FeedItem);
@@ -129,15 +140,16 @@ export function useSessionEvents() {
             // Skip routine-* sessions — the routine runner handles their lifecycle.
             if (session_key.startsWith("activity-") && !session_key.startsWith("routine-")) {
               const activityId = session_key.replace("activity-", "");
-              if (agent?.folderPath) {
-                tauriActivity.update(agent.folderPath, activityId, { status: "needs_you" }).catch((e) =>
-                  console.error("[session] Failed to update activity status:", e),
-                );
-              }
-              if (agent?.id) {
+              // Use the event's agent_path so we update the right agent even
+              // if the user has since navigated away from it.
+              tauriActivity.update(agent_path, activityId, { status: "needs_you" }).catch((e) =>
+                console.error("[session] Failed to update activity status:", e),
+              );
+              // Only navigate if the completed session belongs to the currently-open agent.
+              if (agent?.id && agent.folderPath === agent_path) {
                 nav = { agentId: agent.id, activityId };
               } else {
-                logger.debug(`[notification] session completed but agent.id missing: session_key=${session_key}`);
+                logger.debug(`[notification] session completed for a non-active agent: agent_path=${agent_path}`);
               }
             }
 
@@ -156,21 +168,33 @@ export function useSessionEvents() {
       }
     });
 
+    // Case: user clicks notification → plugin fires onAction directly.
+    // This is the most reliable path for macOS desktop notification clicks.
+    let unlistenNotificationAction: (() => void) | undefined;
+    import("@tauri-apps/plugin-notification").then(({ onAction }) => {
+      onAction((action) => {
+        logger.debug(`[notification] onAction fired: ${JSON.stringify(action)} pendingNav=${JSON.stringify(pendingNotificationNav)}`);
+        consumePendingNav();
+      }).then((unlisten) => {
+        unlistenNotificationAction = () => { unlisten.unregister(); };
+      }).catch((e) => {
+        logger.debug(`[notification] onAction registration failed: ${e}`);
+      });
+    });
+
     // Case: app in background — user clicks notification → OS activates app →
     // Rust emits "app-activated" via RunEvent::Resumed → we consume pending nav.
+    // Also refresh the agent list so any external changes (e.g. Finder delete) are picked up.
     const unlistenActivated = listen("app-activated", () => {
       logger.debug(`[notification] app-activated event fired: pendingNav=${JSON.stringify(pendingNotificationNav)}`);
       consumePendingNav();
+      const ws = useWorkspaceStore.getState().current;
+      if (ws) {
+        useAgentStore.getState().loadAgents(ws.id);
+      }
     });
 
-    // Fallback: browser-level focus and Tauri window focus (belt + suspenders).
-    const handleFocus = () => {
-      if (!pendingNotificationNav) return;
-      logger.debug(`[notification] window focus event fired (browser): pendingNav=${JSON.stringify(pendingNotificationNav)}`);
-      consumePendingNav();
-    };
-    window.addEventListener("focus", handleFocus);
-
+    // Fallback: Tauri window focus event (fires when user switches to the app any way).
     const unlistenTauriFocus = getCurrentWindow().onFocusChanged(({ payload: focused }) => {
       if (!focused || !pendingNotificationNav) return;
       logger.debug(`[notification] onFocusChanged fired: focused=${focused} pendingNav=${JSON.stringify(pendingNotificationNav)}`);
@@ -180,7 +204,7 @@ export function useSessionEvents() {
     return () => {
       unlisten.then((fn) => fn());
       unlistenActivated.then((fn) => fn());
-      window.removeEventListener("focus", handleFocus);
+      unlistenNotificationAction?.();
       unlistenTauriFocus.then((fn) => fn());
     };
   }, []);

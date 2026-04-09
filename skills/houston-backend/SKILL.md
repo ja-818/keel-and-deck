@@ -50,7 +50,6 @@ use houston_tauri::{
     state::AppState,
     events::HoustonEvent,
     session_runner::{spawn_and_monitor, SessionResult, PersistOptions},
-    session_queue::{SessionQueue, SessionQueueConfig},
     agent_sessions::AgentSessionMap,
     chat_session::ChatSessionState,
     channel_manager::{ChannelManager, RoutedMessage},
@@ -80,8 +79,8 @@ Enum for Rust-to-JS event emission. Serialized as `{ type, data }`.
 
 | Variant | Data fields |
 |---------|-------------|
-| `FeedItem` | `session_key`, `item: FeedItem` |
-| `SessionStatus` | `session_key`, `status`, `error` |
+| `FeedItem` | `agent_path`, `session_key`, `item: FeedItem` |
+| `SessionStatus` | `agent_path`, `session_key`, `status`, `error` |
 | `Toast` | `message`, `variant` |
 | `AuthRequired` | `message` |
 | `CompletionToast` | `title`, `issue_id` |
@@ -95,7 +94,7 @@ Enum for Rust-to-JS event emission. Serialized as `{ type, data }`.
 | `RoutinesChanged` | `project_id` |
 
 ```rust
-app_handle.emit("houston-event", HoustonEvent::FeedItem { session_key, item })?;
+app_handle.emit("houston-event", HoustonEvent::FeedItem { agent_path, session_key, item })?;
 app_handle.emit("houston-event", HoustonEvent::Toast { message: "Done".into(), variant: "success".into() })?;
 ```
 
@@ -106,47 +105,34 @@ Core session lifecycle. Spawns Claude CLI, emits events, persists feed, tracks s
 ```rust
 pub fn spawn_and_monitor(
     app_handle: &tauri::AppHandle,
+    agent_path: String,
     session_key: String,
     prompt: String,
     resume_id: Option<String>,
-    working_dir: Option<PathBuf>,
+    working_dir: PathBuf,
     system_prompt: Option<String>,
     chat_state: Option<ChatSessionState>,
     persist: Option<PersistOptions>,
+    pid_map: Option<SessionPidMap>,
 ) -> tokio::task::JoinHandle<SessionResult>
 ```
 
 **Key behaviors:**
 - Auto-calls `claude_path::init()` (idempotent via `OnceLock`)
-- Emits `HoustonEvent::FeedItem` and `HoustonEvent::SessionStatus`
-- Writes `.claude_session_id` to working directory for `--resume` on restart
-- Uses v2 session-keyed persistence when `claude_session_id` is set
-
-### SessionQueue
-
-Sequential message queue with automatic `--resume`. Messages queue while Claude is busy.
-
-```rust
-let queue = SessionQueue::new(app_handle, SessionQueueConfig {
-    session_key: "main".into(),
-    working_dir: Some(dir),
-    system_prompt: Some(prompt),
-    model: None,
-    effort: None,
-    chat_state: Some(state),
-    persist: Some(opts),
-});
-queue.send("Do something".into())?;
-```
+- Emits `HoustonEvent::FeedItem { agent_path, session_key, item }` and `HoustonEvent::SessionStatus { agent_path, session_key, ... }`
+- Writes `.houston/sessions/{session_key}.sid` under the agent folder for `--resume` on restart
+- Persists feed items keyed by `claude_session_id`; the initial user message is buffered in `PersistOptions.user_message` and written on `SessionId` arrival
 
 ### AgentSessionMap
 
-Per-agent session state with disk persistence. Loads/saves `.claude_session_id`.
+One `ChatSessionState` per `(agent_path, session_key)` pair. Loads/saves `.houston/sessions/{session_key}.sid`.
 
 ```rust
 let session_map: AgentSessionMap = Default::default();
-let state = session_map.get_for_agent("project-1", &app_state).await;
-session_map.persist("project-1", &app_state).await;
+let key = format!("{agent_path}:{session_key}");
+let state = session_map.get_for_session(&key, &agent_path, &session_key).await;
+// When the agent is deleted:
+session_map.remove_agent(&format!("{agent_path}:")).await;
 ```
 
 ### ChannelManager
@@ -279,7 +265,8 @@ Every Houston app stores agent-visible data in `.houston/`:
     skills/             # One .md per skill
     log.jsonl           # Append-only audit trail
     config.json         # ProjectConfig
-  .claude_session_id    # Persisted session ID for --resume
+    sessions/
+      {session_key}.sid # Per-conversation Claude session id for --resume
   CLAUDE.md             # Agent instructions
 ```
 

@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import { tauriAgents, tauriAttachments, tauriPreferences, tauriRoutines, tauriWatcher } from "../lib/tauri";
+import { useFeedStore } from "./feeds";
 import type { Agent } from "../lib/types";
+
+export interface CreatedAgent {
+  agent: Agent;
+  onboardingActivityId: string | null;
+}
 
 interface AgentState {
   agents: Agent[];
@@ -8,7 +14,7 @@ interface AgentState {
   loading: boolean;
   loadAgents: (workspaceId: string) => Promise<void>;
   setCurrent: (agent: Agent) => void;
-  create: (workspaceId: string, name: string, configId: string, color?: string, claudeMd?: string) => Promise<Agent>;
+  create: (workspaceId: string, name: string, configId: string, color?: string, claudeMd?: string) => Promise<CreatedAgent>;
   delete: (workspaceId: string, id: string) => Promise<void>;
   rename: (workspaceId: string, id: string, newName: string) => Promise<void>;
 }
@@ -46,7 +52,8 @@ export const useAgentStore = create<AgentState>((set, get) => ({
   },
 
   create: async (workspaceId, name, configId, color?, claudeMd?) => {
-    const agent = await tauriAgents.create(workspaceId, name, configId, color, claudeMd);
+    const result = await tauriAgents.create(workspaceId, name, configId, color, claudeMd);
+    const { agent, onboardingActivityId } = result;
     set((s) => ({
       agents: [...s.agents, agent],
       current: agent,
@@ -56,14 +63,21 @@ export const useAgentStore = create<AgentState>((set, get) => ({
     tauriWatcher.start(agent.folderPath).catch((e) =>
       console.error("[watcher] Failed to start:", e),
     );
-    return agent;
+    return { agent, onboardingActivityId };
   },
 
   delete: async (workspaceId, id) => {
+    // Resolve the agent path before deleting so we can clear its feed bucket.
+    const agentPath = get().agents.find((a) => a.id === id)?.folderPath;
     await tauriAgents.delete(workspaceId, id);
-    // Wipe any chat composer attachments scoped to this agent's main chat.
+    // Wipe any chat composer attachments scoped to this agent's chat.
     // Per-activity attachments are wiped via useDeleteActivity / handleDelete.
     await tauriAttachments.delete(`agent-${id}`).catch(() => {});
+    // Drop the feed store bucket for this agent so stale messages don't
+    // linger in memory.
+    if (agentPath) {
+      useFeedStore.getState().clearAgent(agentPath);
+    }
     set((s) => {
       const agents = s.agents.filter((a) => a.id !== id);
       const current =

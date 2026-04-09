@@ -119,14 +119,12 @@ impl Database {
     }
 }
 
-/// Returns the default data directory for a given app name.
-/// On macOS: ~/Library/Application Support/<app_name>/
-pub fn default_data_dir(app_name: &str) -> PathBuf {
+/// Returns the Houston data root: `~/.houston/`.
+/// All Houston data (db, logs, workspaces, cache) lives here.
+/// Delete this directory for a completely clean slate.
+pub fn houston_dir() -> PathBuf {
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
-    PathBuf::from(home)
-        .join("Library")
-        .join("Application Support")
-        .join(app_name)
+    PathBuf::from(home).join(".houston")
 }
 
 #[cfg(test)]

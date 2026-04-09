@@ -3,7 +3,15 @@ import { cn } from "@houston-ai/core";
 
 export interface TabBarProps {
   title?: string;
-  tabs: { id: string; label: string; badge?: number }[];
+  tabs: {
+    id: string;
+    label: string;
+    badge?: number;
+    /** Disable the tab (non-clickable, muted). */
+    disabled?: boolean;
+    /** Optional text chip shown next to the label (e.g. "Soon"). */
+    chip?: string;
+  }[];
   activeTab: string;
   onTabChange: (id: string) => void;
   actions?: ReactNode;
@@ -37,18 +45,27 @@ export function TabBar({
       <div className="flex items-center gap-5">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
+          const isDisabled = tab.disabled;
           return (
             <button
               key={tab.id}
-              onClick={() => onTabChange(tab.id)}
+              onClick={() => !isDisabled && onTabChange(tab.id)}
+              disabled={isDisabled}
               className={cn(
                 "relative flex items-center gap-1.5 pb-2.5 text-sm transition-colors duration-200",
-                isActive
-                  ? "text-foreground font-medium"
-                  : "text-muted-foreground hover:text-foreground",
+                isDisabled
+                  ? "text-muted-foreground/50 cursor-not-allowed"
+                  : isActive
+                    ? "text-foreground font-medium"
+                    : "text-muted-foreground hover:text-foreground",
               )}
             >
               {tab.label}
+              {tab.chip && (
+                <span className="inline-flex items-center h-[16px] px-1.5 rounded-full text-[10px] font-medium bg-accent text-muted-foreground">
+                  {tab.chip}
+                </span>
+              )}
               {tab.badge != null && tab.badge > 0 && (
                 <span
                   className={cn(
@@ -61,7 +78,7 @@ export function TabBar({
                   {tab.badge}
                 </span>
               )}
-              {isActive && (
+              {isActive && !isDisabled && (
                 <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-full" />
               )}
             </button>

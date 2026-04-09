@@ -9,8 +9,8 @@ STOP - FOLLOW THIS PROTOCOL FOR EVERY INTERACTION
 ### MANDATORY DEBUGGING RULE — USE THE LOG FILES
 When a bug occurs and the fix isn't immediately obvious: **NEVER guess.** Always:
 1. **Read the log files first** — they contain all backend and frontend errors:
-   - **Backend:** `~/Library/Application Support/houston/logs/backend.log` (Rust tracing output — sessions, agent store, channels, watcher, etc.)
-   - **Frontend:** `~/Library/Application Support/houston/logs/frontend.log` (JS console.error/warn, React crashes, Tauri command failures)
+   - **Backend:** `~/.houston/logs/backend.log` (Rust tracing output — sessions, agent store, channels, watcher, etc.)
+   - **Frontend:** `~/.houston/logs/frontend.log` (JS console.error/warn, React crashes, Tauri command failures)
 2. Diagnose from the ACTUAL error in the logs, not assumptions
 3. If the logs don't have enough info, add targeted `tracing::debug!()` (Rust) or `logger.debug()` (TS from `lib/logger.ts`) to narrow it down
 4. **Never ask the user to copy-paste terminal output** — read the log files directly
