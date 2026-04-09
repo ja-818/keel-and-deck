@@ -31,8 +31,8 @@
     "active": true,
     "targets": ["app", "dmg"],
     "macOS": {
-      "signingIdentity": null,
-      "entitlements": null,
+      "signingIdentity": "-",
+      "entitlements": "entitlements.plist",
       "minimumSystemVersion": "10.15"
     },
     "icon": [
