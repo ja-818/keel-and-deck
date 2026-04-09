@@ -1,9 +1,16 @@
-import { useCallback } from "react";
-import { ConnectionsView } from "@houston-ai/connections";
+import { useCallback, useState } from "react";
 import { useConnections, useInvalidateConnections } from "../../hooks/queries";
-import { tauriSystem } from "../../lib/tauri";
+import { tauriConnections, tauriSystem } from "../../lib/tauri";
 import { useComposioAuth } from "../../hooks/use-composio-auth";
 import { ComposioAuthDialog } from "../composio-auth-dialog";
+import { BrowseAppsSection } from "./browse-apps-section";
+import {
+  LoadingState,
+  NotInstalledState,
+  NeedsAuthState,
+  ErrorState,
+  SignedInHeader,
+} from "./integrations-states";
 import type { TabProps } from "../../lib/types";
 
 const COMPOSIO_DASHBOARD_URL = "https://dashboard.composio.dev";
@@ -11,34 +18,66 @@ const COMPOSIO_DASHBOARD_URL = "https://dashboard.composio.dev";
 export default function ConnectionsTab(_props: TabProps) {
   const { data: result, isLoading: loading, refetch } = useConnections();
   const invalidate = useInvalidateConnections();
+  const auth = useComposioAuth(() => invalidate());
+  const [installing, setInstalling] = useState(false);
+  const [installError, setInstallError] = useState<string | null>(null);
 
   const handleManage = useCallback(() => {
     tauriSystem.openUrl(COMPOSIO_DASHBOARD_URL);
   }, []);
 
-  const auth = useComposioAuth(() => {
-    invalidate();
-  });
+  const handleInstall = useCallback(async () => {
+    setInstalling(true);
+    setInstallError(null);
+    try {
+      await tauriConnections.installCli();
+      invalidate();
+    } catch (e) {
+      setInstallError(String(e));
+    } finally {
+      setInstalling(false);
+    }
+  }, [invalidate]);
 
   return (
     <div className="h-full overflow-auto">
       <div className="max-w-3xl mx-auto w-full px-6 py-6">
-        <ConnectionsView
-          result={result ?? null}
-          loading={loading}
-          onRetry={() => refetch()}
-          onManage={handleManage}
-          onAuth={auth.startAuth}
-        />
+        {loading && <LoadingState />}
+
+        {!loading && result?.status === "not_installed" && (
+          <NotInstalledState onInstall={handleInstall} installing={installing} />
+        )}
+
+        {!loading && result?.status === "needs_auth" && (
+          <NeedsAuthState onAuth={auth.startAuth} />
+        )}
+
+        {!loading && result?.status === "error" && (
+          <ErrorState
+            message={result.message}
+            onRetry={() => refetch()}
+            onReconnect={handleManage}
+          />
+        )}
+
+        {installError && (
+          <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mt-4">
+            {installError}
+          </p>
+        )}
+
+        {!loading && result?.status === "ok" && (
+          <>
+            <SignedInHeader email={result.email} orgName={result.org_name} />
+            <BrowseAppsSection connectedToolkits={new Set()} />
+          </>
+        )}
       </div>
 
       <ComposioAuthDialog
         state={auth.state}
         onClose={auth.close}
-        onReopen={auth.reopen}
-        onTogglePaste={auth.togglePaste}
-        onPasteChange={auth.setPasteValue}
-        onPasteSubmit={auth.submitPaste}
+        onReopenBrowser={auth.reopenBrowser}
       />
     </div>
   );

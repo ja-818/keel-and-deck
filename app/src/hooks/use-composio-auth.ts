@@ -1,92 +1,115 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { listen } from "@tauri-apps/api/event";
-import { tauriConnections } from "../lib/tauri";
+import { tauriConnections, tauriSystem } from "../lib/tauri";
+import { logger } from "../lib/logger";
 
+/**
+ * State of the Composio sign-in dialog.
+ *
+ * New shape: the UUID and URL are generated CLIENT-SIDE. The dialog
+ * flips to `waiting` state and opens the browser with a URL that
+ * Composio's dashboard treats as a rendezvous key. The backend is
+ * only touched during the `complete_composio_login` call that polls
+ * until the user has approved in the browser.
+ *
+ * Why: previously we called `start_composio_oauth` first, which on
+ * macOS Tauri occasionally hung inside `tokio::process::Command::
+ * output().await` with no visible error. By computing the URL in JS
+ * we eliminate any Rust call from the visible "open browser" step,
+ * so the worst case is "browser didn't auto-open" (which we also
+ * cover with a fallback button).
+ */
 export interface ComposioAuthState {
   open: boolean;
-  authUrl: string | null;
+  /** Current phase of the flow. */
+  phase: "idle" | "waiting" | "error";
+  /** URL the user can click to open/re-open the Composio dashboard. */
+  loginUrl: string | null;
   error: string | null;
-  pasteExpanded: boolean;
-  pasteValue: string;
-  submitting: boolean;
 }
 
-export function useComposioAuth(onSuccess: () => void) {
+export function useComposioAuth(onSuccess: () => void | Promise<void>) {
   const [state, setState] = useState<ComposioAuthState>({
     open: false,
-    authUrl: null,
+    phase: "idle",
+    loginUrl: null,
     error: null,
-    pasteExpanded: false,
-    pasteValue: "",
-    submitting: false,
   });
-  const unlistenRef = useRef<(() => void) | null>(null);
 
+  // Generation counter: lets us discard stale results if the user
+  // restarts the flow before the previous attempt resolves.
+  const genRef = useRef(0);
+  const mountedRef = useRef(true);
   useEffect(() => {
-    return () => { unlistenRef.current?.(); };
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   const startAuth = useCallback(async () => {
-    setState({
-      open: true, authUrl: null, error: null,
-      pasteExpanded: false, pasteValue: "", submitting: false,
-    });
+    const myGen = ++genRef.current;
 
-    unlistenRef.current?.();
-    unlistenRef.current = await listen<{ success: boolean; error?: string }>(
-      "composio-auth-result",
-      (event) => {
-        if (event.payload.success) {
-          setState((s) => ({ ...s, open: false }));
-          onSuccess();
-        } else {
-          setState((s) => ({ ...s, error: event.payload.error ?? "Authentication failed" }));
-        }
-        unlistenRef.current?.();
-        unlistenRef.current = null;
-      },
-    );
+    // Show dialog immediately in "waiting" state.
+    setState({ open: true, phase: "waiting", loginUrl: null, error: null });
 
     try {
-      const { auth_url } = await tauriConnections.startOAuth();
-      setState((s) => ({ ...s, authUrl: auth_url }));
+      // 1. Get the login URL from the backend.
+      logger.info("[composio-auth] calling startOAuth...");
+      const { login_url, cli_key } = await tauriConnections.startOAuth();
+      logger.info(`[composio-auth] startOAuth returned: url=${login_url} key=${cli_key}`);
+
+      // 2. ALWAYS surface the URL and open the browser — no stale-gen
+      //    check here. Even if the component re-rendered during the
+      //    500ms backend call (TanStack refetch, tab switch, etc.),
+      //    the user still expects the browser to open.
+      setState((s) => ({ ...s, loginUrl: login_url }));
+      logger.info("[composio-auth] opening browser...");
+      try {
+        await tauriSystem.openUrl(login_url);
+        logger.info("[composio-auth] openUrl resolved OK");
+      } catch (urlErr) {
+        logger.error("[composio-auth] openUrl FAILED:", String(urlErr));
+      }
+
+      // 3. Block on the CLI until the user approves (or 5 min timeout).
+      //    THIS is the only step where a stale-gen check matters —
+      //    we don't want an old flow's completion to overwrite the
+      //    current state.
+      logger.info("[composio-auth] calling completeLogin...");
+      await tauriConnections.completeLogin(cli_key);
+      logger.info("[composio-auth] completeLogin resolved OK");
+      if (!mountedRef.current || genRef.current !== myGen) {
+        logger.info("[composio-auth] stale gen after completeLogin, not updating state");
+        return;
+      }
+
+      setState({ open: false, phase: "idle", loginUrl: null, error: null });
+      await onSuccess();
     } catch (e) {
-      console.error("[connections] OAuth start failed:", e);
-      setState((s) => ({ ...s, error: String(e) }));
+      logger.error("[composio-auth] flow error:", String(e));
+      if (!mountedRef.current || genRef.current !== myGen) return;
+      setState((s) => ({
+        ...s,
+        phase: "error",
+        error: String(e),
+      }));
     }
   }, [onSuccess]);
 
-  const reopen = useCallback(async () => {
-    try { await tauriConnections.reopenOAuth(); }
-    catch (e) { console.error("[connections] Reopen failed:", e); }
-  }, []);
-
-  const togglePaste = useCallback(() => {
-    setState((s) => ({ ...s, pasteExpanded: !s.pasteExpanded }));
-  }, []);
-
-  const setPasteValue = useCallback((value: string) => {
-    setState((s) => ({ ...s, pasteValue: value }));
-  }, []);
-
-  const submitPaste = useCallback(async () => {
-    const url = state.pasteValue.trim();
-    if (!url) return;
-    setState((s) => ({ ...s, submitting: true, error: null }));
-    try {
-      await tauriConnections.submitCallback(url);
-      setState((s) => ({ ...s, open: false }));
-      onSuccess();
-    } catch (e) {
-      setState((s) => ({ ...s, error: String(e), submitting: false }));
+  const reopenBrowser = useCallback(() => {
+    if (state.loginUrl) {
+      tauriSystem.openUrl(state.loginUrl).catch(() => {});
     }
-  }, [state.pasteValue, onSuccess]);
+  }, [state.loginUrl]);
 
   const close = useCallback(() => {
-    setState((s) => ({ ...s, open: false }));
-    unlistenRef.current?.();
-    unlistenRef.current = null;
+    // Cancel the in-flight flow by bumping the generation: any
+    // pending completeLogin resolution from this generation will be
+    // discarded when it finally returns. The Rust subprocess will
+    // still run to completion (its own 5 min timeout), but the UI
+    // won't react to it. A proper backend cancel is a follow-up.
+    genRef.current += 1;
+    setState({ open: false, phase: "idle", loginUrl: null, error: null });
   }, []);
 
-  return { state, startAuth, reopen, togglePaste, setPasteValue, submitPaste, close };
+  return { state, startAuth, reopenBrowser, close };
 }

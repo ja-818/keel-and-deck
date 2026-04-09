@@ -230,13 +230,14 @@ pub fn run() {
             commands::slack::connect_slack,
             commands::slack::disconnect_slack,
             commands::slack::get_slack_sync_status,
-            // Composio integrations
+            // Composio integrations (CLI-backed)
             houston_tauri::composio_commands::list_composio_connections,
             houston_tauri::composio_commands::list_composio_apps,
             houston_tauri::composio_commands::connect_composio_app,
             houston_tauri::composio_commands::start_composio_oauth,
-            houston_tauri::composio_commands::reopen_composio_oauth,
-            houston_tauri::composio_commands::submit_composio_callback,
+            houston_tauri::composio_commands::complete_composio_login,
+            houston_tauri::composio_commands::is_composio_cli_installed,
+            houston_tauri::composio_commands::install_composio_cli,
             // Logging
             logging::write_frontend_log,
             logging::read_recent_logs,

@@ -8,3 +8,5 @@ target/
 .claude/skills/
 .windsurf/
 skills-lock.json
+.playwright-mcp/
+.wrangler/

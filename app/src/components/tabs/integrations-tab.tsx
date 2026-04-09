@@ -1,51 +1,51 @@
-import { useCallback, useMemo } from "react";
-import { useConnections, useAgentIntegrations, useResetConnections } from "../../hooks/queries";
-import { tauriSystem } from "../../lib/tauri";
+import { useCallback, useState } from "react";
+import { useConnections, useResetConnections } from "../../hooks/queries";
+import { tauriConnections, tauriSystem } from "../../lib/tauri";
 import { useComposioAuth } from "../../hooks/use-composio-auth";
 import { ComposioAuthDialog } from "../composio-auth-dialog";
 import { BrowseAppsSection } from "./browse-apps-section";
 import {
-  LoadingState, NotConfiguredState, NeedsAuthState, ErrorState,
-  UsedSection, AvailableSection,
+  LoadingState,
+  NotInstalledState,
+  NeedsAuthState,
+  ErrorState,
+  SignedInHeader,
 } from "./integrations-states";
 import type { TabProps } from "../../lib/types";
-import type { Connection } from "@houston-ai/connections";
 
 const COMPOSIO_DASHBOARD_URL = "https://dashboard.composio.dev";
 
-export default function IntegrationsTab({ agent }: TabProps) {
-  const { data: result, isLoading: connectionsLoading, refetch } = useConnections();
-  const { data: tracked, isLoading: trackedLoading } = useAgentIntegrations(agent.folderPath);
+export default function IntegrationsTab({ agent: _agent }: TabProps) {
+  const { data: result, isLoading: loading, refetch } = useConnections();
   const reset = useResetConnections();
   const auth = useComposioAuth(() => reset());
+  const [installing, setInstalling] = useState(false);
+  const [installError, setInstallError] = useState<string | null>(null);
 
   const handleManage = useCallback(() => {
     tauriSystem.openUrl(COMPOSIO_DASHBOARD_URL);
   }, []);
 
-  const loading = connectionsLoading || trackedLoading;
-  const allConnections: Connection[] =
-    result?.status === "ok" ? result.connections : [];
-  const trackedToolkits = new Set((tracked ?? []).map((t) => t.toolkit));
-
-  const usedConnections = allConnections.filter((c) =>
-    trackedToolkits.has(c.toolkit),
-  );
-  const availableConnections = allConnections.filter(
-    (c) => !trackedToolkits.has(c.toolkit),
-  );
-  const connectedToolkits = useMemo(
-    () => new Set(allConnections.map((c) => c.toolkit)),
-    [allConnections],
-  );
+  const handleInstall = useCallback(async () => {
+    setInstalling(true);
+    setInstallError(null);
+    try {
+      await tauriConnections.installCli();
+      await reset();
+    } catch (e) {
+      setInstallError(String(e));
+    } finally {
+      setInstalling(false);
+    }
+  }, [reset]);
 
   return (
     <div className="h-full overflow-auto">
       <div className="max-w-3xl mx-auto w-full px-6 py-6">
         {loading && <LoadingState />}
 
-        {!loading && result?.status === "not_configured" && (
-          <NotConfiguredState onAuth={auth.startAuth} />
+        {!loading && result?.status === "not_installed" && (
+          <NotInstalledState onInstall={handleInstall} installing={installing} />
         )}
 
         {!loading && result?.status === "needs_auth" && (
@@ -60,15 +60,16 @@ export default function IntegrationsTab({ agent }: TabProps) {
           />
         )}
 
+        {installError && (
+          <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mt-4">
+            {installError}
+          </p>
+        )}
+
         {!loading && result?.status === "ok" && (
           <>
-            <UsedSection connections={usedConnections} tracked={tracked ?? []} />
-            <AvailableSection
-              connections={availableConnections}
-              hasUsed={usedConnections.length > 0}
-              onManage={handleManage}
-            />
-            <BrowseAppsSection connectedToolkits={connectedToolkits} />
+            <SignedInHeader email={result.email} orgName={result.org_name} />
+            <BrowseAppsSection connectedToolkits={new Set()} />
           </>
         )}
       </div>
@@ -76,10 +77,7 @@ export default function IntegrationsTab({ agent }: TabProps) {
       <ComposioAuthDialog
         state={auth.state}
         onClose={auth.close}
-        onReopen={auth.reopen}
-        onTogglePaste={auth.togglePaste}
-        onPasteChange={auth.setPasteValue}
-        onPasteSubmit={auth.submitPaste}
+        onReopenBrowser={auth.reopenBrowser}
       />
     </div>
   );

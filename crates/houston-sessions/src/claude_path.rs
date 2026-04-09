@@ -8,13 +8,18 @@ use std::sync::OnceLock;
 /// install locations as fallback.
 static SHELL_PATH: OnceLock<Option<OsString>> = OnceLock::new();
 
-/// Common locations where claude might be installed.
-/// Checked as fallback when shell PATH resolution doesn't find it.
+/// Common locations where `claude` and related CLIs might be installed.
+/// Checked as fallback when shell PATH resolution doesn't find them.
+/// `~/.composio` is the install location for Composio's CLI — needed so
+/// Houston's spawned agents can use `composio search`/`composio execute`
+/// via Bash even when the user's login shell hasn't sourced the PATH
+/// modification the Composio installer appends to rc files.
 const COMMON_CLAUDE_DIRS: &[&str] = &[
     "~/.local/bin",
     "/opt/homebrew/bin",
     "/usr/local/bin",
     "~/.cargo/bin",
+    "~/.composio",
 ];
 
 /// Resolve the user's login shell PATH and cache it.

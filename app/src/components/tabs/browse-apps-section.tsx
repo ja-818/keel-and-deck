@@ -57,8 +57,8 @@ export function BrowseAppsSection({ connectedToolkits }: BrowseAppsSectionProps)
     async (toolkit: string) => {
       setConnecting(toolkit);
       try {
-        const url = await tauriConnections.connectApp(toolkit);
-        tauriSystem.openUrl(url);
+        const { redirect_url } = await tauriConnections.connectApp(toolkit);
+        tauriSystem.openUrl(redirect_url);
         setTimeout(() => invalidate(), 2000);
       } catch {
         // Error already shown via invoke toast

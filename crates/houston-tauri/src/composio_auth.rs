@@ -1,18 +1,19 @@
 //! Composio OAuth PKCE flow for desktop apps.
 //!
-//! Two-phase flow:
-//! 1. `begin_oauth_flow()` — sets up PKCE, opens browser, spawns background
-//!    listener on a fixed port. Returns the auth URL immediately.
-//! 2. The background listener waits for the callback and exchanges the code.
-//!    Alternatively, `complete_oauth_from_url()` accepts a manually pasted URL.
+//! Blocking flow (same pattern as Slack):
+//! 1. `begin_oauth_flow()` — sets up PKCE, opens browser, then BLOCKS until
+//!    the callback arrives (TCP listener) or the user pastes a URL manually.
+//! 2. `complete_oauth_from_url()` — called by the "paste URL" command while
+//!    the main flow is blocking; signals it to complete immediately.
 //!
-//! Both paths converge on the same code exchange + keychain update logic.
+//! The frontend simply `await`s the Tauri command — no events, no listeners.
 
 use base64::Engine;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::sync::Mutex;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::sync::mpsc;
 
 /// Fixed port for the OAuth callback listener.
 const CALLBACK_PORT: u16 = 19823;
@@ -25,31 +26,43 @@ struct PendingOAuth {
     client_id: String,
     redirect_uri: String,
     token_endpoint: String,
+    /// Auth server URL discovered during the current flow — persisted into
+    /// the keychain as `discoveryState.authorizationServerUrl` so that
+    /// Claude Code's spawned MCP clients (running inside Houston agents)
+    /// can find the same entry.
+    auth_server_url: String,
+    /// RFC 9728 protected resource metadata URL — persisted as
+    /// `discoveryState.resourceMetadataUrl`.
+    resource_metadata_url: String,
 }
 
 static PENDING: Mutex<Option<PendingOAuth>> = Mutex::new(None);
 
-// -- Public result type --
-
-#[derive(Debug, Clone, Serialize)]
-pub struct OAuthStarted {
-    pub auth_url: String,
-}
+// Channel used by `complete_oauth_from_url` to signal a successful paste-URL
+// completion to the blocking `begin_oauth_flow`. Only carries success (unit) —
+// errors are returned directly by the paste command and leave the flow open.
+static MANUAL_DONE_TX: Mutex<Option<mpsc::UnboundedSender<()>>> = Mutex::new(None);
 
 // -- Public API --
 
-/// Set up the OAuth flow and open the browser. Returns the auth URL.
-/// Spawns a background listener that will complete the flow when the
-/// browser redirects back. Emits `"composio-auth-result"` on the app handle.
-pub async fn begin_oauth_flow(
-    app_handle: tauri::AppHandle,
-) -> Result<OAuthStarted, String> {
-    let config = read_oauth_config()?;
-    let metadata = fetch_metadata(&config.auth_server_url, &config.resource_metadata_url).await?;
+/// Open the browser and BLOCK until OAuth completes (TCP callback or paste URL).
+/// Returns Ok(()) when the token has been stored in the keychain.
+/// The frontend simply awaits this Tauri command — no events required.
+pub async fn begin_oauth_flow() -> Result<(), String> {
+    // If a previous flow is still running, kill it by dropping its sender.
+    // MutexGuard must be dropped before any .await, so use an explicit block.
+    let old_tx = { MANUAL_DONE_TX.lock().unwrap().take() };
+    if let Some(old_tx) = old_tx {
+        drop(old_tx); // closing the sender causes the old rx.recv() to return None
+        tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+    }
+
+    let discovery = discover_oauth_metadata().await?;
 
     let redirect_uri = format!("http://127.0.0.1:{CALLBACK_PORT}/callback");
 
-    let reg_endpoint = metadata
+    let reg_endpoint = discovery
+        .metadata
         .registration_endpoint
         .as_deref()
         .ok_or("Server does not support dynamic client registration")?;
@@ -60,22 +73,23 @@ pub async fn begin_oauth_flow(
     let challenge = compute_challenge(&verifier);
 
     let auth_url = build_auth_url(
-        &metadata.authorization_endpoint,
+        &discovery.metadata.authorization_endpoint,
         &registration.client_id,
         &redirect_uri,
-        &config.scope,
+        DEFAULT_SCOPE,
         &challenge,
     );
 
-    // Store exchange params for background listener and manual fallback
+    // Guard dropped at end of block — before any .await.
     {
-        let mut pending = PENDING.lock().unwrap();
-        *pending = Some(PendingOAuth {
+        *PENDING.lock().unwrap() = Some(PendingOAuth {
             auth_url: auth_url.clone(),
             verifier,
             client_id: registration.client_id,
             redirect_uri,
-            token_endpoint: metadata.token_endpoint,
+            token_endpoint: discovery.metadata.token_endpoint,
+            auth_server_url: discovery.auth_server_url,
+            resource_metadata_url: discovery.resource_metadata_url,
         });
     }
 
@@ -85,13 +99,33 @@ pub async fn begin_oauth_flow(
         .spawn()
         .map_err(|e| format!("Failed to open browser: {e}"))?;
 
-    // Spawn background listener
-    tokio::spawn(async move {
-        let result = run_callback_listener().await;
-        emit_auth_result(&app_handle, result);
-    });
+    tracing::info!("[composio:auth] Waiting for OAuth callback on port {CALLBACK_PORT}…");
 
-    Ok(OAuthStarted { auth_url })
+    // Set up the manual-completion channel. Guard dropped at end of block.
+    let (tx, mut rx) = mpsc::unbounded_channel::<()>();
+    { *MANUAL_DONE_TX.lock().unwrap() = Some(tx); }
+
+    // Block until EITHER the TCP callback arrives OR the paste-URL path signals.
+    let result = tokio::select! {
+        result = run_callback_listener() => result,
+        received = rx.recv() => {
+            if received.is_some() {
+                Ok(()) // paste-URL path already stored the token
+            } else {
+                Err("Auth flow cancelled".to_string())
+            }
+        }
+    };
+
+    // Clean up — guard dropped at end of block.
+    { *MANUAL_DONE_TX.lock().unwrap() = None; }
+
+    if result.is_ok() {
+        tracing::info!("[composio:auth] OAuth completed successfully");
+    } else {
+        tracing::warn!("[composio:auth] OAuth failed: {:?}", result);
+    }
+    result
 }
 
 /// Re-open the browser with the pending auth URL.
@@ -106,34 +140,42 @@ pub fn reopen_oauth_browser() -> Result<(), String> {
 }
 
 /// Complete the OAuth flow from a manually pasted callback URL.
-/// Extracts the authorization code and exchanges it for tokens.
+/// On success, signals the blocking `begin_oauth_flow` to return immediately.
 pub async fn complete_oauth_from_url(callback_url: &str) -> Result<(), String> {
-    let code = extract_param(callback_url, "code")
-        .ok_or("No authorization code found in the pasted URL")?;
-
     if let Some(err) = extract_param(callback_url, "error") {
         let desc = extract_param(callback_url, "error_description").unwrap_or(err);
         return Err(format!("OAuth error: {desc}"));
     }
 
-    exchange_and_store(&code).await
+    let code = extract_param(callback_url, "code")
+        .ok_or("No authorization code found in the pasted URL")?;
+
+    exchange_and_store(&code).await?;
+
+    // Signal the blocking begin_oauth_flow to return.
+    if let Some(tx) = MANUAL_DONE_TX.lock().unwrap().as_ref() {
+        let _ = tx.send(());
+    }
+
+    Ok(())
 }
 
 /// Silently refresh the access token using a stored refresh token.
 pub async fn refresh_access_token() -> Result<String, String> {
-    let config = read_oauth_config()?;
     let refresh_token = read_refresh_token()
         .ok_or("No refresh token stored — full re-auth required")?;
+    let client_id = read_client_id()
+        .ok_or("No stored client_id — full re-auth required")?;
 
-    let metadata = fetch_metadata(&config.auth_server_url, &config.resource_metadata_url).await?;
+    let discovery = discover_oauth_metadata().await?;
 
     let client = reqwest::Client::new();
     let resp = client
-        .post(&metadata.token_endpoint)
+        .post(&discovery.metadata.token_endpoint)
         .form(&[
             ("grant_type", "refresh_token"),
             ("refresh_token", &refresh_token),
-            ("client_id", &config.client_id),
+            ("client_id", &client_id),
         ])
         .send()
         .await
@@ -153,6 +195,9 @@ pub async fn refresh_access_token() -> Result<String, String> {
         &token.access_token,
         token.expires_in,
         token.refresh_token.as_deref(),
+        &client_id,
+        Some(&discovery.auth_server_url),
+        Some(&discovery.resource_metadata_url),
     )?;
 
     tracing::info!("[composio] Token refreshed silently");
@@ -199,19 +244,10 @@ async fn run_callback_listener() -> Result<(), String> {
     exchange_and_store(&code).await
 }
 
-fn emit_auth_result(app: &tauri::AppHandle, result: Result<(), String>) {
-    use tauri::Emitter;
-    let payload = match &result {
-        Ok(()) => serde_json::json!({ "success": true }),
-        Err(e) => serde_json::json!({ "success": false, "error": e }),
-    };
-    let _ = app.emit("composio-auth-result", payload);
-}
-
 // -- Shared exchange logic --
 
 async fn exchange_and_store(code: &str) -> Result<(), String> {
-    let (verifier, client_id, redirect_uri, token_endpoint) = {
+    let (verifier, client_id, redirect_uri, token_endpoint, auth_server_url, resource_metadata_url) = {
         let pending = PENDING.lock().unwrap();
         let p = pending.as_ref().ok_or("No pending OAuth flow to complete")?;
         (
@@ -219,11 +255,20 @@ async fn exchange_and_store(code: &str) -> Result<(), String> {
             p.client_id.clone(),
             p.redirect_uri.clone(),
             p.token_endpoint.clone(),
+            p.auth_server_url.clone(),
+            p.resource_metadata_url.clone(),
         )
     };
 
     let token = exchange_code(&token_endpoint, code, &client_id, &redirect_uri, &verifier).await?;
-    update_keychain_token(&token.access_token, token.expires_in, token.refresh_token.as_deref())?;
+    update_keychain_token(
+        &token.access_token,
+        token.expires_in,
+        token.refresh_token.as_deref(),
+        &client_id,
+        Some(&auth_server_url),
+        Some(&resource_metadata_url),
+    )?;
 
     // Clear pending state
     { *PENDING.lock().unwrap() = None; }
@@ -232,20 +277,27 @@ async fn exchange_and_store(code: &str) -> Result<(), String> {
     Ok(())
 }
 
-// -- Internal types --
+/// Default scope requested for the Composio MCP OAuth flow. These are the
+/// standard MCP public-client scopes and match Composio's advertised
+/// `scopes_supported`.
+const DEFAULT_SCOPE: &str = "openid profile email offline_access";
 
-struct OAuthConfig {
-    client_id: String,
-    auth_server_url: String,
-    resource_metadata_url: String,
-    scope: String,
-}
+// -- Internal types --
 
 #[derive(Deserialize)]
 struct OAuthMetadata {
     authorization_endpoint: String,
     token_endpoint: String,
     registration_endpoint: Option<String>,
+}
+
+/// Result of OAuth discovery. Carries the RFC 8414 metadata plus the URLs
+/// we followed to get it, so we can persist them in the keychain as
+/// `discoveryState` (Claude Code's spawned MCP clients read this format).
+struct DiscoveryInfo {
+    metadata: OAuthMetadata,
+    auth_server_url: String,
+    resource_metadata_url: String,
 }
 
 #[derive(Deserialize)]
@@ -262,79 +314,139 @@ struct TokenResponse {
     refresh_token: Option<String>,
 }
 
-// -- Read config from keychain --
-
-fn read_oauth_config() -> Result<OAuthConfig, String> {
-    let username = get_username()?;
-    let data = read_keychain(&username)?;
-    let mcp_oauth = data
-        .get("mcpOAuth")
-        .and_then(|v| v.as_object())
-        .ok_or("No mcpOAuth in keychain")?;
-
-    for (key, info) in mcp_oauth {
-        if key.starts_with("composio") {
-            let client_id = info
-                .get("clientId")
-                .and_then(|v| v.as_str())
-                .ok_or("Missing clientId")?
-                .to_string();
-            let discovery = info.get("discoveryState").ok_or("Missing discoveryState")?;
-            let auth_server_url = discovery
-                .get("authorizationServerUrl")
-                .and_then(|v| v.as_str())
-                .ok_or("Missing authorizationServerUrl")?
-                .to_string();
-            let resource_metadata_url = discovery
-                .get("resourceMetadataUrl")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
-            let scope = info
-                .get("scope")
-                .and_then(|v| v.as_str())
-                .unwrap_or("openid profile email offline_access")
-                .to_string();
-            return Ok(OAuthConfig {
-                client_id,
-                auth_server_url,
-                resource_metadata_url,
-                scope,
-            });
-        }
-    }
-    Err("No composio entry in keychain".to_string())
-}
+// -- Read tokens from keychain --
 
 fn read_refresh_token() -> Option<String> {
+    read_composio_field("refreshToken")
+}
+
+fn read_client_id() -> Option<String> {
+    read_composio_field("clientId")
+}
+
+/// Read a string field from the first `composio*` entry in `mcpOAuth` that
+/// has a non-empty value.
+fn read_composio_field(field: &str) -> Option<String> {
     let username = get_username().ok()?;
     let data = read_keychain(&username).ok()?;
     let mcp_oauth = data.get("mcpOAuth")?.as_object()?;
     for (key, info) in mcp_oauth {
-        if key.starts_with("composio") {
-            return info
-                .get("refreshToken")
-                .and_then(|t| t.as_str())
-                .filter(|s| !s.is_empty())
-                .map(String::from);
+        if !key.starts_with("composio") {
+            continue;
+        }
+        if let Some(v) = info
+            .get(field)
+            .and_then(|t| t.as_str())
+            .filter(|s| !s.is_empty())
+        {
+            return Some(v.to_string());
         }
     }
     None
 }
 
-// -- Fetch OAuth metadata --
+// -- OAuth metadata discovery (RFC 9728 + RFC 8414) --
 
-async fn fetch_metadata(
-    auth_server_url: &str,
-    resource_metadata_url: &str,
-) -> Result<OAuthMetadata, String> {
+/// Discover the OAuth authorization server for the Composio MCP endpoint by
+/// probing it unauthenticated and following the standard protected-resource
+/// metadata chain. Requires only the MCP URL from `~/.claude.json`; no
+/// pre-populated keychain config.
+///
+/// Chain:
+/// 1. POST an `initialize` to the MCP endpoint → expect `401` with a
+///    `WWW-Authenticate: Bearer ..., resource_metadata="..."` header.
+/// 2. GET the `resource_metadata` URL → read `authorization_servers[0]`.
+/// 3. GET `{auth_server}/.well-known/oauth-authorization-server` (RFC 8414).
+async fn discover_oauth_metadata() -> Result<DiscoveryInfo, String> {
+    let mcp_url = crate::composio::read_composio_url()
+        .ok_or("Composio MCP server not configured in ~/.claude.json")?;
+
     let client = reqwest::Client::new();
 
+    // Step 1: probe the MCP endpoint to get the WWW-Authenticate header.
+    let init_body = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {},
+            "clientInfo": { "name": "houston", "version": "0" }
+        }
+    });
+
+    let resp = client
+        .post(&mcp_url)
+        .header("Content-Type", "application/json")
+        .header("Accept", "application/json, text/event-stream")
+        .json(&init_body)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to probe MCP server: {e}"))?;
+
+    let status = resp.status();
+    if status != reqwest::StatusCode::UNAUTHORIZED {
+        return Err(format!(
+            "Expected 401 from MCP probe, got {status} — cannot discover OAuth config"
+        ));
+    }
+
+    let www_auth = resp
+        .headers()
+        .get("www-authenticate")
+        .and_then(|v| v.to_str().ok())
+        .ok_or("MCP 401 response is missing WWW-Authenticate header")?
+        .to_string();
+
+    let resource_metadata_url = parse_www_auth_param(&www_auth, "resource_metadata")
+        .ok_or("WWW-Authenticate header has no resource_metadata parameter")?;
+
+    tracing::debug!("[composio:auth] Protected resource metadata: {resource_metadata_url}");
+
+    // Step 2: fetch the protected resource metadata to find the auth server.
+    let pr_meta: serde_json::Value = client
+        .get(&resource_metadata_url)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to fetch protected resource metadata: {e}"))?
+        .json()
+        .await
+        .map_err(|e| format!("Invalid protected resource metadata JSON: {e}"))?;
+
+    let auth_server_url = pr_meta
+        .get("authorization_servers")
+        .and_then(|v| v.as_array())
+        .and_then(|arr| arr.first())
+        .and_then(|v| v.as_str())
+        .ok_or("No authorization_servers in protected resource metadata")?
+        .to_string();
+
+    tracing::debug!("[composio:auth] Authorization server: {auth_server_url}");
+
+    // Step 3: fetch the auth server metadata.
+    let metadata = fetch_auth_server_metadata(&client, &auth_server_url).await?;
+
+    Ok(DiscoveryInfo {
+        metadata,
+        auth_server_url,
+        resource_metadata_url,
+    })
+}
+
+async fn fetch_auth_server_metadata(
+    client: &reqwest::Client,
+    auth_server_url: &str,
+) -> Result<OAuthMetadata, String> {
+    // Composio hosts the well-known path at the ROOT of the auth server's
+    // host, not under its path prefix (the former returns 200, the latter
+    // 404). We try root first, then fall back to the full path and finally
+    // to the OIDC discovery document.
+    let root = root_url(auth_server_url);
     let candidates = [
-        resource_metadata_url.to_string(),
-        format!("{}/.well-known/oauth-authorization-server", root_url(auth_server_url)),
-        format!("{}/.well-known/oauth-authorization-server", auth_server_url),
-        format!("{}/.well-known/openid-configuration", root_url(auth_server_url)),
+        format!("{root}/.well-known/oauth-authorization-server"),
+        format!("{auth_server_url}/.well-known/oauth-authorization-server"),
+        format!("{root}/.well-known/openid-configuration"),
+        format!("{auth_server_url}/.well-known/openid-configuration"),
     ];
 
     for url in &candidates {
@@ -347,38 +459,30 @@ async fn fetch_metadata(
             tracing::debug!("[composio:auth]   → {}", resp.status());
             continue;
         }
-        let body = resp.text().await.unwrap_or_default();
-        tracing::debug!("[composio:auth]   → 200, body: {}", &body[..body.len().min(300)]);
-
-        if let Ok(meta) = serde_json::from_str::<OAuthMetadata>(&body) {
+        if let Ok(meta) = resp.json::<OAuthMetadata>().await {
             return Ok(meta);
-        }
-        if let Ok(res) = serde_json::from_str::<serde_json::Value>(&body) {
-            if let Some(servers) = res.get("authorization_servers").and_then(|s| s.as_array()) {
-                for server_url in servers.iter().filter_map(|s| s.as_str()) {
-                    tracing::debug!("[composio:auth] Found AS: {server_url}");
-                    let as_url = format!("{}/.well-known/oauth-authorization-server", server_url);
-                    if let Ok(as_resp) = client.get(&as_url).send().await {
-                        if as_resp.status().is_success() {
-                            if let Ok(meta) = as_resp.json::<OAuthMetadata>().await {
-                                return Ok(meta);
-                            }
-                        }
-                    }
-                    let oidc_url = format!("{}/.well-known/openid-configuration", server_url);
-                    if let Ok(oidc_resp) = client.get(&oidc_url).send().await {
-                        if oidc_resp.status().is_success() {
-                            if let Ok(meta) = oidc_resp.json::<OAuthMetadata>().await {
-                                return Ok(meta);
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 
-    Err("Could not find OAuth metadata at any known endpoint".to_string())
+    Err(format!(
+        "Could not find OAuth metadata for auth server {auth_server_url}"
+    ))
+}
+
+/// Parse a single parameter value out of a `WWW-Authenticate: Bearer ...`
+/// header. Handles both quoted and unquoted values.
+fn parse_www_auth_param(header: &str, key: &str) -> Option<String> {
+    // A WWW-Authenticate header value looks like:
+    //   Bearer error="unauthorized", error_description="...", resource_metadata="https://..."
+    // We split on commas and find the part that starts with `key=`.
+    let needle = format!("{key}=");
+    for part in header.split(',') {
+        let trimmed = part.trim().trim_start_matches("Bearer ").trim_start();
+        if let Some(rest) = trimmed.strip_prefix(&needle) {
+            return Some(rest.trim_matches('"').to_string());
+        }
+    }
+    None
 }
 
 fn root_url(url: &str) -> String {
@@ -573,44 +677,147 @@ async fn exchange_code(
 
 // -- Update keychain --
 
+/// Fallback key used when Houston needs to create a `mcpOAuth.composio*`
+/// entry and no `composio*` key exists yet. Normally Houston writes into
+/// whichever `composio*` keys already exist (including Claude Code's own
+/// `composio|<hash>` entry) so that Claude Code's MCP client — the one
+/// that the models running *inside* Houston agents use — can find the
+/// tokens under its expected key.
+const HOUSTON_COMPOSIO_KEY: &str = "composio|houston";
+
+/// Write the freshly-obtained OAuth tokens into the keychain.
+///
+/// Strategy: update EVERY `composio*` entry under `mcpOAuth`, not just one.
+/// The `Claude Code-credentials` keychain can contain several such entries
+/// at once — one that Claude Code itself created (with a hashed key like
+/// `composio|3cef502fa536d618`) and one that Houston created. Writing to
+/// all of them means that both Houston's own Tauri commands AND the Claude
+/// Code sessions that Houston spawns as agents will find a valid token
+/// under whichever key they look up.
+///
+/// If no `composio*` entry exists at all, we create one under
+/// `HOUSTON_COMPOSIO_KEY` with the full `discoveryState` shape that Claude
+/// Code expects, so a freshly-spawned Claude Code session can also use it.
 fn update_keychain_token(
     access_token: &str,
     expires_in: Option<u64>,
     refresh_token: Option<&str>,
+    client_id: &str,
+    auth_server_url: Option<&str>,
+    resource_metadata_url: Option<&str>,
 ) -> Result<(), String> {
     let username = get_username()?;
-    let mut data = read_keychain(&username)?;
+    let mut data = read_keychain(&username).unwrap_or_else(|_| serde_json::json!({}));
 
-    if let Some(mcp_oauth) = data.get_mut("mcpOAuth").and_then(|v| v.as_object_mut()) {
-        for (key, info) in mcp_oauth.iter_mut() {
-            if key.starts_with("composio") {
-                if let Some(obj) = info.as_object_mut() {
-                    obj.insert(
-                        "accessToken".to_string(),
-                        serde_json::Value::String(access_token.to_string()),
-                    );
-                    if let Some(exp) = expires_in {
-                        let expires_at = std::time::SystemTime::now()
-                            .duration_since(std::time::UNIX_EPOCH)
-                            .unwrap_or_default()
-                            .as_secs()
-                            + exp;
-                        obj.insert(
-                            "expiresAt".to_string(),
-                            serde_json::Value::Number(expires_at.into()),
-                        );
-                    }
-                    if let Some(rt) = refresh_token {
-                        obj.insert(
-                            "refreshToken".to_string(),
-                            serde_json::Value::String(rt.to_string()),
-                        );
-                    }
-                }
-                break;
+    if !data.is_object() {
+        data = serde_json::json!({});
+    }
+    let root = data.as_object_mut().expect("data is an object");
+
+    if !root.get("mcpOAuth").map(|v| v.is_object()).unwrap_or(false) {
+        root.insert("mcpOAuth".to_string(), serde_json::json!({}));
+    }
+    let mcp_oauth = root
+        .get_mut("mcpOAuth")
+        .and_then(|v| v.as_object_mut())
+        .expect("mcpOAuth is an object");
+
+    let existing_keys: Vec<String> = mcp_oauth
+        .keys()
+        .filter(|k| k.starts_with("composio"))
+        .cloned()
+        .collect();
+
+    // If nothing exists yet, seed Houston's own entry — otherwise Claude
+    // Code's spawned MCP clients would have nothing to read.
+    let target_keys: Vec<String> = if existing_keys.is_empty() {
+        mcp_oauth.insert(
+            HOUSTON_COMPOSIO_KEY.to_string(),
+            serde_json::json!({}),
+        );
+        vec![HOUSTON_COMPOSIO_KEY.to_string()]
+    } else {
+        existing_keys
+    };
+
+    let expires_at = expires_in.map(|exp| {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs()
+            + exp
+    });
+
+    for key in &target_keys {
+        let info = mcp_oauth
+            .entry(key.clone())
+            .or_insert_with(|| serde_json::json!({}));
+        if !info.is_object() {
+            *info = serde_json::json!({});
+        }
+        let obj = info.as_object_mut().expect("just set to object");
+
+        obj.insert(
+            "accessToken".to_string(),
+            serde_json::Value::String(access_token.to_string()),
+        );
+        obj.insert(
+            "clientId".to_string(),
+            serde_json::Value::String(client_id.to_string()),
+        );
+        if let Some(exp_at) = expires_at {
+            obj.insert(
+                "expiresAt".to_string(),
+                serde_json::Value::Number(exp_at.into()),
+            );
+        }
+        if let Some(rt) = refresh_token {
+            obj.insert(
+                "refreshToken".to_string(),
+                serde_json::Value::String(rt.to_string()),
+            );
+        }
+
+        // Populate `discoveryState` only if missing — preserving whatever
+        // Claude Code originally wrote. Many Claude Code versions use this
+        // field to discover the auth-server for silent refresh.
+        if let (Some(as_url), Some(rm_url)) = (auth_server_url, resource_metadata_url) {
+            let needs_discovery_state = obj
+                .get("discoveryState")
+                .map(|v| !v.is_object())
+                .unwrap_or(true);
+            if needs_discovery_state {
+                obj.insert(
+                    "discoveryState".to_string(),
+                    serde_json::json!({
+                        "authorizationServerUrl": as_url,
+                        "resourceMetadataUrl": rm_url,
+                    }),
+                );
             }
         }
+
+        // Default scope when the entry has none — matches what Composio
+        // advertises in `scopes_supported`.
+        if obj
+            .get("scope")
+            .and_then(|v| v.as_str())
+            .map(str::is_empty)
+            .unwrap_or(true)
+        {
+            obj.insert(
+                "scope".to_string(),
+                serde_json::Value::String(DEFAULT_SCOPE.to_string()),
+            );
+        }
     }
+
+    tracing::info!(
+        "[composio] Stored tokens into {} keychain entr{}: {:?}",
+        target_keys.len(),
+        if target_keys.len() == 1 { "y" } else { "ies" },
+        target_keys
+    );
 
     write_keychain(&username, &data)
 }
@@ -671,4 +878,47 @@ fn write_keychain(
         return Err("Failed to update keychain".to_string());
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_resource_metadata_from_www_authenticate() {
+        let header = r#"Bearer error="unauthorized", error_description="Missing authentication: provide Authorization: Bearer or x-consumer-api-key header", resource_metadata="https://connect.composio.dev/.well-known/oauth-protected-resource""#;
+        assert_eq!(
+            parse_www_auth_param(header, "resource_metadata"),
+            Some("https://connect.composio.dev/.well-known/oauth-protected-resource".to_string())
+        );
+        assert_eq!(
+            parse_www_auth_param(header, "error"),
+            Some("unauthorized".to_string())
+        );
+    }
+
+    #[test]
+    fn returns_none_for_missing_param() {
+        let header = r#"Bearer error="unauthorized""#;
+        assert_eq!(parse_www_auth_param(header, "resource_metadata"), None);
+    }
+
+    #[test]
+    fn handles_bearer_prefix_without_space() {
+        // Defensive: some servers might format without a trailing space.
+        let header = r#"Bearer resource_metadata="https://example.com/rm""#;
+        assert_eq!(
+            parse_www_auth_param(header, "resource_metadata"),
+            Some("https://example.com/rm".to_string())
+        );
+    }
+
+    #[test]
+    fn root_url_strips_path() {
+        assert_eq!(
+            root_url("https://connect.composio.dev/api/v3/auth/dash"),
+            "https://connect.composio.dev"
+        );
+        assert_eq!(root_url("https://example.com"), "https://example.com");
+    }
 }

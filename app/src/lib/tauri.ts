@@ -1,5 +1,4 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
-import type { ConnectionsResult } from "@houston-ai/connections";
 import type {
   Workspace,
   Agent,
@@ -195,15 +194,39 @@ export interface ComposioAppEntry {
   logo_url: string;
 }
 
+/**
+ * Composio integration state as reported by Houston's CLI-backed backend.
+ * Matches the `ComposioStatus` enum in `crates/houston-tauri/src/composio_cli.rs`.
+ */
+export type ComposioStatus =
+  | { status: "not_installed" }
+  | { status: "needs_auth" }
+  | { status: "error"; message: string }
+  | { status: "ok"; email: string | null; org_name: string | null };
+
+/** Async login start: opens a URL for the user to approve in the browser. */
+export interface StartLoginResponse {
+  login_url: string;
+  cli_key: string;
+}
+
+/** Async app-link start: URL the user opens to authorize an app (Gmail, etc). */
+export interface StartLinkResponse {
+  redirect_url: string;
+  connected_account_id: string;
+  toolkit: string;
+}
+
 export const tauriConnections = {
-  list: () => invoke<ConnectionsResult>("list_composio_connections"),
+  list: () => invoke<ComposioStatus>("list_composio_connections"),
   listApps: () => invoke<ComposioAppEntry[]>("list_composio_apps"),
   connectApp: (toolkit: string) =>
-    invoke<string>("connect_composio_app", { toolkit }),
-  startOAuth: () => invoke<{ auth_url: string }>("start_composio_oauth"),
-  reopenOAuth: () => invoke<void>("reopen_composio_oauth"),
-  submitCallback: (callbackUrl: string) =>
-    invoke<void>("submit_composio_callback", { callback_url: callbackUrl }),
+    invoke<StartLinkResponse>("connect_composio_app", { toolkit }),
+  startOAuth: () => invoke<StartLoginResponse>("start_composio_oauth"),
+  completeLogin: (cliKey: string) =>
+    invoke<void>("complete_composio_login", { cli_key: cliKey }),
+  isCliInstalled: () => invoke<boolean>("is_composio_cli_installed"),
+  installCli: () => invoke<void>("install_composio_cli"),
 };
 
 export const tauriIntegrations = {

@@ -34,19 +34,31 @@ pub async fn send_message(
     let mut system_prompt = agent::build_system_prompt(&working_dir);
 
     // Append Composio integration guidance to the system prompt.
-    // We do NOT list specific connected services — the agent discovers those
-    // via the Composio MCP tools at runtime. Listing a subset caused the agent
-    // to treat it as exhaustive and refuse to use unlisted services.
+    // Agents use the `composio` CLI (not MCP) to access integrations.
     system_prompt.push_str(
-        "\n\n---\n\n# Integrations — Composio\n\n\
-         The user has Composio set up with connected integrations. \
-         Use the Composio MCP tools (e.g. COMPOSIO_MANAGE_CONNECTIONS) to \
-         discover which services are available and to initiate new connections.\n\n\
-         When you use a Composio integration, record it by writing to \
-         `.houston/integrations.json`. Read the current file first, then \
-         append your toolkit name with `first_used_at`, `last_used_at` \
-         (ISO-8601), and `use_count` fields. If the toolkit already \
-         exists, increment `use_count` and update `last_used_at`.",
+        "\n\n---\n\n# Integrations — Composio CLI\n\n\
+         For ANY task involving external apps (email, calendar, Slack, GitHub, \
+         etc.), ALWAYS use the `composio` CLI via Bash. Never use MCP tools \
+         for integrations — the CLI is the only supported interface.\n\n\
+         Quick reference:\n\
+         - `composio search \"<what you want to do>\"` — find the right tool\n\
+         - `composio execute <TOOL_SLUG> -d '{ ... }'` — run a tool\n\
+         - `composio execute <TOOL_SLUG> --get-schema` — see required params\n\n\
+         Always search first, then execute.\n\n\
+         ## When an app is not connected\n\n\
+         If `composio execute` fails because no account is linked for that \
+         toolkit, DO NOT open the browser for the user and DO NOT tell them \
+         to go to the Integrations tab. Instead:\n\n\
+         1. Offer to help connect the app right now. Ask in a friendly way, \
+            e.g. \"I'd need you to connect your Gmail first. Want me to help?\"\n\
+         2. If the user says yes, run `composio link <toolkit> --no-wait` via \
+            Bash and parse the JSON output.\n\
+         3. Present the `redirect_url` from that JSON as a markdown link for \
+            the user to click, e.g. `[Connect Gmail](<redirect_url>)`. The \
+            Houston chat renders markdown links as clickable buttons — the \
+            user opens the browser, not you.\n\
+         4. After they tell you they've approved in the browser, retry the \
+            original action.",
     );
 
     let source = source.unwrap_or_else(|| "desktop".to_string());
