@@ -12,6 +12,7 @@ import type { ToolsAndCardsProps } from "./chat-helpers";
 import type { ToolEntry } from "./feed-to-messages";
 import { ChatInput } from "./chat-input";
 import { ChatMessages, ChatDropOverlay } from "./chat-messages";
+import type { ChatMessagesProps } from "./chat-messages";
 import { Shimmer } from "./ai-elements/shimmer";
 import { useFileDropZone, useControllable, mergeUniqueFiles } from "./use-file-drop-zone";
 
@@ -74,6 +75,13 @@ export interface ChatPanelProps {
   renderTurnSummary?: (tools: ToolEntry[]) => ReactNode;
   /** Called when the user clicks the open button on an inline link. */
   onOpenLink?: (url: string) => void;
+  /**
+   * Custom renderer for markdown links — replaces the default button.
+   * The app layer uses this to render rich inline cards for certain
+   * URL patterns (e.g. Composio connect flows). When omitted, links
+   * render as the default `onOpenLink` button.
+   */
+  renderLink?: ChatMessagesProps["renderLink"];
 }
 
 function deriveStatus(items: FeedItem[], isLoading: boolean): ChatStatus {
@@ -114,6 +122,7 @@ export function ChatPanel({
   renderMessageAvatar,
   renderTurnSummary,
   onOpenLink,
+  renderLink,
   value,
   onValueChange,
   attachments,
@@ -183,6 +192,7 @@ export function ChatPanel({
           renderMessageAvatar={renderMessageAvatar}
           renderTurnSummary={renderTurnSummary}
           onOpenLink={onOpenLink}
+          renderLink={renderLink}
         />
       ) : (
         <div className="flex-1 min-h-0 flex items-center justify-center">

@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef, useState } from "react";
+import { useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { ChatPanel } from "@houston-ai/chat";
 import type { FeedItem } from "@houston-ai/chat";
 import {
@@ -11,6 +11,12 @@ import { useFeedStore } from "../../stores/feeds";
 import { useUIStore } from "../../stores/ui";
 import { tauriChat, tauriAttachments, tauriSystem, withAttachmentPaths } from "../../lib/tauri";
 import { useFileToolRenderer } from "../../hooks/use-file-tool-renderer";
+import { useConnectedToolkits, useConnections } from "../../hooks/queries";
+import { COMPOSIO_PROBE_SLUGS } from "../../lib/composio-catalog";
+import {
+  ComposioLinkCard,
+  parseComposioToolkitFromHref,
+} from "../composio-link-card";
 import type { TabProps } from "../../lib/types";
 
 export default function ChatTab({ agent }: TabProps) {
@@ -56,6 +62,38 @@ export default function ChatTab({ agent }: TabProps) {
     tauriSystem.openUrl(url).catch(console.error);
   }, []);
 
+  // Connection state for inline Composio connect cards. Only probe
+  // when the user is signed in — otherwise the CLI call will fail.
+  const { data: composioStatus } = useConnections();
+  const probeSlugs = useMemo(
+    () => (composioStatus?.status === "ok" ? COMPOSIO_PROBE_SLUGS : []),
+    [composioStatus?.status],
+  );
+  const { data: connectedList } = useConnectedToolkits(probeSlugs);
+  const connectedSet = useMemo(
+    () => new Set(connectedList ?? []),
+    [connectedList],
+  );
+
+  // Custom link renderer — intercepts Composio connect URLs tagged
+  // with `#houston_toolkit=<slug>` and renders them as rich cards.
+  // Returns undefined for non-Composio links so the chat falls back
+  // to the default markdown button.
+  const renderLink = useCallback(
+    ({ href, onOpen }: { href: string; onOpen: () => void }) => {
+      const toolkit = parseComposioToolkitFromHref(href);
+      if (!toolkit) return undefined;
+      return (
+        <ComposioLinkCard
+          toolkit={toolkit}
+          isConnected={connectedSet.has(toolkit)}
+          onOpen={onOpen}
+        />
+      );
+    },
+    [connectedSet],
+  );
+
   const handleSend = useCallback(
     async (text: string, files: File[]) => {
       if (sendingRef.current) return;
@@ -96,6 +134,7 @@ export default function ChatTab({ agent }: TabProps) {
         onSend={handleSend}
         onStop={handleStop}
         onOpenLink={handleOpenLink}
+        renderLink={renderLink}
         isSpecialTool={isSpecialTool}
         renderToolResult={renderToolResult}
         renderTurnSummary={renderTurnSummary}
