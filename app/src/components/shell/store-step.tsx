@@ -1,4 +1,4 @@
-import { DialogTitle, Input, cn } from "@houston-ai/core";
+import { Input, cn } from "@houston-ai/core";
 import { Search } from "lucide-react";
 import type { AgentDefinition, AgentCategory, StoreListing } from "../../lib/types";
 import { AgentCard, StoreAgentCard } from "./experience-card";
@@ -64,10 +64,7 @@ export function StoreStep({
 
   return (
     <>
-      <div className="shrink-0 px-6 pt-6 space-y-4">
-        <DialogTitle className="text-xl font-semibold">
-          Houston Store
-        </DialogTitle>
+      <div className="shrink-0 px-6 space-y-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
@@ -148,6 +145,7 @@ export function StoreStep({
             </p>
           </div>
         )}
+
       </div>
     </>
   );
@@ -169,3 +167,4 @@ function StoreSection({
     </section>
   );
 }
+

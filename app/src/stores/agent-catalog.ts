@@ -8,6 +8,8 @@ interface AgentCatalogState {
   storeCatalog: StoreListing[];
   installedIds: Set<string>;
   loading: boolean;
+  updatedRepos: string[];
+  dismissUpdates: () => void;
   loadConfigs: () => Promise<void>;
   getById: (id: string) => AgentDefinition | undefined;
   installAgent: (listing: StoreListing) => Promise<void>;
@@ -19,6 +21,8 @@ export const useAgentCatalogStore = create<AgentCatalogState>((set, get) => ({
   storeCatalog: [],
   installedIds: new Set<string>(),
   loading: false,
+  updatedRepos: [],
+  dismissUpdates: () => set({ updatedRepos: [] }),
 
   loadConfigs: async () => {
     set({ loading: true });
@@ -36,6 +40,17 @@ export const useAgentCatalogStore = create<AgentCatalogState>((set, get) => ({
         .fetchCatalog()
         .then((catalog) => set({ storeCatalog: catalog }))
         .catch((e) => console.warn("[agent-catalog] Store fetch failed:", e));
+
+      // Check installed agents for GitHub updates (background)
+      tauriStore
+        .checkUpdates()
+        .then((repos) => {
+          if (repos.length > 0) {
+            console.info("[agent-catalog] Updates found:", repos);
+            set({ updatedRepos: repos });
+          }
+        })
+        .catch((e) => console.warn("[agent-catalog] Update check failed:", e));
     } catch (e) {
       console.error("[agent-catalog] Failed to load:", e);
       set({ loading: false });

@@ -31,6 +31,7 @@ import { useUIStore } from "./stores/ui";
 import { useActivity, useConnections, useComposioApps } from "./hooks/queries";
 import { Sidebar } from "./components/shell/sidebar";
 import { CreateAgentDialog } from "./components/shell/create-workspace-dialog";
+import { AgentUpdateBanner } from "./components/shell/agent-update-banner";
 import { AgentRenderer } from "./components/shell/experience-renderer";
 import { Dashboard } from "./components/dashboard";
 import { IntegrationsView } from "./components/tabs/integrations-view";
@@ -224,6 +225,7 @@ export default function App() {
         </Sidebar>
 
         <CreateAgentDialog />
+        <AgentUpdateBanner />
         <ToastContainer toasts={mappedToasts} onDismiss={dismissToast} />
       </div>
     </DetailPanelProvider>

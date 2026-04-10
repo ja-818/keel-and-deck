@@ -18,9 +18,6 @@ export async function loadAllConfigs(): Promise<AgentDefinition[]> {
         config: inst.config,
         source: "installed",
         path: inst.path,
-        bundleUrl: inst.config.tabs.some(t => t.customComponent)
-          ? `asset://localhost/${inst.path}/bundle.js`
-          : undefined,
       });
     }
   } catch {

@@ -33,9 +33,11 @@
 
 **For developers —** an open-source framework for building AI agent experiences. React packages for the UI, Rust crates for the engine. Your agent is a manifest + optional custom React. Publish it once, anyone can install it in one click.
 
-**For founders —** the foundation of your vertical AI product. Fork Houston, rename it, ship a workspace specialized for your industry. Your code, your customers, your moat. Skip six months of plumbing and focus on the part that's actually different. We make money by hosting it for you 24/7 — the framework itself is free forever.
+**For founders (B2C) —** Fork Houston. Rename it. Ship a vertical workspace to your users. Your code, your customers, your moat. Free base, hosting from us when you're ready to scale.
 
-> **Read the full vision:** [Why AI-native workspaces](https://gethouston.ai/vision/) — an essay on how every app is CRUD, why AI-as-a-feature has a ceiling, and what changes when humans and AI share all the operations on the same data.
+**For founders (B2B) —** Ship one product to every customer. Their AI adapts the schema, views, and business logic to fit them. No forks, no feature flags, no customizations team. You own the base product, we manage the multi-tenant infrastructure. This is what "ship the impossible" means.
+
+> **Read the full vision:** [Ship the impossible](https://gethouston.ai/vision/)
 
 ---
 
@@ -48,6 +50,16 @@ Most AI products bolt a chat sidebar onto a SaaS app and call it AI. Houston age
 - **Trained on real tasks** — every agent in the store ships pre-configured for a specific job: outbound sequences, fundraising memos, ICP analysis, support triage. Real, tested playbooks — not generic prompting.
 - **Files-first architecture** — agent-visible data lives in `.houston/` files, not in a database. Agents read and write naturally; you can open the same files yourself in any text editor.
 - **Symmetric participation** — both you and the AI can take any action. Click a button or ask in chat — same outcome, same data.
+
+---
+
+## The B2B case
+
+Every B2B company hits the customizations wall. Client A wants allergies tracked. Client B wants bus routes. Client C needs a custom pricing model. Today that means feature flags, custom forks, or a professional services team.
+
+Houston offers a fourth option. Ship one base product. Each customer's local AI agent adapts the data model, the page layouts, and the business logic to fit their needs. Updates from you layer on top. Local customizations persist.
+
+The customization lives in the instance, not in the codebase. Read the full vision: [Ship the impossible](https://gethouston.ai/vision/).
 
 ---
 
@@ -466,7 +478,7 @@ houston/
 ## Resources
 
 - **[gethouston.ai](https://gethouston.ai)** — landing page
-- **[Vision essay](https://gethouston.ai/vision/)** — Why AI-native workspaces (the *why* behind Houston)
+- **[Vision essay](https://gethouston.ai/vision/)** — Ship the impossible
 - **[Learn guide](https://gethouston.ai/learn/)** — Eight chapters on building Houston apps (the *how*)
 - **[Join the waiting list](https://forms.gle/ac24qrKSufYvfudt8)** — Get notified when the app ships
 - **[skills.sh](https://skills.sh)** — Community AI skills marketplace

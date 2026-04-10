@@ -1,5 +1,11 @@
 import { lazy, type ComponentType } from "react";
+import * as React from "react";
+import * as ReactDOM from "react-dom";
+import * as jsxRuntime from "react/jsx-runtime";
 import type { AgentTab, AgentDefinition, TabProps } from "../lib/types";
+
+// Expose React on window so IIFE agent bundles can access it via globals
+(window as any).Houston = { React, ReactDOM, jsxRuntime };
 import ChatTab from "../components/tabs/chat-tab";
 import BoardTab from "../components/tabs/board-tab";
 import FilesTab from "../components/tabs/files-tab";
@@ -33,12 +39,27 @@ export function resolveTabComponent(
   }
 
   // Custom component from bundle (tier 2) — lazy with cache
-  if (tab.customComponent && agentDef.bundleUrl) {
-    const cacheKey = `${agentDef.bundleUrl}:${tab.customComponent}`;
+  // Bundles are IIFE format that access React via window.Houston globals.
+  // We read the JS, evaluate it via <script>, and read exports from window.
+  if (tab.customComponent && agentDef.path) {
+    const cacheKey = `${agentDef.path}:${tab.customComponent}`;
     if (!bundleCache.has(cacheKey)) {
       const component = lazy(async () => {
-        const module = await import(/* @vite-ignore */ agentDef.bundleUrl!);
-        const Component = module[tab.customComponent!];
+        const { invoke } = await import("@tauri-apps/api/core");
+        const code = await invoke<string>("read_agent_file", {
+          agent_path: agentDef.path,
+          name: "bundle.js",
+        });
+        // Evaluate the IIFE — it assigns exports to window.__houston_bundle__
+        const script = document.createElement("script");
+        script.textContent = code;
+        document.head.appendChild(script);
+        document.head.removeChild(script);
+        // Read and clean up the global
+        const exports = (window as any).__houston_bundle__;
+        (window as any).__houston_bundle__ = undefined;
+        if (!exports) throw new Error("Bundle did not register exports");
+        const Component = exports[tab.customComponent!];
         if (!Component) throw new Error(`Bundle does not export "${tab.customComponent}"`);
         return { default: Component };
       });

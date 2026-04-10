@@ -68,8 +68,8 @@ export interface CreateAgentResult {
 export const tauriAgents = {
   list: (workspaceId: string) =>
     invoke<Agent[]>("list_agents", { workspace_id: workspaceId }),
-  create: (workspaceId: string, name: string, configId: string, color?: string, claudeMd?: string) =>
-    invoke<CreateAgentResult>("create_agent", { workspace_id: workspaceId, name, config_id: configId, color, claude_md: claudeMd }),
+  create: (workspaceId: string, name: string, configId: string, color?: string, claudeMd?: string, installedPath?: string, seeds?: Record<string, string>) =>
+    invoke<CreateAgentResult>("create_agent", { workspace_id: workspaceId, name, config_id: configId, color, claude_md: claudeMd, installed_path: installedPath, seeds }),
   delete: (workspaceId: string, id: string) =>
     invoke<void>("delete_agent", { workspace_id: workspaceId, id }),
   rename: (workspaceId: string, id: string, newName: string) =>
@@ -281,6 +281,12 @@ export const tauriStore = {
     invoke<void>("install_store_agent", { repo, agent_id: agentId }),
   uninstall: (agentId: string) =>
     invoke<void>("uninstall_store_agent", { agent_id: agentId }),
+  /** Install an agent directly from a GitHub URL or "owner/repo" shorthand. */
+  installFromGithub: (githubUrl: string) =>
+    invoke<string>("install_agent_from_github", { github_url: githubUrl }),
+  /** Check all installed agents for updates from their GitHub source. Returns list of repos that were updated. */
+  checkUpdates: () =>
+    invoke<string[]>("check_agent_updates"),
 };
 
 interface RawConversation {

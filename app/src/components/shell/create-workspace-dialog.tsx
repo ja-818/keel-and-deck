@@ -1,13 +1,28 @@
-import { useState, useMemo, type FormEvent } from "react";
-import { Dialog, DialogContent } from "@houston-ai/core";
+import { useState, useEffect, useMemo, type FormEvent } from "react";
+import {
+  cn,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@houston-ai/core";
 import { useAgentCatalogStore } from "../../stores/agent-catalog";
 import { useAgentStore } from "../../stores/agents";
 import { useWorkspaceStore } from "../../stores/workspaces";
 import { useUIStore } from "../../stores/ui";
-import { tauriChat } from "../../lib/tauri";
+import { tauriChat, tauriStore } from "../../lib/tauri";
 import type { AgentCategory, StoreListing } from "../../lib/types";
 import { StoreStep } from "./store-step";
 import { NamingStep } from "./naming-step";
+import { GithubImportView } from "./github-import-view";
+
+type View = "store" | "github";
+
+const TABS: { id: View; label: string }[] = [
+  { id: "store", label: "Houston Store" },
+  { id: "github", label: "GitHub" },
+];
 
 export function CreateAgentDialog() {
   const open = useUIStore((s) => s.createAgentDialogOpen);
@@ -20,6 +35,7 @@ export function CreateAgentDialog() {
   const currentWorkspace = useWorkspaceStore((s) => s.current);
 
   const [step, setStep] = useState<1 | 2>(1);
+  const [view, setView] = useState<View>("store");
   const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [color, setColor] = useState<string | undefined>(undefined);
@@ -27,19 +43,21 @@ export function CreateAgentDialog() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<"all" | AgentCategory>("all");
 
-  const reset = () => {
-    setStep(1);
-    setSelectedConfigId(null);
-    setName("");
-    setColor(undefined);
-    setError(null);
-    setSearch("");
-    setCategory("all");
-  };
+  useEffect(() => {
+    if (!open) {
+      setStep(1);
+      setView("store");
+      setSelectedConfigId(null);
+      setName("");
+      setColor(undefined);
+      setError(null);
+      setSearch("");
+      setCategory("all");
+    }
+  }, [open]);
 
   const handleClose = () => {
     setOpen(false);
-    reset();
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -53,9 +71,9 @@ export function CreateAgentDialog() {
         selectedConfigId,
         color,
         selectedDef?.config.claudeMd,
+        selectedDef?.path,
+        selectedDef?.config.agentSeeds,
       );
-      // For blank agents, kick off the onboarding conversation. The instructions
-      // are injected into the system prompt so they never appear in the chat feed.
       if (selectedConfigId === "blank" && onboardingActivityId) {
         tauriChat.startOnboarding(agent.folderPath, `activity-${onboardingActivityId}`);
       }
@@ -69,6 +87,12 @@ export function CreateAgentDialog() {
 
   const handleInstall = async (listing: StoreListing) => {
     await installAgent(listing);
+  };
+
+  const handleInstallFromGithub = async (url: string): Promise<string> => {
+    const agentId = await tauriStore.installFromGithub(url);
+    await useAgentCatalogStore.getState().loadConfigs();
+    return agentId;
   };
 
   const filtered = useMemo(() => {
@@ -98,22 +122,52 @@ export function CreateAgentDialog() {
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
       <DialogContent className="sm:max-w-[900px] h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
         {step === 1 ? (
-          <StoreStep
-            search={search}
-            onSearchChange={setSearch}
-            category={category}
-            onCategoryChange={setCategory}
-            houstonAgents={houstonAgents}
-            communityAgents={communityAgents}
-            storeCatalog={storeCatalog}
-            installedIds={installedIds}
-            hasResults={filtered.length > 0}
-            onSelect={(id) => {
-              setSelectedConfigId(id);
-              setStep(2);
-            }}
-            onInstall={handleInstall}
-          />
+          <>
+            <DialogHeader className="shrink-0 px-6 pt-6 pb-3">
+              <DialogTitle>New agent</DialogTitle>
+              <DialogDescription>
+                Browse the store or import from GitHub.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="shrink-0 flex gap-1 px-6 pb-3">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setView(tab.id)}
+                  className={cn(
+                    "px-3 py-1.5 text-sm rounded-full transition-colors",
+                    view === tab.id
+                      ? "bg-gray-200 text-foreground font-medium"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {view === "store" ? (
+              <StoreStep
+                search={search}
+                onSearchChange={setSearch}
+                category={category}
+                onCategoryChange={setCategory}
+                houstonAgents={houstonAgents}
+                communityAgents={communityAgents}
+                storeCatalog={storeCatalog}
+                installedIds={installedIds}
+                hasResults={filtered.length > 0}
+                onSelect={(id) => {
+                  setSelectedConfigId(id);
+                  setStep(2);
+                }}
+                onInstall={handleInstall}
+              />
+            ) : (
+              <GithubImportView onInstall={handleInstallFromGithub} />
+            )}
+          </>
         ) : (
           <NamingStep
             selectedAgent={selectedDef}

@@ -232,6 +232,60 @@
 
   .nav-right a:not(.btn):hover { color: var(--gray-950); }
 
+  /* Hamburger button — hidden on desktop */
+  .nav-burger {
+    display: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: var(--gray-700);
+    transition: background 0.2s;
+  }
+
+  .nav-burger:hover { background: var(--gray-50); }
+  .nav-burger svg { width: 20px; height: 20px; }
+
+  /* Mobile menu dropdown */
+  .nav-dropdown {
+    display: none;
+    position: fixed;
+    top: 52px;
+    left: 0;
+    right: 0;
+    z-index: 99;
+    background: rgba(255,255,255,0.97);
+    backdrop-filter: blur(20px);
+    padding: 8px 20px 16px;
+    flex-direction: column;
+    gap: 0;
+    border-bottom: 1px solid var(--border-light);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+  }
+
+  .nav-dropdown.open { display: flex; }
+
+  .nav-dropdown a {
+    font-size: 15px;
+    color: var(--gray-700);
+    text-decoration: none;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--border-light);
+    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .nav-dropdown a:last-child { border-bottom: none; }
+  .nav-dropdown a:hover { color: var(--gray-950); }
+  .nav-dropdown a svg { width: 16px; height: 16px; opacity: 0.5; }
+
   /* ═══════════════════════════════════════════
      BUTTONS
      ═══════════════════════════════════════════ */
@@ -258,6 +312,8 @@
   }
 
   .btn-primary:hover { background: var(--gray-700); }
+
+  .btn-short-text { display: none; }
 
   .btn-secondary {
     background: white;
@@ -1638,6 +1694,11 @@
     .section-title { font-size: 36px; }
     nav { padding: 16px 20px; }
     .nav-center { display: none; }
+    .nav-burger { display: flex; }
+    .nav-right a:not(.btn) { display: none !important; }
+    .nav-right .btn .btn-full-text { display: none; }
+    .nav-right .btn .btn-short-text { display: inline; }
+    .hero h1 { white-space: normal; }
     .learn-card { grid-template-columns: 1fr; padding: 32px; gap: 24px; }
     .learn-card h3 { font-size: 22px; }
     .founders-grid { grid-template-columns: 1fr; gap: 40px; }
@@ -1645,6 +1706,9 @@
     .final-cta-dual { grid-template-columns: 1fr; }
     .final-cta-card + .final-cta-card { border-left: none; border-top: 1px solid var(--border-light); }
     .final-cta-card { padding: 36px 28px; }
+    .kanban-mockup { grid-template-columns: 1fr; }
+    .mockup-body { min-height: auto; }
+    .app-mockup { max-width: 100% !important; }
   }
 
   @media (max-width: 600px) {
@@ -1652,6 +1716,8 @@
     .hero h1 { font-size: 28px; font-weight: 400; white-space: normal; }
     .hero { padding: 120px 24px 60px; }
     .hero p { font-size: 16px; margin-bottom: 32px; }
+    .hero-cycling-word { display: inline; height: auto; }
+    .hero-cycling-word .cycling-word { white-space: nowrap; }
     .cta-section h2 { font-size: 28px; }
     .cta-section { padding: 80px 24px 120px; }
     .section-title { font-size: 28px; }
@@ -1661,6 +1727,20 @@
     .capabilities-grid { gap: 12px; }
     .feature-info h3 { font-size: 24px; }
     footer { padding: 32px 24px; }
+    .nav-right .btn { font-size: 12px; padding: 0 12px; height: 32px; }
+    .framework-platform { font-size: 12px; padding: 16px 20px; }
+    .framework-platform .platform-pill { font-size: 11px; padding: 3px 10px; }
+    .founders-visual { padding: 20px; }
+    .founders-stat { padding: 12px 16px; }
+    .founders-stat .label { font-size: 12px; }
+    .founders-stat .value { font-size: 16px; }
+    .kanban-col:nth-child(3) { display: none; }
+    .mockup-titlebar .title { font-size: 12px; }
+    .kanban-col-header { font-size: 11px; }
+    .kanban-card-title { font-size: 12px; }
+    .kanban-card-desc { font-size: 11px; }
+    .mockup-sidebar { display: none; }
+    .app-mockup { margin-top: 40px !important; }
   }
 </style>
 </head>
@@ -1687,9 +1767,25 @@
     <a href="https://github.com/ja-818/houston" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;">
       <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
     </a>
-    <a href="https://forms.gle/ac24qrKSufYvfudt8" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Join the waiting list</a>
+    <a href="https://forms.gle/ac24qrKSufYvfudt8" target="_blank" rel="noopener noreferrer" class="btn btn-primary"><span class="btn-full-text">Join the waiting list</span><span class="btn-short-text">Waiting list</span></a>
+    <button class="nav-burger" id="nav-burger" aria-label="Menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="burger-icon"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
   </div>
 </nav>
+
+<div class="nav-dropdown" id="nav-dropdown">
+  <a href="#agents">Agents</a>
+  <a href="#features">Features</a>
+  <a href="#developers">Developers</a>
+  <a href="#founders">Founders</a>
+  <a href="learn/index.html">Learn</a>
+  <a href="vision/index.html">Vision</a>
+  <a href="https://github.com/ja-818/houston" target="_blank" rel="noopener noreferrer">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+    GitHub
+  </a>
+</div>
 
 <!-- ═══════════════════════════════════════════
      HERO
@@ -2449,6 +2545,27 @@
     }
     window.addEventListener('scroll', check, { passive: true });
     check();
+  })();
+
+  // Hamburger menu toggle
+  (function() {
+    var burger = document.getElementById('nav-burger');
+    var dropdown = document.getElementById('nav-dropdown');
+    var icon = document.getElementById('burger-icon');
+    if (!burger || !dropdown) return;
+    burger.addEventListener('click', function() {
+      var open = dropdown.classList.toggle('open');
+      icon.innerHTML = open
+        ? '<path d="M18 6L6 18M6 6l12 12"/>'
+        : '<path d="M4 6h16M4 12h16M4 18h16"/>';
+    });
+    // Close on link click
+    dropdown.querySelectorAll('a').forEach(function(a) {
+      a.addEventListener('click', function() {
+        dropdown.classList.remove('open');
+        icon.innerHTML = '<path d="M4 6h16M4 12h16M4 18h16"/>';
+      });
+    });
   })();
 
   // Scroll reveal

@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
@@ -170,6 +171,8 @@ pub fn create_agent(
     config_id: String,
     color: Option<String>,
     claude_md: Option<String>,
+    installed_path: Option<String>,
+    seeds: Option<HashMap<String, String>>,
 ) -> Result<CreateAgentResult, String> {
     let ws_dir = resolve_ws_folder(&root.0, &workspace_id)?;
     let folder = ws_dir.join(&name);
@@ -195,13 +198,33 @@ pub fn create_agent(
     };
     write_agent_meta(&folder, &meta)?;
 
-    // Seed CLAUDE.md from agent config or use generic template
+    // Seed CLAUDE.md: prefer inline claudeMd > installed definition's CLAUDE.md > generic
     let claude_md_path = folder.join("CLAUDE.md");
     if !claude_md_path.exists() {
         let content = claude_md
+            .or_else(|| {
+                installed_path.as_ref().and_then(|p| {
+                    fs::read_to_string(PathBuf::from(p).join("CLAUDE.md")).ok()
+                })
+            })
             .unwrap_or_else(|| "## Instructions\n\n## Learnings\n".to_string());
-        fs::write(&claude_md_path, content)
+        fs::write(&claude_md_path, &content)
             .map_err(|e| format!("Failed to write CLAUDE.md: {e}"))?;
+    }
+
+    // Seed data files from agent definition (e.g., empty JSON arrays for custom tabs)
+    if let Some(seed_files) = seeds {
+        for (path, content) in &seed_files {
+            let target = folder.join(path);
+            if !target.exists() {
+                if let Some(parent) = target.parent() {
+                    fs::create_dir_all(parent)
+                        .map_err(|e| format!("Failed to create dir for {path}: {e}"))?;
+                }
+                fs::write(&target, content)
+                    .map_err(|e| format!("Failed to seed {path}: {e}"))?;
+            }
+        }
     }
 
     // Seed prompt files

@@ -148,6 +148,8 @@ pub fn run() {
             commands::store::search_store,
             commands::store::install_store_agent,
             commands::store::uninstall_store_agent,
+            commands::store::install_agent_from_github,
+            commands::store::check_agent_updates,
             // Chat commands (send_message, load_chat_history, file read/write)
             commands::chat::send_message,
             commands::chat::start_onboarding_session,
