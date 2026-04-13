@@ -7,7 +7,10 @@ const host = process.env.TAURI_DEV_HOST;
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  define: { __APP_VERSION__: JSON.stringify(version) },
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+    __APTABASE_APP_KEY__: JSON.stringify(process.env.APTABASE_APP_KEY ?? ""),
+  },
   clearScreen: false,
   // Exclude workspace packages from Vite's dep pre-bundling so live edits
   // are picked up immediately without stale cache issues.
