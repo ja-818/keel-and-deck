@@ -45,9 +45,16 @@ pub async fn create_activity(
     agent_path: String,
     title: String,
     description: String,
+    agent: Option<String>,
+    worktree_path: Option<String>,
 ) -> Result<Activity, String> {
     let root = resolve_agent_dir(&agent_path)?;
-    let item = AgentStore::new(&root).create_activity(&title, &description)?;
+    let item = AgentStore::new(&root).create_activity(
+        &title,
+        &description,
+        agent.as_deref(),
+        worktree_path.as_deref(),
+    )?;
     let _ = app_handle.emit("houston-event", HoustonEvent::ActivityChanged {
         agent_path: agent_path.clone(),
     });

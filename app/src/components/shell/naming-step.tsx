@@ -1,35 +1,19 @@
 import { type FormEvent, useEffect } from "react";
 import { DialogTitle, Button, Input, cn } from "@houston-ai/core";
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft, Check, FolderOpen } from "lucide-react";
 import type { AgentDefinition } from "../../lib/types";
-import { getHoustonLogo, isLightColor } from "./experience-card";
-
-const AGENT_COLORS = [
-  "#f9f9f9", // white
-  "#0d0d0d", // black
-  // Dark (white helmet)
-  "#0f3d20", // deep green
-  "#162d4a", // deep blue
-  "#2d0550", // deep purple
-  "#6b1a1a", // deep red
-  "#7c3510", // deep orange
-  "#6b5010", // deep yellow
-  // Light (black helmet)
-  "#fef3c7", // light yellow
-  "#fed7aa", // light orange
-  "#fecdd3", // light red
-  "#e8d5f5", // light purple
-  "#dbeafe", // light blue
-  "#d5f5e3", // light green
-];
+import { HoustonHelmet } from "./experience-card";
+import { AGENT_COLORS, colorHex, resolveAgentColor } from "../../lib/agent-colors";
 
 interface NamingStepProps {
   selectedAgent: AgentDefinition | undefined;
   name: string;
   color: string | undefined;
   error: string | null;
+  existingPath: string | null;
   onNameChange: (value: string) => void;
   onColorChange: (value: string) => void;
+  onExistingPathChange: (path: string | null) => void;
   onBack: () => void;
   onSubmit: (e: FormEvent) => void;
 }
@@ -39,19 +23,21 @@ export function NamingStep({
   name,
   color,
   error,
+  existingPath,
   onNameChange,
   onColorChange,
+  onExistingPathChange,
   onBack,
   onSubmit,
 }: NamingStepProps) {
   // Default to white on mount if none selected
+  const resolvedColor = resolveAgentColor(color);
+
   useEffect(() => {
     if (!color) {
-      onColorChange(AGENT_COLORS[0]);
+      onColorChange(AGENT_COLORS[0].id);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const logo = getHoustonLogo(color);
 
   return (
     <div className="flex flex-col items-center justify-center flex-1 px-6 py-16">
@@ -67,10 +53,10 @@ export function NamingStep({
       {/* Avatar preview */}
       <div className="flex flex-col items-center gap-4 mb-8">
         <div
-          className="h-20 w-20 shrink-0 rounded-full flex items-center justify-center transition-colors duration-200"
-          style={{ backgroundColor: color ?? "#f5f5f5" }}
+          className="h-20 w-20 shrink-0 rounded-full flex items-center justify-center transition-colors duration-200 bg-background border-2"
+          style={{ borderColor: resolvedColor }}
         >
-          <img src={logo} alt="" className="h-12 w-12 object-contain" />
+          <HoustonHelmet color={resolvedColor} size={48} />
         </div>
 
         <div className="text-center">
@@ -85,24 +71,28 @@ export function NamingStep({
 
       {/* Color palette */}
       <div className="flex items-center gap-2 mb-6">
-        {AGENT_COLORS.map((c) => (
-          <button
-            key={c}
-            type="button"
-            onClick={() => onColorChange(c)}
-            className={cn(
-              "h-7 w-7 rounded-full flex items-center justify-center transition-all duration-150",
-              color === c
-                ? "ring-2 ring-offset-2 ring-foreground/30"
-                : "hover:scale-110",
-            )}
-            style={{ backgroundColor: c }}
-          >
-            {color === c && (
-              <Check className={cn("h-3.5 w-3.5", isLightColor(c) ? "text-gray-700" : "text-white")} />
-            )}
-          </button>
-        ))}
+        {AGENT_COLORS.map((c) => {
+          const hex = colorHex(c);
+          const isSelected = color === c.id || color === c.light || color === c.dark;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => onColorChange(c.id)}
+              className={cn(
+                "h-7 w-7 rounded-full flex items-center justify-center transition-all duration-150",
+                isSelected
+                  ? "ring-2 ring-offset-2 ring-foreground/30"
+                  : "hover:scale-110",
+              )}
+              style={{ backgroundColor: hex }}
+            >
+              {isSelected && (
+                <Check className="h-3.5 w-3.5 text-white" />
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <form onSubmit={onSubmit} className="w-full max-w-sm space-y-4">
@@ -113,6 +103,43 @@ export function NamingStep({
           placeholder="e.g. Project Alpha"
           className="text-center rounded-full"
         />
+
+        {/* Link existing project */}
+        <div className="flex flex-col items-center gap-1.5">
+          {existingPath ? (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary rounded-full px-3 py-1.5">
+              <FolderOpen className="size-3" />
+              <span className="truncate max-w-[200px]">{existingPath.split("/").pop()}</span>
+              <button
+                type="button"
+                onClick={() => onExistingPathChange(null)}
+                className="text-muted-foreground hover:text-foreground ml-1"
+              >
+                &times;
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={async () => {
+                const { tauriAgents } = await import("../../lib/tauri");
+                const picked = await tauriAgents.pickDirectory();
+                if (picked) {
+                  onExistingPathChange(picked);
+                  if (!name.trim()) {
+                    const folderName = picked.replace(/\/$/, "").split("/").pop() ?? "";
+                    onNameChange(folderName);
+                  }
+                }
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
+            >
+              <FolderOpen className="size-3" />
+              Link existing project
+            </button>
+          )}
+        </div>
+
         {error && (
           <p className="text-xs text-destructive text-center">{error}</p>
         )}

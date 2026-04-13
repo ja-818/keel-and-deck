@@ -18,6 +18,8 @@ interface UIState {
   chatDraft: string;
   /** Callback registered by the board tab to open the new-mission panel */
   onStartMission: (() => void) | null;
+  /** Extra create actions registered by the board tab (e.g. "New Planning Session"). */
+  boardActions: Array<{ id: string; label: string; onClick: () => void }>;
   /** Whether the mission chat panel is open (hides tab bar for full-height panel) */
   missionPanelOpen: boolean;
   setViewMode: (mode: string) => void;
@@ -30,6 +32,7 @@ interface UIState {
   setCreateAgentDialogOpen: (open: boolean) => void;
   setChatDraft: (draft: string) => void;
   setOnStartMission: (cb: (() => void) | null) => void;
+  setBoardActions: (actions: Array<{ id: string; label: string; onClick: () => void }>) => void;
   setMissionPanelOpen: (open: boolean) => void;
 }
 
@@ -45,6 +48,7 @@ export const useUIStore = create<UIState>((set) => ({
   createAgentDialogOpen: false,
   chatDraft: "",
   onStartMission: null,
+  boardActions: [],
   missionPanelOpen: false,
 
   setViewMode: (viewMode) => set({ viewMode }),
@@ -76,5 +80,6 @@ export const useUIStore = create<UIState>((set) => ({
 
   setChatDraft: (chatDraft) => set({ chatDraft }),
   setOnStartMission: (onStartMission) => set({ onStartMission }),
+  setBoardActions: (boardActions) => set({ boardActions }),
   setMissionPanelOpen: (missionPanelOpen) => set({ missionPanelOpen }),
 }));

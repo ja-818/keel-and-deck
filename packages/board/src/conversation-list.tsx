@@ -11,7 +11,6 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
   running: "default",
   needs_you: "destructive",
   done: "secondary",
-  queue: "outline",
   cancelled: "outline",
 }
 
@@ -19,7 +18,6 @@ const STATUS_LABEL: Record<string, string> = {
   running: "Running",
   needs_you: "Needs you",
   done: "Done",
-  queue: "Queued",
   cancelled: "Cancelled",
 }
 

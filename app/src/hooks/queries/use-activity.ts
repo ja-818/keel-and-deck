@@ -13,8 +13,13 @@ export function useActivity(agentPath: string | undefined) {
 export function useCreateActivity(agentPath: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ title, description }: { title: string; description?: string }) =>
-      tauriActivity.create(agentPath!, title, description),
+    mutationFn: ({ title, description, agent, worktreePath }: {
+      title: string;
+      description?: string;
+      agent?: string;
+      worktreePath?: string;
+    }) =>
+      tauriActivity.create(agentPath!, title, description, agent, worktreePath),
     onSuccess: () => {
       if (agentPath) qc.invalidateQueries({ queryKey: queryKeys.activity(agentPath) });
     },

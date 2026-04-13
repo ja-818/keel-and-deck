@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{% block title %}{{ title }}{% endblock %}</title>
 {% block meta %}{% endblock %}
-{% block favicon %}{% endblock %}
+{% block favicon %}<link rel="icon" type="image/svg+xml" href="/favicon.svg">{% endblock %}
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@500,600,700&display=swap" rel="stylesheet">
 {% block stylesheets %}{% endblock %}
 {% block inlineStyles %}{% endblock %}
 </head>

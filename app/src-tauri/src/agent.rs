@@ -18,11 +18,21 @@ pub fn seed_agent(dir: &Path) -> Result<(), String> {
     Ok(())
 }
 
-pub fn build_system_prompt(dir: &Path) -> String {
+/// Build the system prompt.
+///
+/// - `dir`: the agent root directory (where `.houston/` lives)
+/// - `working_dir_override`: if set, the Claude CLI will run here (e.g. a worktree path)
+/// - `prompt_file`: which prompt file to read from `.houston/prompts/` (defaults to `system.md`)
+pub fn build_system_prompt(
+    dir: &Path,
+    working_dir_override: Option<&Path>,
+    prompt_file: Option<&str>,
+) -> String {
     let mut parts = Vec::new();
 
     // 0. Working directory constraint — MUST be first so the agent sees it immediately
-    let working_dir = dir.to_string_lossy();
+    let effective_dir = working_dir_override.unwrap_or(dir);
+    let working_dir = effective_dir.to_string_lossy();
     parts.push(format!(
         "# Working Directory — MANDATORY\n\n\
          Your working directory is: `{working_dir}`\n\n\
@@ -37,7 +47,8 @@ pub fn build_system_prompt(dir: &Path) -> String {
     tracing::info!("[agent] system prompt working_dir={working_dir}");
 
     // 1. Base prompt (read from file, fall back to hardcoded default)
-    let system_path = dir.join(".houston/prompts/system.md");
+    let file_name = prompt_file.unwrap_or("system.md");
+    let system_path = dir.join(format!(".houston/prompts/{file_name}"));
     let base = std::fs::read_to_string(&system_path)
         .unwrap_or_else(|_| DEFAULT_SYSTEM_PROMPT.to_string());
     parts.push(base);

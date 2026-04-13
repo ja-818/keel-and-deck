@@ -3,7 +3,7 @@ import { Button } from "@houston-ai/core";
 import { Download, Check, Sparkles } from "lucide-react";
 import type { AgentConfig, StoreListing } from "../../lib/types";
 import { AgentAvatar } from "./agent-avatar";
-export { AgentAvatar, AgentMiniAvatar, HoustonThinkingIndicator, getAgentIcon, getAgentIconColor, getHoustonLogo, isLightColor } from "./agent-avatar";
+export { AgentAvatar, AgentMiniAvatar, HoustonHelmet, HoustonLogo, HoustonThinkingIndicator, getAgentIcon, getAgentIconColor, getHoustonLogo, isLightColor } from "./agent-avatar";
 
 interface AgentCardProps {
   config: AgentConfig;
@@ -14,7 +14,7 @@ export function AgentCard({ config, onSelect }: AgentCardProps) {
   return (
     <button
       onClick={() => onSelect(config.id)}
-      className="flex items-start gap-4 rounded-2xl bg-[#f5f5f5] p-4 text-left transition-colors duration-200 hover:bg-[#ebebeb]"
+      className="flex items-start gap-4 rounded-2xl bg-secondary p-4 text-left transition-colors duration-200 hover:bg-accent"
     >
       <AgentAvatar config={config} size="md" />
       <div className="flex flex-col gap-0.5 min-w-0 pt-0.5">
@@ -66,8 +66,8 @@ export function StoreAgentCard({
   return (
     <div
       onClick={handleClick}
-      className={`flex items-start gap-4 rounded-2xl bg-[#f5f5f5] p-4 text-left transition-colors duration-200 ${
-        isInstalled ? "cursor-pointer hover:bg-[#ebebeb]" : ""
+      className={`flex items-start gap-4 rounded-2xl bg-secondary p-4 text-left transition-colors duration-200 ${
+        isInstalled ? "cursor-pointer hover:bg-accent" : ""
       }`}
     >
       <StoreAvatar listing={listing} />
@@ -113,7 +113,7 @@ export function StoreAgentCard({
 function StoreAvatar({ listing }: { listing: StoreListing }) {
   if (listing.icon_url) {
     return (
-      <div className="h-14 w-14 shrink-0 rounded-full border border-black/10 flex items-center justify-center p-2.5 bg-white">
+      <div className="h-14 w-14 shrink-0 rounded-full border border-border flex items-center justify-center p-2.5 bg-background">
         <img
           src={listing.icon_url}
           alt={listing.name}
@@ -124,8 +124,8 @@ function StoreAvatar({ listing }: { listing: StoreListing }) {
   }
   const Icon = Sparkles;
   return (
-    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gray-100">
-      <Icon className="h-6 w-6 text-gray-600" />
+    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-secondary">
+      <Icon className="h-6 w-6 text-muted-foreground" />
     </div>
   );
 }

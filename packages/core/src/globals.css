@@ -2,43 +2,102 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Light mode defaults — set as regular CSS vars so dark mode can override */
+:root {
+  --ht-background: #ffffff;
+  --ht-foreground: #0d0d0d;
+  --ht-card: #ffffff;
+  --ht-card-fg: #0d0d0d;
+  --ht-popover: #ffffff;
+  --ht-popover-fg: #0d0d0d;
+  --ht-primary: #0d0d0d;
+  --ht-primary-fg: #ffffff;
+  --ht-secondary: #f5f5f5;
+  --ht-secondary-fg: #0d0d0d;
+  --ht-muted: #f5f5f5;
+  --ht-muted-fg: #8e8e8e;
+  --ht-accent: rgba(0, 0, 0, 0.07);
+  --ht-accent-fg: #424242;
+  --ht-destructive: #e02e2a;
+  --ht-destructive-fg: #ffffff;
+  --ht-border: rgba(0, 0, 0, 0.06);
+  --ht-input: #e3e3e3;
+  --ht-ring: #0d0d0d;
+  --ht-sidebar: #f5f5f5;
+  --ht-sidebar-fg: #0d0d0d;
+  --ht-sidebar-border: rgba(0, 0, 0, 0.06);
+  --ht-sidebar-accent: rgba(0, 0, 0, 0.07);
+  --ht-sidebar-accent-fg: #0d0d0d;
+  --ht-success: #00a240;
+  --ht-success-fg: #ffffff;
+  --ht-warning: #e0ac00;
+  --ht-warning-fg: #ffffff;
+}
+
+/* Dark mode overrides — same vars, different values */
+[data-theme="dark"] {
+  --ht-background: #141414;
+  --ht-foreground: #e5e5e5;
+  --ht-card: #1e1e1e;
+  --ht-card-fg: #e5e5e5;
+  --ht-popover: #1e1e1e;
+  --ht-popover-fg: #e5e5e5;
+  --ht-primary: #e5e5e5;
+  --ht-primary-fg: #0a0a0a;
+  --ht-secondary: #1a1a1a;
+  --ht-secondary-fg: #e5e5e5;
+  --ht-muted: #1a1a1a;
+  --ht-muted-fg: #8e8e8e;
+  --ht-accent: rgba(255, 255, 255, 0.08);
+  --ht-accent-fg: #d4d4d4;
+  --ht-destructive: #ef4444;
+  --ht-destructive-fg: #ffffff;
+  --ht-border: rgba(255, 255, 255, 0.08);
+  --ht-input: #252525;
+  --ht-ring: #e5e5e5;
+  --ht-sidebar: #0a0a0a;
+  --ht-sidebar-fg: #e5e5e5;
+  --ht-sidebar-border: rgba(255, 255, 255, 0.06);
+  --ht-sidebar-accent: rgba(255, 255, 255, 0.08);
+  --ht-sidebar-accent-fg: #e5e5e5;
+  --ht-success: #22c55e;
+  --ht-success-fg: #000000;
+  --ht-warning: #eab308;
+  --ht-warning-fg: #000000;
+  color-scheme: dark;
+}
+
+/* @theme references the intermediate vars — Tailwind generates utilities from these */
 @theme {
-  /* Houston color palette — pixel-matched to Houston's hardcoded values */
-  --color-background: #ffffff;
-  --color-foreground: #0d0d0d;
-  --color-card: #ffffff;
-  --color-card-foreground: #0d0d0d;
-  --color-popover: #ffffff;
-  --color-popover-foreground: #0d0d0d;
-  --color-primary: #0d0d0d;
-  --color-primary-foreground: #ffffff;
-  --color-secondary: #f5f5f5;
-  --color-secondary-foreground: #0d0d0d;
-  --color-muted: #f5f5f5;
-  --color-muted-foreground: #8e8e8e;
-  --color-accent: rgba(0, 0, 0, 0.07);
-  --color-accent-foreground: #424242;
-  --color-destructive: #e02e2a;
-  --color-destructive-foreground: #ffffff;
-  --color-border: rgba(0, 0, 0, 0.06);
-  --color-input: #e3e3e3;
-  --color-ring: #0d0d0d;
+  --color-background: var(--ht-background);
+  --color-foreground: var(--ht-foreground);
+  --color-card: var(--ht-card);
+  --color-card-foreground: var(--ht-card-fg);
+  --color-popover: var(--ht-popover);
+  --color-popover-foreground: var(--ht-popover-fg);
+  --color-primary: var(--ht-primary);
+  --color-primary-foreground: var(--ht-primary-fg);
+  --color-secondary: var(--ht-secondary);
+  --color-secondary-foreground: var(--ht-secondary-fg);
+  --color-muted: var(--ht-muted);
+  --color-muted-foreground: var(--ht-muted-fg);
+  --color-accent: var(--ht-accent);
+  --color-accent-foreground: var(--ht-accent-fg);
+  --color-destructive: var(--ht-destructive);
+  --color-destructive-foreground: var(--ht-destructive-fg);
+  --color-border: var(--ht-border);
+  --color-input: var(--ht-input);
+  --color-ring: var(--ht-ring);
   --radius: 0.5rem;
-
-  /* Sidebar — matches Houston sidebar exactly */
-  --color-sidebar: #f5f5f5;
-  --color-sidebar-foreground: #0d0d0d;
-  --color-sidebar-border: rgba(0, 0, 0, 0.06);
-  --color-sidebar-accent: rgba(0, 0, 0, 0.07);
-  --color-sidebar-accent-foreground: #0d0d0d;
-
-  /* Success */
-  --color-success: #00a240;
-  --color-success-foreground: #ffffff;
-
-  /* Warning */
-  --color-warning: #e0ac00;
-  --color-warning-foreground: #ffffff;
+  --color-sidebar: var(--ht-sidebar);
+  --color-sidebar-foreground: var(--ht-sidebar-fg);
+  --color-sidebar-border: var(--ht-sidebar-border);
+  --color-sidebar-accent: var(--ht-sidebar-accent);
+  --color-sidebar-accent-foreground: var(--ht-sidebar-accent-fg);
+  --color-success: var(--ht-success);
+  --color-success-foreground: var(--ht-success-fg);
+  --color-warning: var(--ht-warning);
+  --color-warning-foreground: var(--ht-warning-fg);
 }
 
 @layer base {
@@ -46,6 +105,7 @@
     border-color: var(--color-border);
   }
 }
+
 
 button,
 [role="button"],
@@ -88,9 +148,10 @@ body {
 
 .card-running-glow {
   --glow-angle: 0deg;
+  --glow-bg: var(--color-background, #ffffff);
   position: relative;
   background:
-    linear-gradient(white, white) padding-box,
+    linear-gradient(var(--glow-bg), var(--glow-bg)) padding-box,
     conic-gradient(
       from var(--glow-angle),
       transparent 60%,
@@ -137,10 +198,10 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.15);
+  background: color-mix(in srgb, var(--color-foreground) 15%, transparent);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.3);
+  background: color-mix(in srgb, var(--color-foreground) 30%, transparent);
 }

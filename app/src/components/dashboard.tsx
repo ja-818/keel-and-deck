@@ -13,8 +13,9 @@ import {
   DropdownMenuItem,
 } from "@houston-ai/core";
 import { ChevronDown, Plus } from "lucide-react";
-import houstonIconWhite from "../assets/houston-icon-white.svg";
-import { getHoustonLogo } from "./shell/experience-card";
+import { HoustonLogo } from "./shell/experience-card";
+import { HoustonHelmet } from "./shell/experience-card";
+import { resolveAgentColor } from "../lib/agent-colors";
 import { useAgentStore } from "../stores/agents";
 import { useUIStore } from "../stores/ui";
 import { tauriChat } from "../lib/tauri";
@@ -73,10 +74,10 @@ export function Dashboard() {
   const selectedItem = mc.selectedId
     ? mc.items.find((i) => i.id === mc.selectedId)
     : null;
-  const selectedColor = selectedItem
+  const selectedColorRaw = selectedItem
     ? colorByPath[selectedItem.metadata?.agentPath as string]
     : undefined;
-  const selectedLogo = getHoustonLogo(selectedColor);
+  const selectedColor = resolveAgentColor(selectedColorRaw);
 
   if (agents.length === 0) {
     return (
@@ -113,7 +114,7 @@ export function Dashboard() {
         size="sm"
         onClick={() => setNewDialogOpen(true)}
       >
-        <img src={houstonIconWhite} alt="" className="size-4" />
+        <HoustonLogo size={16} />
         New mission
       </Button>
     </Empty>
@@ -158,7 +159,7 @@ export function Dashboard() {
               className="rounded-full gap-1.5 h-8"
               onClick={() => setNewDialogOpen(true)}
             >
-              <img src={houstonIconWhite} alt="" className="size-4" />
+              <HoustonLogo size={16} />
               New mission
             </Button>
           </div>
@@ -184,12 +185,18 @@ export function Dashboard() {
           onStopSession={handleStopSession}
           panelAgentName={selectedItem?.subtitle}
           panelAvatar={
-            <span
-              className="size-10 rounded-full flex items-center justify-center shrink-0"
-              style={{ backgroundColor: selectedColor ?? "#e5e5e5" }}
-            >
-              <img src={selectedLogo} alt="Houston" className="size-6 object-contain" />
-            </span>
+            selectedItem?.status === "running" ? (
+              <span className="size-10 rounded-full flex items-center justify-center shrink-0 card-running-glow">
+                <HoustonHelmet color={selectedColor} size={24} />
+              </span>
+            ) : (
+              <span
+                className="size-10 rounded-full flex items-center justify-center shrink-0 bg-background border-2"
+                style={{ borderColor: selectedColor ?? "#cdcdcd" }}
+              >
+                <HoustonHelmet color={selectedColor} size={24} />
+              </span>
+            )
           }
           thinkingIndicator={<HoustonThinkingIndicator />}
         />

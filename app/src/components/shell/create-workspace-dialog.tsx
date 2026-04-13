@@ -42,6 +42,7 @@ export function CreateAgentDialog() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<"all" | AgentCategory>("all");
+  const [existingPath, setExistingPath] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -53,6 +54,7 @@ export function CreateAgentDialog() {
       setError(null);
       setSearch("");
       setCategory("all");
+      setExistingPath(null);
     }
   }, [open]);
 
@@ -73,6 +75,7 @@ export function CreateAgentDialog() {
         selectedDef?.config.claudeMd,
         selectedDef?.path,
         selectedDef?.config.agentSeeds,
+        existingPath ?? undefined,
       );
       if (selectedConfigId === "blank" && onboardingActivityId) {
         tauriChat.startOnboarding(agent.folderPath, `activity-${onboardingActivityId}`);
@@ -141,7 +144,7 @@ export function CreateAgentDialog() {
                   className={cn(
                     "px-3 py-1.5 text-sm rounded-full transition-colors",
                     view === tab.id
-                      ? "bg-gray-200 text-foreground font-medium"
+                      ? "bg-accent text-foreground font-medium"
                       : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
@@ -177,8 +180,10 @@ export function CreateAgentDialog() {
             name={name}
             color={color}
             error={error}
+            existingPath={existingPath}
             onNameChange={setName}
             onColorChange={setColor}
+            onExistingPathChange={setExistingPath}
             onBack={() => setStep(1)}
             onSubmit={handleSubmit}
           />

@@ -38,8 +38,8 @@
   box-sizing: border-box;
 }
 
-html {
-  scroll-behavior: smooth;
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
 }
 
 body {
@@ -87,8 +87,9 @@ nav {
 }
 
 .nav-logo {
-  font-size: 18px;
-  font-weight: 600;
+  font-family: 'General Sans', sans-serif;
+  font-size: 22px;
+  font-weight: 500;
   letter-spacing: -0.02em;
   color: var(--gray-950);
   display: flex;
@@ -97,11 +98,54 @@ nav {
   text-decoration: none;
 }
 
-.nav-logo svg {
-  width: 28px;
-  height: 28px;
-  color: var(--gray-950);
+.btn-short-text { display: none; }
+
+/* Hamburger */
+.nav-burger {
+  display: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--gray-700);
+  transition: background 0.2s;
 }
+.nav-burger:hover { background: var(--gray-50); }
+.nav-burger svg { width: 20px; height: 20px; }
+
+/* Dropdown */
+.nav-dropdown {
+  display: none;
+  position: fixed;
+  top: 52px;
+  left: 0;
+  right: 0;
+  z-index: 99;
+  background: rgba(255,255,255,0.97);
+  backdrop-filter: blur(20px);
+  padding: 8px 20px 16px;
+  flex-direction: column;
+  border-bottom: 1px solid var(--border-light);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+}
+.nav-dropdown.open { display: flex; }
+.nav-dropdown a {
+  font-size: 15px;
+  color: var(--gray-700);
+  text-decoration: none;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nav-dropdown a:last-child { border-bottom: none; }
+.nav-dropdown a svg { width: 16px; height: 16px; opacity: 0.5; }
 
 .nav-center {
   position: absolute;
@@ -154,6 +198,10 @@ nav .btn {
   .nav-center {
     display: none;
   }
+  .nav-burger { display: flex; }
+  .nav-right a:not(.btn) { display: none !important; }
+  .nav-right .btn .btn-full-text { display: none; }
+  .nav-right .btn .btn-short-text { display: inline; }
 }
 
 /* ═══════════════════════════════════════════
@@ -268,10 +316,10 @@ nav .btn {
 }
 
 .content h1 {
-  font-size: 40px;
-  font-weight: 600;
-  letter-spacing: -0.025em;
-  line-height: 1.1;
+  font-size: clamp(32px, 4vw, 44px);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
   color: var(--gray-950);
   margin-bottom: 20px;
 }
@@ -420,7 +468,6 @@ nav .btn {
 
 .callout {
   border: 1px solid var(--border-light);
-  border-left: 3px solid var(--gray-300);
   border-radius: 10px;
   padding: 16px 20px;
   margin: 24px 0;
@@ -446,21 +493,24 @@ nav .btn {
 }
 
 .callout-info {
-  border-left-color: var(--info);
+  background: color-mix(in oklch, var(--info) 6%, white);
+  border-color: color-mix(in oklch, var(--info) 20%, transparent);
 }
 .callout-info .callout-label {
   color: var(--info);
 }
 
 .callout-warning {
-  border-left-color: var(--warning);
+  background: color-mix(in oklch, var(--warning) 6%, white);
+  border-color: color-mix(in oklch, var(--warning) 20%, transparent);
 }
 .callout-warning .callout-label {
   color: var(--warning);
 }
 
 .callout-success {
-  border-left-color: var(--success);
+  background: color-mix(in oklch, var(--success) 6%, white);
+  border-color: color-mix(in oklch, var(--success) 20%, transparent);
 }
 .callout-success .callout-label {
   color: var(--success);
@@ -662,8 +712,9 @@ nav .btn {
 }
 
 .hero h1 {
-  font-size: 52px;
-  line-height: 1.05;
+  font-size: clamp(36px, 5vw, 52px);
+  font-weight: 400;
+  line-height: 1.15;
   letter-spacing: -0.03em;
   margin-bottom: 24px;
 }

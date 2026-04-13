@@ -69,7 +69,7 @@ export function AddSkillDialog({
                 className={cn(
                   "px-3 py-1.5 text-sm rounded-full transition-colors",
                   view === tab.id
-                    ? "bg-gray-200 text-foreground font-medium"
+                    ? "bg-accent text-foreground font-medium"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground",
                 )}
               >

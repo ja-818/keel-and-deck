@@ -38,6 +38,8 @@ export interface AIBoardProps {
   chatEmptyState?: ReactNode
   /** Custom thinking indicator for the chat panel. */
   thinkingIndicator?: ReactNode
+  /** Avatar element shown on every kanban card (e.g. small agent icon). */
+  cardAvatar?: ReactNode
   /** Avatar element shown in the detail panel header. */
   panelAvatar?: ReactNode
   /** Name shown next to the avatar in the panel header (e.g. "Houston"). */
@@ -100,6 +102,7 @@ export function AIBoard({
   onNewPanelOpenerReady,
   chatEmptyState,
   thinkingIndicator,
+  cardAvatar,
   panelAvatar,
   panelAgentName,
   onPanelOpenChange,
@@ -252,6 +255,7 @@ export function AIBoard({
         onRename={onRename}
         emptyState={emptyState}
         actions={actions}
+        avatar={cardAvatar}
       />
     </div>
   )

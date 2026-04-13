@@ -1,0 +1,79 @@
+# Houston macOS Release Workflow
+#
+# Triggered by pushing a version tag (e.g. `git tag v0.3.0 && git push --tags`).
+# Builds, signs, notarizes, and creates a draft GitHub Release with .app and .dmg assets.
+#
+# Required secrets:
+#
+#   TAURI_SIGNING_PRIVATE_KEY          — Tauri updater private key (generate: `pnpm tauri signer generate`)
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD — Password for the updater key
+#
+#   APPLE_CERTIFICATE                  — Base64-encoded .p12 certificate from Apple Developer portal
+#   APPLE_CERTIFICATE_PASSWORD         — Password for the .p12 certificate
+#   APPLE_SIGNING_IDENTITY             — e.g. "Developer ID Application: Your Name (TEAM_ID)"
+#   APPLE_API_ISSUER                   — App Store Connect API issuer ID
+#   APPLE_API_KEY                      — App Store Connect API key ID
+#   APPLE_API_KEY_PATH                 — Path to the .p8 key file (written to runner by tauri-action)
+#
+#   APTABASE_APP_KEY                   — Aptabase analytics key (https://aptabase.com dashboard)
+#   SENTRY_DSN                         — Sentry DSN for crash reporting (Sentry project settings)
+#
+# Note: releaseDraft is true — releases must be manually published from the GitHub Releases page.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build and release
+        uses: tauri-apps/tauri-action@v0
+        with:
+          projectPath: app
+          tagName: v__VERSION__
+          releaseName: Houston v__VERSION__
+          releaseBody: See the assets to download and install this version.
+          releaseDraft: true
+          prerelease: false
+          includeUpdaterJson: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Tauri updater signing
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # Apple code signing + notarization
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_PATH: ${{ secrets.APPLE_API_KEY_PATH }}
+          # Analytics + crash reporting (compiled into binary)
+          APTABASE_APP_KEY: ${{ secrets.APTABASE_APP_KEY }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}

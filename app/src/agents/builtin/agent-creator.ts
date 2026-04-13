@@ -1,12 +1,10 @@
 import type { AgentConfig } from "../../lib/types";
-import houstonIcon from "../../assets/houston-icon.svg";
 
 export const agentCreator: AgentConfig = {
   id: "agent-creator",
   name: "Agent Creator",
   description: "Build and publish your own agent to the Houston Store — guided step by step",
   icon: "Wand2",
-  image: houstonIcon,
   category: "productivity",
   author: "Houston",
   tags: ["creator", "publish", "store", "builder"],

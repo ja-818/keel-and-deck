@@ -7,6 +7,8 @@ export interface KanbanItem {
   subtitle?: string
   /** Grouping label displayed above the title (e.g. agent name). */
   group?: string
+  /** Small pill labels shown at the bottom of the card. */
+  tags?: string[]
   status: string
   updatedAt: string
   icon?: React.ReactNode

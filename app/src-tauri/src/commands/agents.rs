@@ -173,16 +173,27 @@ pub fn create_agent(
     claude_md: Option<String>,
     installed_path: Option<String>,
     seeds: Option<HashMap<String, String>>,
+    existing_path: Option<String>,
 ) -> Result<CreateAgentResult, String> {
     let ws_dir = resolve_ws_folder(&root.0, &workspace_id)?;
-    let folder = ws_dir.join(&name);
 
-    if folder.exists() {
-        return Err(format!("An agent named \"{name}\" already exists"));
-    }
-
-    fs::create_dir_all(&folder)
-        .map_err(|e| format!("Failed to create agent directory: {e}"))?;
+    // If linking an existing project directory, use that path directly.
+    // Otherwise, create a new folder under the workspace.
+    let folder = if let Some(ref ep) = existing_path {
+        let p = houston_tauri::paths::expand_tilde(&PathBuf::from(ep));
+        if !p.exists() {
+            return Err(format!("Directory does not exist: {}", p.display()));
+        }
+        p
+    } else {
+        let f = ws_dir.join(&name);
+        if f.exists() {
+            return Err(format!("An agent named \"{name}\" already exists"));
+        }
+        fs::create_dir_all(&f)
+            .map_err(|e| format!("Failed to create agent directory: {e}"))?;
+        f
+    };
 
     let houston = houston_dir(&folder);
     fs::create_dir_all(folder.join(".agents/skills"))

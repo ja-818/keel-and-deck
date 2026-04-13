@@ -50,7 +50,7 @@ fn command_schema(cmd: &str) -> Value {
             "command": "houston activity list",
             "description": "List activities for a project",
             "args": {
-                "--status": { "type": "string", "required": false, "enum": ["queue", "running", "needs_you", "done", "cancelled"] },
+                "--status": { "type": "string", "required": false, "enum": ["running", "needs_you", "done", "cancelled"] },
             },
             "requires": ["--project-id"],
         }),
@@ -61,7 +61,7 @@ fn command_schema(cmd: &str) -> Value {
                 "id": { "type": "string", "required": true, "positional": true },
                 "--title": { "type": "string", "required": false },
                 "--description": { "type": "string", "required": false },
-                "--status": { "type": "string", "required": false, "enum": ["queue", "running", "needs_you", "done", "cancelled"] },
+                "--status": { "type": "string", "required": false, "enum": ["running", "needs_you", "done", "cancelled"] },
                 "--tags": { "type": "string", "required": false, "description": "Comma-separated" },
             },
             "requires": ["--project-id"],

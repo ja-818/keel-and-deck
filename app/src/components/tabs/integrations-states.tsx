@@ -3,7 +3,7 @@ import { ExternalLink, Download, Loader2 } from "lucide-react";
 import {
   Empty, EmptyHeader, EmptyTitle, EmptyDescription,
 } from "@houston-ai/core";
-import houstonBlack from "../../assets/houston-black.svg";
+import { HoustonLogo } from "../shell/experience-card";
 
 export function LoadingState() {
   const barRef = useRef<HTMLDivElement>(null);
@@ -18,11 +18,7 @@ export function LoadingState() {
 
   return (
     <Empty className="border-0">
-      <img
-        src={houstonBlack}
-        alt="Houston"
-        className="h-12 w-auto mb-2 animate-pulse"
-      />
+      <HoustonLogo size={48} className="mb-2 animate-pulse" />
       <EmptyHeader>
         <EmptyTitle>Loading your integrations</EmptyTitle>
         <EmptyDescription>

@@ -66,39 +66,51 @@ export function KanbanCard({
       <div
         onClick={(e) => { e.stopPropagation(); onSelect() }}
         className={cn(
-          "group/card relative rounded-lg bg-background px-3 py-2.5 cursor-pointer transition-all duration-200",
+          "group/card relative rounded-xl bg-background p-3 cursor-pointer transition-all duration-200",
           isRunning
             ? "card-running-glow shadow-[0_2px_12px_rgba(59,130,246,0.12)]"
-            : "shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:shadow-[0_2px_6px_rgba(0,0,0,0.08)]",
+            : "border border-black/[0.04] shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:shadow-[0_2px_6px_rgba(0,0,0,0.08)]",
         )}
       >
-        {/* Action buttons */}
-        <div className="absolute top-2 right-2 flex items-center gap-0.5">
-          {onRename && (
-            <button
-              onClick={handleRenameClick}
-              className="p-1 rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-accent transition-colors duration-200"
-              aria-label={`Rename ${item.title}`}
-            >
-              <Pencil className="size-3" />
-            </button>
-          )}
-          {onDelete && (
-            <button
-              onClick={handleDeleteClick}
-              className="p-1 rounded-md text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors duration-200"
-              aria-label={`Delete ${item.title}`}
-            >
-              <Trash2 className="size-3" />
-            </button>
-          )}
+        {/* Top row: agent info + action buttons */}
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {avatar ?? (
+              item.icon && (
+                <span className="size-3.5 shrink-0 flex items-center justify-center">
+                  {item.icon}
+                </span>
+              )
+            )}
+            {item.group && (
+              <span className="text-[11px] text-muted-foreground truncate">
+                {item.group}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-0.5 shrink-0">
+            {onRename && (
+              <button
+                onClick={handleRenameClick}
+                className="p-1 rounded-md text-muted-foreground/40 hover:text-foreground hover:bg-accent transition-colors duration-200"
+                aria-label={`Rename ${item.title}`}
+              >
+                <Pencil className="size-3" />
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={handleDeleteClick}
+                className="p-1 rounded-md text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors duration-200"
+                aria-label={`Delete ${item.title}`}
+              >
+                <Trash2 className="size-3" />
+              </button>
+            )}
+          </div>
         </div>
 
-        {item.group && (
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-            {item.group}
-          </span>
-        )}
+        {/* Title */}
         {editing ? (
           <input
             ref={inputRef}
@@ -110,52 +122,51 @@ export function KanbanCard({
               if (e.key === "Escape") setEditing(false)
             }}
             onClick={(e) => e.stopPropagation()}
-            className="text-sm text-foreground bg-transparent border-b border-foreground/20 outline-none w-full pr-5"
+            className="text-[13px] font-medium text-foreground bg-transparent border-b border-foreground/20 outline-none w-full"
           />
         ) : (
-          <p className="text-sm text-foreground line-clamp-2 pr-10">
+          <p className="text-[13px] font-medium text-foreground line-clamp-2">
             {item.title}
           </p>
         )}
+
+        {/* Description */}
         {item.description && (
-          <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+          <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
             {item.description}
           </p>
         )}
 
-        {/* Footer: avatar + subtitle + actions */}
-        <div className="flex items-center justify-between mt-2.5">
-          <div className="flex items-center gap-1.5 min-w-0">
-            {avatar ?? (
-              item.icon && (
-                <span className="size-4 shrink-0 flex items-center justify-center">
-                  {item.icon}
+        {/* Footer: tags + actions */}
+        {(item.tags?.length || actions || (isNeedsApproval && onApprove)) && (
+          <div className="flex items-center justify-between mt-2.5">
+            <div className="flex items-center gap-1 flex-wrap min-w-0">
+              {item.tags?.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex h-[18px] items-center rounded-full bg-secondary px-2 text-[10px] font-medium text-muted-foreground"
+                >
+                  {tag}
                 </span>
-              )
-            )}
-            {item.subtitle && (
-              <span className="text-[11px] text-muted-foreground truncate">
-                {item.subtitle}
-              </span>
-            )}
+              ))}
+            </div>
+            <div className="shrink-0">
+              {actions}
+              {!actions && isNeedsApproval && onApprove && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onApprove()
+                  }}
+                  className="flex items-center gap-0.5 h-5 pl-1 pr-2 rounded-full bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/85 transition-colors duration-200"
+                >
+                  <CheckCircle className="size-2.5" />
+                  Approve
+                </button>
+              )}
+            </div>
           </div>
-
-          <div className="shrink-0">
-            {actions}
-            {!actions && isNeedsApproval && onApprove && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onApprove()
-                }}
-                className="flex items-center gap-0.5 h-5 pl-1 pr-2 rounded-full bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/85 transition-colors duration-200"
-              >
-                <CheckCircle className="size-2.5" />
-                Approve
-              </button>
-            )}
-          </div>
-        </div>
+        )}
       </div>
 
       <ConfirmDialog

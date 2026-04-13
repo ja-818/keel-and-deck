@@ -147,7 +147,7 @@ async fn handle_new_message(
     let root = crate::paths::expand_tilde(&std::path::PathBuf::from(agent_path));
     let store = crate::agent_store::AgentStore::new(&root);
     let title = truncate(&msg.text, 80);
-    let activity = store.create_activity(&title, &msg.text)?;
+    let activity = store.create_activity(&title, &msg.text, None, None)?;
     let session_key = activity.session_key.clone()
         .unwrap_or_else(|| format!("activity-{}", activity.id));
 

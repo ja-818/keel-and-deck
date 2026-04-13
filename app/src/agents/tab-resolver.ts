@@ -14,6 +14,7 @@ import IntegrationsTab from "../components/tabs/integrations-tab";
 import JobDescriptionTab from "../components/tabs/job-description-tab";
 import RoutinesTab from "../components/tabs/routines-tab";
 import EventsTab from "../components/tabs/events-tab";
+import ConfigureTab from "../components/tabs/configure-tab";
 
 const BUILTIN_TABS: Record<string, ComponentType<TabProps>> = {
   chat: ChatTab,
@@ -24,6 +25,7 @@ const BUILTIN_TABS: Record<string, ComponentType<TabProps>> = {
   "job-description": JobDescriptionTab,
   routines: RoutinesTab,
   events: EventsTab,
+  configure: ConfigureTab,
 };
 
 // Cache for custom bundle components so they're not re-created on every render

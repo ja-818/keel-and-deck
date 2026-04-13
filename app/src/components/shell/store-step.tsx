@@ -71,12 +71,12 @@ export function StoreStep({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search the store..."
-            className="pl-9 rounded-full bg-gray-50 border-black/5 focus:bg-white"
+            className="pl-9 rounded-full bg-secondary border-border focus:bg-background"
           />
         </div>
       </div>
 
-      <div className="shrink-0 flex items-center gap-5 px-6 border-b border-black/5">
+      <div className="shrink-0 flex items-center gap-5 px-6 border-b border-border">
         {categories.map((cat) => {
           const isActive = category === cat.id;
           return (

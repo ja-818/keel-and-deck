@@ -5,6 +5,9 @@ import { useFeedStore } from "../stores/feeds";
 import { useAllConversations } from "../hooks/queries";
 import { tauriActivity, tauriChat, tauriAttachments, withAttachmentPaths } from "../lib/tauri";
 import type { Agent } from "../lib/types";
+import { createElement } from "react";
+import { HoustonHelmet } from "./shell/agent-avatar";
+import { resolveAgentColor } from "../lib/agent-colors";
 
 export function useMissionControl(agents: Agent[]) {
   // Mission control is cross-agent. Flatten the nested feed store into a
@@ -35,6 +38,12 @@ export function useMissionControl(agents: Agent[]) {
 
   const { data: convos } = useAllConversations(paths);
 
+  const agentColorMap = useMemo(() => {
+    const m: Record<string, string | undefined> = {};
+    for (const a of agents) m[a.folderPath] = a.color;
+    return m;
+  }, [agents]);
+
   const items: KanbanItem[] = useMemo(() => {
     if (!convos) return [];
     const map: Record<string, string> = {};
@@ -46,7 +55,8 @@ export function useMissionControl(agents: Agent[]) {
           id: c.id,
           title: c.title,
           description: c.description,
-          subtitle: c.agent_name,
+          group: c.agent_name,
+          icon: createElement(HoustonHelmet, { color: resolveAgentColor(agentColorMap[c.agent_path]), size: 14 }),
           status: c.status!,
           updatedAt: c.updated_at ?? new Date().toISOString(),
           metadata: { agentPath: c.agent_path },
@@ -54,7 +64,7 @@ export function useMissionControl(agents: Agent[]) {
       });
     pathMapRef.current = map;
     return result;
-  }, [convos]);
+  }, [convos, agentColorMap]);
 
   const loadHistory = useCallback(
     async (sessionKey: string): Promise<FeedItem[]> => {

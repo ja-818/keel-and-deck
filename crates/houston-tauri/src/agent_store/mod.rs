@@ -48,9 +48,15 @@ impl AgentStore {
     pub fn list_activity(&self) -> Result<Vec<Activity>, String> {
         activity::list(&self.root)
     }
-    pub fn create_activity(&self, title: &str, description: &str) -> Result<Activity, String> {
+    pub fn create_activity(
+        &self,
+        title: &str,
+        description: &str,
+        agent: Option<&str>,
+        worktree_path: Option<&str>,
+    ) -> Result<Activity, String> {
         self.ensure_houston_dir()?;
-        activity::create(&self.root, title, description)
+        activity::create(&self.root, title, description, agent, worktree_path)
     }
     pub fn update_activity(&self, id: &str, updates: ActivityUpdate) -> Result<Activity, String> {
         activity::update(&self.root, id, updates)
