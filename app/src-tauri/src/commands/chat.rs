@@ -7,13 +7,10 @@ use houston_tauri::houston_sessions::Provider;
 use houston_tauri::paths::expand_tilde;
 use houston_tauri::session_pids::SessionPidMap;
 use houston_tauri::session_runner::PersistOptions;
-use houston_tauri::slack_sync::SlackSyncManager;
 use houston_tauri::state::AppState;
 use std::path::PathBuf;
-use std::sync::Arc;
-use tauri::{Emitter, Manager, State};
+use tauri::{Emitter, State};
 use tokio::io::AsyncWriteExt;
-use tokio::sync::RwLock;
 
 /// Resolved provider + model for a session.
 struct ResolvedProvider {
@@ -154,60 +151,6 @@ pub async fn send_message(
         "[houston:session] resume_id={:?} for key={}",
         resume_id, agent_key
     );
-
-    // If message came from Slack, emit a FeedItem so the Houston UI shows it
-    if source == "slack" {
-        let _ = app_handle.emit(
-            "houston-event",
-            houston_tauri::events::HoustonEvent::FeedItem {
-                agent_path: agent_path.clone(),
-                session_key: session_key.clone(),
-                item: houston_sessions::FeedItem::UserMessage(prompt.clone()),
-            },
-        );
-    }
-
-    // If message came from Houston desktop, mirror it to Slack.
-    // First message creates the thread (user's text as top-level post).
-    // Subsequent messages post as thread replies under the user's identity.
-    if source == "desktop" {
-        let sync_mgr: State<'_, Arc<RwLock<SlackSyncManager>>> = app_handle.state();
-        let agent_path_clone = agent_path.clone();
-        let session_key_clone = session_key.clone();
-        let prompt_clone = prompt.clone();
-        let mgr = sync_mgr.inner().clone();
-        tokio::spawn(async move {
-            let mut mgr = mgr.write().await;
-
-            // Check if thread already exists
-            let existing_ts = mgr.session_for_agent(&agent_path_clone)
-                .and_then(|s| houston_tauri::slack_sync::thread_map::find_thread(
-                    &s.config, &session_key_clone,
-                ))
-                .map(|t| t.thread_ts.clone());
-
-            if let Some(thread_ts) = existing_ts {
-                // Thread exists — post user message as a reply
-                if let Some(session) = mgr.session_for_agent(&agent_path_clone) {
-                    let _ = houston_channels::slack::api::post_message_as(
-                        &session.config.bot_token,
-                        &session.config.slack_channel_id,
-                        &prompt_clone,
-                        Some(&thread_ts),
-                        Some(&session.config.user_name),
-                        session.config.user_avatar.as_deref(),
-                    ).await;
-                }
-            } else {
-                // No thread yet — create one with user's message as top-level post
-                if let Err(e) = houston_tauri::slack_sync::thread_create::create_thread_for_user_message(
-                    &mut mgr, &agent_path_clone, &session_key_clone, &prompt_clone,
-                ).await {
-                    tracing::error!("[slack] failed to create thread: {e}");
-                }
-            }
-        });
-    }
 
     houston_tauri::session_runner::spawn_and_monitor(
         &app_handle,

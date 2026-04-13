@@ -474,24 +474,6 @@ export const tauriProvider = {
     invoke<void>("set_default_provider", { provider }),
 };
 
-export const tauriSlack = {
-  /** One-click: opens browser → user approves → channel created → sync starts. */
-  connect: (agentPath: string, agentName: string, agentColor?: string) =>
-    invoke<{ channel_id: string; channel_name: string; team_name: string }>(
-      "connect_slack",
-      { agent_path: agentPath, agent_name: agentName, agent_color: agentColor ?? null },
-    ),
-  disconnect: (agentPath: string) =>
-    invoke<void>("disconnect_slack", { agent_path: agentPath }),
-  getStatus: (agentPath: string) =>
-    invoke<{
-      connected: boolean;
-      channel_name?: string;
-      channel_id?: string;
-      thread_count?: number;
-    }>("get_slack_sync_status", { agent_path: agentPath }),
-};
-
 export const tauriSystem = {
   checkClaudeCli: () => invoke<boolean>("check_claude_cli"),
   openUrl: (url: string) => invoke<void>("open_url", { url }),

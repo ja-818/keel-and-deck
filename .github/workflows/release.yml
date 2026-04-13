@@ -79,3 +79,7 @@ jobs:
           # Analytics + crash reporting (compiled into binary)
           APTABASE_APP_KEY: ${{ secrets.APTABASE_APP_KEY }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          # Slack integration (compiled into binary)
+          HOUSTON_SLACK_CLIENT_ID: ${{ secrets.HOUSTON_SLACK_CLIENT_ID }}
+          HOUSTON_SLACK_CLIENT_SECRET: ${{ secrets.HOUSTON_SLACK_CLIENT_SECRET }}
+          HOUSTON_SLACK_APP_TOKEN: ${{ secrets.HOUSTON_SLACK_APP_TOKEN }}

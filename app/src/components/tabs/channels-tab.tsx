@@ -31,7 +31,7 @@ export default function ChannelsTab({ agent }: TabProps) {
   const handleAdd = useCallback(
     async (type: ChannelType, config: Record<string, string>) => {
       const existing = channels ?? [];
-      const label = type === "slack" ? "Slack" : "Telegram";
+      const label = type.charAt(0).toUpperCase() + type.slice(1);
       const count = existing.filter((e) => e.channel_type === type).length;
       const name = count === 0 ? label : `${label} ${count + 1}`;
       const token = JSON.stringify(config);
