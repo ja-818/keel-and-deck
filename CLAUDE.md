@@ -38,19 +38,22 @@ Follow these phases IN ORDER for every interaction. Do not skip phases.
 
 ## What This Repo Is
 
-Houston is a monorepo for building AI agent desktop apps. It contains both the reusable library and the Houston app itself:
+Houston is an open source **platform** for AI-native products. Not a framework, not a library, not an SDK. A platform — like Shopify is a platform for e-commerce.
+
+**Three audiences:**
+1. **Individual users** — download the free desktop app, use pre-built AI agents for real work
+2. **Founders** — build AI-native products on Houston for their customers (define agents with JSON + prompts, Houston handles workspace/chat/board/integrations)
+3. **Houston Cloud** (coming) — deploy founder products to enterprise customers with custom branding, managed hosting, client management
 
 | Directory | What |
 |-----------|------|
-| `packages/` | React UI packages (`@houston-ai/*`) — design system, chat, board, layout, etc. |
+| `packages/` | React UI packages (`@houston-ai/*`) — internal components powering the platform |
 | `crates/` | Rust crates (`houston-*`) — session management, database, agent persistence, Tauri integration |
-| `app/` | The Houston app — AI work delegation desktop app (Tauri 2) |
-| `showcase/` | Component showcase — live docs & demos for all @houston-ai components |
-| `create-app/` | Scaffolding template for new Houston agents |
+| `app/` | The Houston app — the platform's desktop client (Tauri 2) |
+| `website/` | gethouston.ai — landing, startups page, vision essay, learn guide |
+| `create-app/` | Scaffolding templates for custom agent React bundles |
 
-**Core relationship:** `packages/` and `crates/` are the reusable library. `app/` consumes it and serves as both a real product and living documentation.
-
-**Showcase app:** `showcase/` — a Vite + React app that demos all @houston-ai components. Organized by package, each component has a live demo + props table + code examples. Use the showcase to iterate on component design before wiring into the app.
+**Key distinction:** `packages/` and `crates/` are internal infrastructure, not the developer-facing product. External developers build agents by writing `houston.json` + `CLAUDE.md`, not by importing React components. The components exist to power the platform.
 
 ---
 
@@ -322,28 +325,106 @@ All packages share ONE version number. Every release bumps ALL packages together
 
 ## Versioning
 - All packages follow semver: `0.x.y`
-- Pre-1.0: breaking changes bump minor (`0.1.0` -> `0.2.0`)
-- Bug fixes bump patch (`0.1.0` -> `0.1.1`)
-- `1.0.0` when API is stable and publicly committed
+- **Default: bump PATCH only** (`0.3.0` → `0.3.1` → `0.3.2`). Do this for every release unless told otherwise.
+- **Minor bumps (`0.3.x` → `0.4.0`) require explicit user permission.** Never bump minor on your own. Instead, if you think it's time (big feature landed, significant milestone, breaking change), **suggest it**: "This might warrant a 0.4.0 — want to bump minor?" Then wait for approval.
+- We're in no rush to reach 1.0. FastAPI has been 0.x for years while powering serious production systems. Same energy here.
 
-## How to Release
+## How to Release (CI/CD — the standard way)
+
+**This is the normal release flow. Use this unless CI is broken.**
+
 ```bash
-./scripts/release.sh 0.2.0
+./scripts/version.sh 0.3.0   # Bump version in all package.json + Cargo.toml
+git add -A && git commit -m "release: v0.3.0"
+git tag v0.3.0
+git push origin main --tags
 ```
 
-This script:
-1. Bumps version in all package.json + Cargo.toml files
-2. Commits: `release: v0.2.0`
-3. Tags: `v0.2.0`
-4. Pushes to main with tags
-5. Publishes all npm packages (`@houston-ai/*`)
-6. Publishes all Rust crates (`houston-*`)
-7. Creates a GitHub Release with auto-generated notes
+GitHub Actions (`.github/workflows/release.yml`) takes over:
+1. Builds the Tauri app on macOS
+2. Signs with Apple Developer ID (`$APPLE_SIGNING_IDENTITY`)
+3. Notarizes the `.app` with Apple
+4. Creates a signed `.dmg`
+5. Generates `latest.json` for the auto-updater
+6. Creates a **draft** GitHub Release with all artifacts
+
+**After CI finishes:** Go to GitHub Releases, review the draft, and click "Publish." Users running Houston will see "Update available" and can update in-app.
+
+## How to Release (Manual — fallback)
+
+If CI is broken or you need a quick local build, use the `/build-houston` skill. It handles: clean stale artifacts → `pnpm tauri build` → notarize the DMG (Tauri skips this) → staple → verify → copy to `~/Desktop/Houston-{version}.dmg`.
 
 ## Version Bump Only (no publish)
 ```bash
 ./scripts/version.sh 0.2.0
 ```
+
+## Required Environment Variables for Releases
+
+These must be set in the shell (for local builds) AND in GitHub Secrets (for CI):
+
+| Variable | Purpose | Where to get it |
+|----------|---------|-----------------|
+| `APPLE_SIGNING_IDENTITY` | Developer ID string | Apple Developer portal → Certificates |
+| `APPLE_API_KEY` | App Store Connect key ID | App Store Connect → Users → Keys |
+| `APPLE_API_KEY_PATH` | Path to `.p8` key file | Downloaded when creating the key |
+| `APPLE_API_ISSUER` | App Store Connect issuer UUID | App Store Connect → Users → Keys |
+| `TAURI_SIGNING_PRIVATE_KEY` | Ed25519 key for update signing | `pnpm tauri signer generate` |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Password for the above key | Set during key generation |
+| `APTABASE_APP_KEY` | Analytics app key | aptabase.com dashboard |
+| `SENTRY_DSN` | Crash reporting DSN | sentry.io project settings |
+
+For CI, also needed as GitHub Secrets:
+- `APPLE_CERTIFICATE` — base64-encoded `.p12` certificate
+- `APPLE_CERTIFICATE_PASSWORD` — password for the `.p12`
+
+**Never hardcode these values in code or config files.** They are read via `option_env!()` in Rust (compile-time) and passed as env vars in CI.
+
+---
+
+# Production Infrastructure
+
+Houston has four production systems. All are **dormant by default** — they activate only when their env vars are set.
+
+## Auto-Updater (`tauri-plugin-updater`)
+
+- **Config:** `tauri.conf.json` → `plugins.updater` (endpoint + pubkey)
+- **Frontend:** `app/src/hooks/use-update-checker.ts` → checks on launch + every 30 min
+- **UI:** `app/src/components/shell/update-checker.tsx` → banner with download/restart buttons
+- **How it works:** Checks `latest.json` on GitHub Releases. If a newer version exists, downloads `.app.tar.gz`, verifies Ed25519 signature, replaces binary, relaunches.
+- **Important:** Update signing (Ed25519 via `TAURI_SIGNING_PRIVATE_KEY`) is SEPARATE from Apple code signing. Both are needed.
+- **Important:** Users who install a version WITHOUT the updater can never auto-update. The updater must ship in every release.
+
+## Analytics (`tauri-plugin-aptabase`)
+
+- **Backend:** Registered in `lib.rs`, conditional on `option_env!("APTABASE_APP_KEY")`
+- **Frontend:** `app/src/lib/analytics.ts` — fire-and-forget wrapper, never throws
+- **Currently tracked events:** `app_launched`, `agent_created`, `chat_message_sent`
+
+### Adding new analytics events
+When building a new feature, add tracking with one line:
+```typescript
+import { analytics } from "@/lib/analytics";
+analytics.track("event_name", { key: "value" });
+```
+Props must be `Record<string, string | number>` (no booleans). Tracking is fire-and-forget — it never throws or blocks. If Aptabase isn't configured, calls silently no-op.
+
+**Analytics tracking goes in `app/` only** — never in `packages/`. The library boundary rule applies: packages are generic, analytics is app-specific.
+
+## Crash Reporting (`sentry` + `tauri-plugin-sentry`)
+
+- **Backend:** Initialized in `lib.rs` BEFORE other plugins, conditional on `option_env!("SENTRY_DSN")`
+- **Frontend:** Auto-injected by `tauri-plugin-sentry` — catches JS errors + unhandled promise rejections with zero frontend code
+- **Rust panics:** Captured automatically via sentry's panic handler
+- **When to check:** If a user reports a crash or the app behaves unexpectedly, check the Sentry dashboard before reading local logs
+
+## CI/CD (GitHub Actions)
+
+- **Workflow:** `.github/workflows/release.yml`
+- **Trigger:** Push a tag matching `v*`
+- **Output:** Draft GitHub Release with signed + notarized DMG + updater artifacts (`latest.json`)
+- **Duration:** ~15 minutes (compile + sign + notarize)
+- **Secrets:** 12 GitHub Secrets must be configured (see Release Protocol above)
 
 ---
 

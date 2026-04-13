@@ -1,13 +1,15 @@
-# Houston — Library Knowledge Base
+# Houston — Platform Knowledge Base
 
 ## What This Is
 
-A framework for building AI agent desktop apps. Three layers:
-- **Houston App** (`app/`) — the flagship AI work delegation desktop app (Tauri 2). Consumes the library and serves as living documentation.
-- **Houston** (Rust crates in `crates/`) — session management, database, agent persistence, Tauri integration
-- **Houston UI** (React packages in `packages/`) — UI components for chat, kanban boards, layouts, and design system
+An open source platform for AI-native products. Three layers:
+- **Houston App** (`app/`) — the platform's desktop client (Tauri 2). Individual users use it directly; founders build agents that run on it.
+- **Houston Engine** (Rust crates in `crates/`) — session management, database, agent persistence, Tauri integration
+- **Houston UI** (React packages in `packages/`) — internal React components powering the platform UI
 
 **Architecture:** Library components are genericized and props-driven. No Zustand store dependencies, no app-specific logic in the library. All visual styling follows the Houston design system. The app wires stores to library component props.
+
+**Platform model:** External developers don't import Houston packages. They define agents with `houston.json` + `CLAUDE.md` and optionally add custom React bundles (`bundle.js`). Workspace templates bundle multiple agents from one GitHub repo.
 
 ---
 
@@ -105,13 +107,15 @@ The app sidebar (`app/src/components/shell/sidebar.tsx`) has two tiers:
 
 ### Agent Definition System
 
-Agent definitions (manifests) define what an AI agent looks like — which tabs are available, what system prompt the agent uses, and what files are seeded on creation.
+Agent definitions define what an AI agent looks like — which tabs are available, what system prompt the agent uses, and what files are seeded on creation. This is the primary developer surface of the platform.
 
 **Three tiers:**
 
-1. **JSON-only:** `manifest.json` defines tabs, prompt, colors, icon. Uses built-in @houston-ai tab components.
-2. **Custom React:** `manifest.json` + `bundle.js` with custom React components. Components import @houston-ai as peer deps.
-3. **Custom Rust:** PR a new crate to this repo. Agent definition declares `features: ["capability"]` in manifest.
+1. **JSON-only:** `houston.json` + `CLAUDE.md` defines tabs, prompt, colors, icon. Uses built-in tab components.
+2. **Custom React:** `houston.json` + `bundle.js` with custom React components. Components import @houston-ai as peer deps.
+3. **Workspace template:** `workspace.json` + `agents/` folder bundles multiple agents from one GitHub repo.
+
+**Import flow:** Users import agents from GitHub by pasting `owner/repo` in the "New Agent > GitHub" dialog. Houston downloads `houston.json`, `CLAUDE.md`, `icon.png`, and `bundle.js` to `~/.houston/agents/{id}/`.
 
 **Manifest structure:**
 ```typescript
@@ -144,9 +148,39 @@ interface AgentTab {
 
 **Built-in agents** (9): Default, Project Manager, Meeting Assistant, Research Agent, Data Analyst, Code Reviewer, DevOps, Content Writer, Customer Support. Located in `app/src/agents/builtin/`.
 
-**Installed agent definitions:** loaded from `~/.houston/agents/{id}/manifest.json`. Installed definitions with the same ID as a builtin override the builtin (deduplication in `loader.ts`).
+**Installed agent definitions:** loaded from `~/.houston/agents/{id}/houston.json`. Installed definitions with the same ID as a builtin override the builtin (deduplication in `loader.ts`).
 
-**Agent creation** seeds CLAUDE.md from the agent definition's `claudeMd` field. If `claudeMd` is not set, a generic template is used.
+**Agent creation** seeds CLAUDE.md from the agent definition's `claudeMd` field, or from the definition's `CLAUDE.md` file. If neither is set, a generic template is used.
+
+### Workspace Templates
+
+Workspace templates bundle multiple agents into one GitHub repo. Import creates a workspace with all agents ready to use.
+
+**Repo structure:**
+```
+my-workspace/
+├── workspace.json
+└── agents/
+    ├── agent-one/
+    │   ├── houston.json
+    │   └── CLAUDE.md
+    └── agent-two/
+        ├── houston.json
+        └── CLAUDE.md
+```
+
+**workspace.json:**
+```json
+{
+  "name": "Workspace Name",
+  "description": "Optional description.",
+  "agents": ["agent-one", "agent-two"]
+}
+```
+
+**Import flow:** "New Workspace > Import from GitHub" dialog. Paste `owner/repo`. Houston downloads workspace.json, installs all agent definitions, creates the workspace, and creates agent instances with CLAUDE.md + seed files. All agents are ready to chat immediately.
+
+**Rust command:** `install_workspace_from_github` in `app/src-tauri/src/commands/store.rs`.
 
 ### Activity / Board Tab
 
