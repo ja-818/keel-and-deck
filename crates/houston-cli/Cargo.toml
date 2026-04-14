@@ -1,6 +1,6 @@
 [package]
 name = "houston-cli"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2021"
 description = "CLI for managing AI agent tasks and routines"
 license = "MIT"
