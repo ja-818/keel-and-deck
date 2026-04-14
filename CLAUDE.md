@@ -395,10 +395,11 @@ Houston has four production systems. All are **dormant by default** — they act
 - **Important:** Update signing (Ed25519 via `TAURI_SIGNING_PRIVATE_KEY`) is SEPARATE from Apple code signing. Both are needed.
 - **Important:** Users who install a version WITHOUT the updater can never auto-update. The updater must ship in every release.
 
-## Analytics (`tauri-plugin-aptabase`)
+## Analytics (`@aptabase/web`)
 
-- **Backend:** Registered in `lib.rs`, conditional on `option_env!("APTABASE_APP_KEY")`
-- **Frontend:** `app/src/lib/analytics.ts` — fire-and-forget wrapper, never throws
+- **Implementation:** Pure JavaScript — runs in the webview, no Rust plugin. This avoids Tokio runtime conflicts and works in future Capacitor mobile builds too.
+- **Init:** `app/src/lib/analytics.ts` — reads `APTABASE_APP_KEY` env var via Vite `define` (baked at build time). If empty, all tracking silently no-ops.
+- **Debug/Release:** `import.meta.env.DEV` sets `isDebug` — events from `pnpm tauri dev` show as "Debug" in the Aptabase dashboard, release builds show as "Release".
 - **Currently tracked events:** `app_launched`, `agent_created`, `chat_message_sent`
 
 ### Adding new analytics events
@@ -418,13 +419,41 @@ Props must be `Record<string, string | number>` (no booleans). Tracking is fire-
 - **Rust panics:** Captured automatically via sentry's panic handler
 - **When to check:** If a user reports a crash or the app behaves unexpectedly, check the Sentry dashboard before reading local logs
 
+## Auto-Update UI
+
+- **Hook:** `app/src/hooks/use-update-checker.ts` — checks on launch + every 30 min
+- **Component:** `app/src/components/shell/update-checker.tsx` — compact notification in sidebar footer
+- **States:** idle (hidden) → available (shows version + update button) → downloading (progress) → ready (restart button)
+- **Where it renders:** `AppSidebar` footer prop in `app/src/components/shell/sidebar.tsx`
+
 ## CI/CD (GitHub Actions)
 
 - **Workflow:** `.github/workflows/release.yml`
 - **Trigger:** Push a tag matching `v*`
 - **Output:** Draft GitHub Release with signed + notarized DMG + updater artifacts (`latest.json`)
-- **Duration:** ~15 minutes (compile + sign + notarize)
-- **Secrets:** 12 GitHub Secrets must be configured (see Release Protocol above)
+- **Duration:** ~10-15 minutes (compile + sign + notarize)
+- **Draft releases:** CI creates DRAFTS — users don't see them until you publish on GitHub. Use this as a QA gate.
+- **Secrets:** All configured in GitHub repo Settings → Secrets → Actions
+
+## Release Checklist (step by step)
+
+Every time you ship a release, follow this exact sequence:
+
+1. **Verify code:** `cargo check --workspace && cd app && pnpm tsc --noEmit`
+2. **Commit:** Stage and commit all changes to `main`
+3. **Bump version:** `./scripts/version.sh 0.3.X` (patch by default — see Versioning rules above)
+4. **Commit version bump:** `git add -A && git commit -m "release: v0.3.X"`
+5. **Tag and push:** `git tag v0.3.X && git push origin main --tags`
+6. **Wait for CI:** ~10-15 min. Check github.com/ja-818/houston/actions
+7. **If CI fails:** Read logs with `gh run view <id> --log-failed`, fix, commit, re-tag (delete old tag first: `git tag -d v0.3.X && git push origin :refs/tags/v0.3.X`, then re-tag + push)
+8. **Publish:** Go to GitHub Releases → click the draft → "Publish release"
+9. **Verify:** Installed apps should show "Update available" in the sidebar within 30 min (or on next launch)
+
+### Common CI failures and fixes
+- **`bundle_dmg.sh` failed:** Flaky on CI runners. Just rerun: `gh run rerun <id>`
+- **Missing env var at compile time:** A new `env!()` was added — must add the secret to GitHub AND the workflow YAML
+- **Notarization failed:** Apple's servers are slow. Rerun usually fixes it.
+- **TypeScript errors:** Run `pnpm tsc --noEmit` locally BEFORE tagging
 
 ---
 

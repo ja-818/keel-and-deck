@@ -31,7 +31,6 @@ import { useActivity, useConnections, useComposioApps } from "./hooks/queries";
 import { Sidebar } from "./components/shell/sidebar";
 import { CreateAgentDialog } from "./components/shell/create-workspace-dialog";
 import { AgentUpdateBanner } from "./components/shell/agent-update-banner";
-import { UpdateChecker } from "./components/shell/update-checker";
 import { analytics } from "./lib/analytics";
 import { loadTheme } from "./lib/theme";
 import { AgentRenderer } from "./components/shell/experience-renderer";
@@ -246,7 +245,6 @@ export default function App() {
 
         <CreateAgentDialog />
         <AgentUpdateBanner />
-        <UpdateChecker />
         <ToastContainer toasts={mappedToasts} onDismiss={dismissToast} />
       </div>
     </DetailPanelProvider>

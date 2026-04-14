@@ -33,6 +33,8 @@ export interface SidebarProps {
   onDelete?: (id: string) => void;
   onRename?: (id: string, newName: string) => void;
   sectionLabel?: string;
+  /** Footer area rendered at the very bottom of the sidebar */
+  footer?: ReactNode;
   children?: ReactNode;
 }
 
@@ -48,6 +50,7 @@ export function AppSidebar({
   onDelete,
   onRename,
   sectionLabel,
+  footer,
   children,
 }: SidebarProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -147,6 +150,9 @@ export function AppSidebar({
             ))}
           </div>
         </ScrollArea>
+
+        {/* Footer slot (e.g., update notification) */}
+        {footer}
       </aside>
 
       {children}
