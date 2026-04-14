@@ -164,6 +164,36 @@ pub async fn list_worktrees(
     Ok(worktrees)
 }
 
+// -- Shell --
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn run_shell(
+    path: String,
+    command: String,
+) -> Result<String, String> {
+    let dir = houston_tauri::paths::expand_tilde(&PathBuf::from(&path));
+    if !dir.exists() {
+        return Err(format!("Directory does not exist: {}", dir.display()));
+    }
+
+    let output = Command::new("sh")
+        .args(["-c", &command])
+        .current_dir(&dir)
+        .env("PATH", houston_tauri::houston_sessions::claude_path::shell_path())
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run command: {e}"))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+    if !output.status.success() {
+        return Err(format!("{stderr}\n{stdout}"));
+    }
+
+    Ok(stdout)
+}
+
 // -- Terminal --
 
 #[tauri::command(rename_all = "snake_case")]

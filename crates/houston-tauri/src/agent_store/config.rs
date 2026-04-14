@@ -16,6 +16,7 @@ pub fn read(root: &Path) -> Result<ProjectConfig, String> {
             provider: None,
             model: None,
             effort: None,
+            extra: serde_json::Map::new(),
         });
     }
     let contents =

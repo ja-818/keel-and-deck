@@ -249,4 +249,7 @@ pub struct ProjectConfig {
     /// Effort level override (e.g. "low", "medium", "high"). Provider-specific.
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "claude_effort")]
     pub effort: Option<String>,
+    /// Extra fields from the frontend (worktreeMode, devCommand, etc.)
+    #[serde(flatten)]
+    pub extra: serde_json::Map<String, serde_json::Value>,
 }
