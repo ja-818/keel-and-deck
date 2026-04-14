@@ -215,6 +215,7 @@ pub fn run() {
             commands::worktree::create_worktree,
             commands::worktree::remove_worktree,
             commands::worktree::list_worktrees,
+            commands::worktree::run_shell,
             commands::worktree::open_terminal,
             // Logging
             logging::write_frontend_log,

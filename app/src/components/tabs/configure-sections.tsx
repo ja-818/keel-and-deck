@@ -63,7 +63,7 @@ export function AutoSaveTextarea({
         onBlur={handleBlur}
         placeholder={placeholder}
         rows={Math.max(6, value.split("\n").length + 1)}
-        className="w-full text-sm text-foreground leading-relaxed bg-[#f9f9f9] outline-none rounded-xl px-4 py-3 border border-black/[0.04] hover:border-black/[0.1] focus:border-black/[0.15] focus:bg-white transition-all duration-200 resize-none placeholder:text-muted-foreground/30"
+        className="w-full text-sm text-foreground leading-relaxed bg-secondary outline-none rounded-xl px-4 py-3 border border-border/30 hover:border-border/60 focus:border-border focus:bg-background transition-all duration-200 resize-none placeholder:text-muted-foreground/30"
       />
     </div>
   );
@@ -127,10 +127,12 @@ export function LearningsSection({
 export function SettingsForm({ agentPath, config }: { agentPath: string; config: Record<string, unknown> }) {
   const qc = useQueryClient();
   const [devCommand, setDevCommand] = useState((config.devCommand as string) ?? "");
+  const [installCommand, setInstallCommand] = useState((config.installCommand as string) ?? "");
   const [worktreeMode, setWorktreeMode] = useState((config.worktreeMode as boolean) ?? false);
 
   useEffect(() => {
     setDevCommand((config.devCommand as string) ?? "");
+    setInstallCommand((config.installCommand as string) ?? "");
     setWorktreeMode((config.worktreeMode as boolean) ?? false);
   }, [config]);
 
@@ -145,17 +147,6 @@ export function SettingsForm({ agentPath, config }: { agentPath: string; config:
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <label className="text-xs font-medium text-muted-foreground block mb-1.5">Dev command</label>
-        <input
-          type="text"
-          value={devCommand}
-          onChange={(e) => setDevCommand(e.target.value)}
-          onBlur={() => saveConfig({ devCommand })}
-          placeholder="e.g. pnpm dev, npm run dev, cargo run"
-          className="w-full rounded-xl border border-black/[0.04] bg-[#f9f9f9] px-4 py-2.5 text-sm outline-none hover:border-black/[0.1] focus:border-black/[0.15] focus:bg-white transition-all duration-200 placeholder:text-muted-foreground/30"
-        />
-      </div>
       <div className="flex items-center justify-between">
         <div>
           <label className="text-xs font-medium text-muted-foreground block">Worktree mode</label>
@@ -177,6 +168,28 @@ export function SettingsForm({ agentPath, config }: { agentPath: string; config:
             }`}
           />
         </button>
+      </div>
+      <div>
+        <label className="text-xs font-medium text-muted-foreground block mb-1.5">Install command</label>
+        <input
+          type="text"
+          value={installCommand}
+          onChange={(e) => setInstallCommand(e.target.value)}
+          onBlur={() => saveConfig({ installCommand })}
+          placeholder="e.g. pnpm install, npm install, cargo build"
+          className="w-full rounded-xl border border-border/30 bg-secondary px-4 py-2.5 text-sm text-foreground outline-none hover:border-border/60 focus:border-border focus:bg-background transition-all duration-200 placeholder:text-muted-foreground/30"
+        />
+      </div>
+      <div>
+        <label className="text-xs font-medium text-muted-foreground block mb-1.5">Dev command</label>
+        <input
+          type="text"
+          value={devCommand}
+          onChange={(e) => setDevCommand(e.target.value)}
+          onBlur={() => saveConfig({ devCommand })}
+          placeholder="e.g. pnpm dev, npm run dev, cargo run"
+          className="w-full rounded-xl border border-border/30 bg-secondary px-4 py-2.5 text-sm text-foreground outline-none hover:border-border/60 focus:border-border focus:bg-background transition-all duration-200 placeholder:text-muted-foreground/30"
+        />
       </div>
     </div>
   );
