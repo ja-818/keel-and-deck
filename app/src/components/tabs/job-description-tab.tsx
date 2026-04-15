@@ -149,7 +149,7 @@ export default function JobDescriptionTab({ agent }: TabProps) {
             <div className="max-w-3xl mx-auto w-full flex-1 flex flex-col">
               <InstructionsSection
                 content={instructions ?? ""}
-                onSave={(c) => saveInstructions.mutateAsync({ name: "CLAUDE.md", content: c })}
+                onSave={(c) => saveInstructions.mutateAsync({ name: ".houston/prompts/context.md", content: c })}
               />
             </div>
           </div>
@@ -208,6 +208,7 @@ function InstructionsSection({
 }) {
   const [value, setValue] = useState(content);
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     setValue(content);
@@ -221,7 +222,11 @@ function InstructionsSection({
     }
   };
 
-  const isEmpty = !value.trim();
+  const isEmpty = !value.trim() && !editing;
+
+  const textareaRef = useCallback((el: HTMLTextAreaElement | null) => {
+    if (el && editing) el.focus();
+  }, [editing]);
 
   return (
     <section className="flex-1 flex flex-col">
@@ -233,19 +238,14 @@ function InstructionsSection({
           <EmptyHeader>
             <EmptyTitle>No instructions yet</EmptyTitle>
             <EmptyDescription>
-              Write a CLAUDE.md to tell your agent how to behave.
+              Add instructions to tell your agent how to behave.
             </EmptyDescription>
           </EmptyHeader>
           <Button
             className="rounded-full"
             onClick={() => {
-              setValue(" ");
-              requestAnimationFrame(() => {
-                const el = document.querySelector<HTMLTextAreaElement>(
-                  "[data-instructions-textarea]",
-                );
-                if (el) { el.value = ""; setValue(""); el.focus(); }
-              });
+              setValue("");
+              setEditing(true);
             }}
           >
             <FileText className="h-4 w-4" />
@@ -254,6 +254,7 @@ function InstructionsSection({
         </Empty>
       ) : (
         <textarea
+          ref={textareaRef}
           data-instructions-textarea
           value={value}
           onChange={(e) => setValue(e.target.value)}
