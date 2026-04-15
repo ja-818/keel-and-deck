@@ -11,8 +11,9 @@ import { useAgentCatalogStore } from "../../stores/agent-catalog";
 import { useAgentStore } from "../../stores/agents";
 import { useWorkspaceStore } from "../../stores/workspaces";
 import { useUIStore } from "../../stores/ui";
-import { tauriChat, tauriStore } from "../../lib/tauri";
+import { tauriChat, tauriStore, tauriConfig } from "../../lib/tauri";
 import type { AgentCategory, StoreListing } from "../../lib/types";
+import { getDefaultModel } from "../../lib/providers";
 import { StoreStep } from "./store-step";
 import { NamingStep } from "./naming-step";
 import { GithubImportView } from "./github-import-view";
@@ -43,6 +44,10 @@ export function CreateAgentDialog() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<"all" | AgentCategory>("all");
   const [existingPath, setExistingPath] = useState<string | null>(null);
+  const wsProvider = currentWorkspace?.provider ?? "anthropic";
+  const wsModel = currentWorkspace?.model ?? getDefaultModel(wsProvider);
+  const [provider, setProvider] = useState(wsProvider);
+  const [model, setModel] = useState(wsModel);
 
   useEffect(() => {
     if (!open) {
@@ -55,8 +60,10 @@ export function CreateAgentDialog() {
       setSearch("");
       setCategory("all");
       setExistingPath(null);
+      setProvider(wsProvider);
+      setModel(wsModel);
     }
-  }, [open]);
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleClose = () => {
     setOpen(false);
@@ -77,6 +84,11 @@ export function CreateAgentDialog() {
         selectedDef?.config.agentSeeds,
         existingPath ?? undefined,
       );
+      // Write provider/model to agent config if different from workspace default
+      if (provider !== wsProvider || model !== wsModel) {
+        const cfg = await tauriConfig.read(agent.folderPath);
+        await tauriConfig.write(agent.folderPath, { ...cfg, provider, model });
+      }
       if (selectedConfigId === "blank" && onboardingActivityId) {
         tauriChat.startOnboarding(agent.folderPath, `activity-${onboardingActivityId}`);
       }
@@ -181,9 +193,13 @@ export function CreateAgentDialog() {
             color={color}
             error={error}
             existingPath={existingPath}
+            provider={provider}
+            model={model}
+            showLinkProject={selectedDef?.config.features?.includes("link-project")}
             onNameChange={setName}
             onColorChange={setColor}
             onExistingPathChange={setExistingPath}
+            onProviderChange={(p, m) => { setProvider(p); setModel(m); }}
             onBack={() => setStep(1)}
             onSubmit={handleSubmit}
           />
