@@ -149,7 +149,7 @@ export default function JobDescriptionTab({ agent }: TabProps) {
             <div className="max-w-3xl mx-auto w-full flex-1 flex flex-col">
               <InstructionsSection
                 content={instructions ?? ""}
-                onSave={(c) => saveInstructions.mutateAsync({ name: ".houston/prompts/context.md", content: c })}
+                onSave={(c) => saveInstructions.mutateAsync({ name: "CLAUDE.md", content: c })}
               />
             </div>
           </div>

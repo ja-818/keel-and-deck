@@ -87,7 +87,7 @@ pub async fn send_message(
     prompt: String,
     session_key: Option<String>,
     source: Option<String>,
-    prompt_file: Option<String>,
+    mode: Option<String>,
     working_dir_override: Option<String>,
     provider_override: Option<String>,
     model_override: Option<String>,
@@ -117,7 +117,7 @@ pub async fn send_message(
     let mut system_prompt = agent::build_system_prompt(
         &agent_dir,
         working_dir_override.as_ref().map(|p| expand_tilde(&PathBuf::from(p))).as_deref(),
-        prompt_file.as_deref(),
+        mode.as_deref(),
     );
 
     // Append Composio integration guidance to the system prompt.

@@ -2,12 +2,28 @@ use houston_tauri::agent as kw;
 use std::path::Path;
 
 pub fn seed_agent(dir: &Path) -> Result<(), String> {
-    kw::seed_file(dir, "CLAUDE.md", CLAUDE_MD)?;
+    // CLAUDE.md — user's project context, auto-read by Claude Code
+    kw::seed_file(dir, "CLAUDE.md", DEFAULT_CLAUDE_MD)?;
 
-    // Create .houston/prompts/ directory and seed editable prompt files
+    // Symlink AGENTS.md → CLAUDE.md so Codex auto-reads the same content
+    let agents_md = dir.join("AGENTS.md");
+    if !agents_md.exists() {
+        #[cfg(unix)]
+        {
+            let _ = std::os::unix::fs::symlink("CLAUDE.md", &agents_md);
+        }
+        #[cfg(windows)]
+        {
+            let _ = std::os::windows::fs::symlink_file("CLAUDE.md", &agents_md);
+        }
+    }
+
+    // .houston/prompts/ — Houston-controlled system prompt files
     let prompts_dir = dir.join(".houston/prompts");
-    std::fs::create_dir_all(&prompts_dir)
-        .map_err(|e| format!("Failed to create .houston/prompts: {e}"))?;
+    let modes_dir = prompts_dir.join("modes");
+    std::fs::create_dir_all(&modes_dir)
+        .map_err(|e| format!("Failed to create .houston/prompts/modes: {e}"))?;
+
     kw::seed_file(&prompts_dir, "system.md", DEFAULT_SYSTEM_PROMPT)?;
     kw::seed_file(
         &prompts_dir,
@@ -18,19 +34,29 @@ pub fn seed_agent(dir: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// Build the system prompt.
+/// Build the system prompt by concatenating files in deterministic order.
 ///
-/// - `dir`: the agent root directory (where `.houston/` lives)
-/// - `working_dir_override`: if set, the Claude CLI will run here (e.g. a worktree path)
-/// - `prompt_file`: which prompt file to read from `.houston/prompts/` (defaults to `system.md`)
+/// The system prompt is Houston's behavioral layer — injected via `--system-prompt`
+/// (Claude) or `-c developer_instructions` (Codex). Project context lives in
+/// CLAUDE.md / AGENTS.md and is auto-read by the CLIs, NOT included here.
+///
+/// Assembly order:
+/// 1. Working directory constraint (computed)
+/// 2. `.houston/prompts/system.md` (always)
+/// 3. `.houston/prompts/modes/{mode}.md` (if mode is set)
+/// 4. `.houston/prompts/self-improvement.md` (always)
+/// 5. Learnings snapshot (computed)
+/// 6. Skills index (computed)
+/// 7. Integrations context (computed)
 pub fn build_system_prompt(
     dir: &Path,
     working_dir_override: Option<&Path>,
-    prompt_file: Option<&str>,
+    mode: Option<&str>,
 ) -> String {
     let mut parts = Vec::new();
+    let prompts_dir = dir.join(".houston/prompts");
 
-    // 0. Working directory constraint — MUST be first so the agent sees it immediately
+    // 1. Working directory constraint — MUST be first so the agent sees it immediately
     let effective_dir = working_dir_override.unwrap_or(dir);
     let working_dir = effective_dir.to_string_lossy();
     parts.push(format!(
@@ -46,17 +72,31 @@ pub fn build_system_prompt(
     ));
     tracing::info!("[agent] system prompt working_dir={working_dir}");
 
-    // 1. Base prompt (read from file, fall back to hardcoded default)
-    let file_name = prompt_file.unwrap_or("system.md");
-    let system_path = dir.join(format!(".houston/prompts/{file_name}"));
-    let base = std::fs::read_to_string(&system_path)
-        .unwrap_or_else(|_| DEFAULT_SYSTEM_PROMPT.to_string());
-    parts.push(base);
+    // 2. Base system prompt (always)
+    if let Ok(content) = std::fs::read_to_string(prompts_dir.join("system.md")) {
+        parts.push(content);
+    } else {
+        parts.push(DEFAULT_SYSTEM_PROMPT.to_string());
+    }
 
-    // 2. Self-improvement guidance (always use latest hardcoded version)
+    // 3. Mode-specific overlay (if mode is set)
+    if let Some(m) = mode {
+        let mode_path = prompts_dir.join(format!("modes/{m}.md"));
+        // Fall back to .houston/prompts/{m}.md for backwards compat
+        let fallback_path = prompts_dir.join(format!("{m}.md"));
+        if let Ok(content) = std::fs::read_to_string(&mode_path)
+            .or_else(|_| std::fs::read_to_string(&fallback_path))
+        {
+            parts.push(content);
+        } else {
+            tracing::warn!("[agent] mode file not found: {m}.md");
+        }
+    }
+
+    // 4. Self-improvement guidance (always — use latest hardcoded version)
     parts.push(houston_tauri::self_improvement::SELF_IMPROVEMENT_GUIDANCE.to_string());
 
-    // 3. Learnings snapshot
+    // 5. Learnings snapshot
     let memory_dir = dir.join(".houston/memory");
     let config = houston_memory::LearningsConfig::default();
     if let Ok(prompt) = houston_memory::build_learnings_prompt(&memory_dir, &config) {
@@ -65,7 +105,7 @@ pub fn build_system_prompt(
         }
     }
 
-    // 4. Skills index (read from .agents/skills — skill.sh convention)
+    // 6. Skills index (read from .agents/skills — skill.sh convention)
     let skills_dir = dir.join(".agents/skills");
     if let Ok(index) = houston_skills::build_skills_index(&skills_dir) {
         if !index.is_empty() {
@@ -73,12 +113,10 @@ pub fn build_system_prompt(
         }
     }
 
-    // 5. Integrations context (tracked per-agent)
-    // The agent may write this as an array or a map — handle both.
+    // 7. Integrations context (tracked per-agent)
     let integrations_path = dir.join(".houston/integrations.json");
     if let Ok(content) = std::fs::read_to_string(&integrations_path) {
         let names: Vec<String> =
-            // Try array format: [{ "toolkit": "gmail", ... }]
             serde_json::from_str::<Vec<serde_json::Value>>(&content)
                 .ok()
                 .map(|arr| {
@@ -86,7 +124,6 @@ pub fn build_system_prompt(
                         .filter_map(|v| v.get("toolkit").and_then(|t| t.as_str()).map(String::from))
                         .collect()
                 })
-                // Fall back to map format: { "gmail": { ... } }
                 .or_else(|| {
                     serde_json::from_str::<serde_json::Map<String, serde_json::Value>>(&content)
                         .ok()
@@ -104,26 +141,22 @@ pub fn build_system_prompt(
         }
     }
 
-    // 6. Workspace files (CLAUDE.md)
-    for (name, label) in &PROMPT_FILES {
-        if let Ok(content) = std::fs::read_to_string(dir.join(name)) {
-            parts.push(format!("# {label}\n\n{content}"));
-        }
-    }
-
     let prompt = parts.join("\n\n---\n\n");
-    tracing::debug!("[agent] system prompt assembled ({} chars, {} sections)", prompt.len(), parts.len());
+    tracing::debug!(
+        "[agent] system prompt assembled ({} chars, {} sections, mode={:?})",
+        prompt.len(),
+        parts.len(),
+        mode
+    );
     prompt
 }
-
-const PROMPT_FILES: [(&str, &str); 1] = [("CLAUDE.md", "CLAUDE.md — Agent Instructions")];
 
 const DEFAULT_SYSTEM_PROMPT: &str = "\
 You are an AI assistant running inside Houston, \
 a native desktop app. Your workspace files are injected below. Follow them.\n\n\
 Never use emojis unless being asked to.";
 
-const CLAUDE_MD: &str = r#"# Houston Agent
+const DEFAULT_CLAUDE_MD: &str = r#"# Houston Agent
 
 ## Role
 You are a helpful AI assistant.

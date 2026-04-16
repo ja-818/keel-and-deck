@@ -130,7 +130,7 @@ async fn spawn_claude(
     run_cli_process(tx, &mut cmd, &prompt, Provider::Anthropic).await;
 }
 
-/// Spawn a Codex CLI session (`codex exec --json --full-auto`).
+/// Spawn a Codex CLI session (`codex exec --json --dangerously-bypass-approvals-and-sandbox`).
 async fn spawn_codex(
     tx: &mpsc::UnboundedSender<SessionUpdate>,
     prompt: String,
@@ -144,16 +144,6 @@ async fn spawn_codex(
         resume_session_id
     );
 
-    // Write AGENTS.md for system prompt (Codex reads this instead of --system-prompt flag).
-    if let Some(ref sp) = system_prompt {
-        if let Some(ref dir) = working_dir {
-            let agents_md = dir.join("AGENTS.md");
-            if let Err(e) = std::fs::write(&agents_md, sp) {
-                tracing::warn!("[houston:session] failed to write AGENTS.md: {e}");
-            }
-        }
-    }
-
     let mut cmd = Command::new("codex");
     cmd.env("PATH", super::claude_path::shell_path());
 
@@ -165,7 +155,16 @@ async fn spawn_codex(
         cmd.arg("exec");
     }
 
-    cmd.arg("--json").arg("--full-auto").arg("--skip-git-repo-check");
+    cmd.arg("--json")
+        .arg("--dangerously-bypass-approvals-and-sandbox")
+        .arg("--skip-git-repo-check");
+
+    // Inject system prompt via developer_instructions config override.
+    // Codex has no --system-prompt flag; this is the supported injection point.
+    if let Some(ref sp) = system_prompt {
+        let json_val = serde_json::to_string(sp).unwrap_or_else(|_| format!("\"{sp}\""));
+        cmd.arg("-c").arg(format!("developer_instructions={json_val}"));
+    }
 
     if let Some(ref m) = model {
         cmd.arg("--model").arg(m);
@@ -274,18 +273,33 @@ async fn run_cli_process(
             if status.success() || is_sigterm {
                 let _ = tx.send(SessionUpdate::Status(SessionStatus::Completed));
             } else {
-                let stderr_summary = if stderr_lines.is_empty() {
-                    "no stderr output captured".to_string()
+                // Check if stderr indicates an auth failure (e.g. Codex 401 retries).
+                let has_auth_error = stderr_lines.iter().any(|l| {
+                    let lower = l.to_lowercase();
+                    lower.contains("401")
+                        || lower.contains("unauthorized")
+                        || lower.contains("not authenticated")
+                });
+
+                if has_auth_error {
+                    // Clean error — no noisy stderr dump.
+                    let _ = tx.send(SessionUpdate::Status(SessionStatus::Error(
+                        "Authentication expired — sign in again to continue".to_string(),
+                    )));
                 } else {
-                    stderr_lines.join("\n")
-                };
-                let _ = tx.send(SessionUpdate::Feed(FeedItem::ToolResult {
-                    content: format!("Process stderr:\n{stderr_summary}"),
-                    is_error: true,
-                }));
-                let _ = tx.send(SessionUpdate::Status(SessionStatus::Error(format!(
-                    "{cli_name} exited with {status}"
-                ))));
+                    let stderr_summary = if stderr_lines.is_empty() {
+                        "no stderr output captured".to_string()
+                    } else {
+                        stderr_lines.join("\n")
+                    };
+                    let _ = tx.send(SessionUpdate::Feed(FeedItem::ToolResult {
+                        content: format!("Process stderr:\n{stderr_summary}"),
+                        is_error: true,
+                    }));
+                    let _ = tx.send(SessionUpdate::Status(SessionStatus::Error(format!(
+                        "{cli_name} exited with {status}"
+                    ))));
+                }
             }
         }
         Err(e) => {
