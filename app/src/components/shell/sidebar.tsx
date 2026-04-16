@@ -9,7 +9,6 @@ import { useUIStore } from "../../stores/ui";
 import { analytics } from "../../lib/analytics";
 import { AgentMiniAvatar } from "./experience-card";
 import { UpdateChecker } from "./update-checker";
-import { MobileSyncButton } from "./mobile-sync";
 import { CreateWorkspaceDialog } from "../../App";
 
 export function Sidebar({ children }: { children: ReactNode }) {
@@ -134,7 +133,6 @@ export function Sidebar({ children }: { children: ReactNode }) {
         onDelete={handleDelete}
         footer={
           <>
-            <MobileSyncButton />
             <UpdateChecker />
           </>
         }
