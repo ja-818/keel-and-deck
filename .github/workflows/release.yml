@@ -1,24 +1,26 @@
 # Houston macOS Release Workflow
 #
 # Triggered by pushing a version tag (e.g. `git tag v0.3.0 && git push --tags`).
-# Builds, signs, notarizes, and creates a draft GitHub Release with .app and .dmg assets.
+#
+# Signing chain:
+#   1. tauri-action builds, signs, notarizes, and staples the .app
+#   2. tauri-action creates and signs the DMG (but does NOT notarize it — known Tauri gap)
+#   3. This workflow notarizes and staples the DMG (with retry)
+#   4. Full verification: .app signature, .app notarization, DMG signature, DMG notarization,
+#      .app-inside-DMG integrity check
+#   5. All artifacts uploaded to a draft GitHub Release (publish manually after QA)
 #
 # Required secrets:
-#
-#   TAURI_SIGNING_PRIVATE_KEY          — Tauri updater private key (generate: `pnpm tauri signer generate`)
+#   TAURI_SIGNING_PRIVATE_KEY          — Tauri updater key (generate: `pnpm tauri signer generate`)
 #   TAURI_SIGNING_PRIVATE_KEY_PASSWORD — Password for the updater key
-#
-#   APPLE_CERTIFICATE                  — Base64-encoded .p12 certificate from Apple Developer portal
-#   APPLE_CERTIFICATE_PASSWORD         — Password for the .p12 certificate
+#   APPLE_CERTIFICATE                  — Base64-encoded .p12 certificate
+#   APPLE_CERTIFICATE_PASSWORD         — Password for the .p12
 #   APPLE_SIGNING_IDENTITY             — e.g. "Developer ID Application: Your Name (TEAM_ID)"
 #   APPLE_API_ISSUER                   — App Store Connect API issuer ID
 #   APPLE_API_KEY                      — App Store Connect API key ID
-#   APPLE_API_KEY_CONTENT              — Base64-encoded .p8 key file (decoded to disk at build time)
-#
-#   APTABASE_APP_KEY                   — Aptabase analytics key (https://aptabase.com dashboard)
-#   SENTRY_DSN                         — Sentry DSN for crash reporting (Sentry project settings)
-#
-# Note: releaseDraft is true — releases must be manually published from the GitHub Releases page.
+#   APPLE_API_KEY_CONTENT              — Base64-encoded .p8 key file
+#   APTABASE_APP_KEY                   — Aptabase analytics key
+#   SENTRY_DSN                         — Sentry crash reporting DSN
 
 name: Release
 
@@ -33,6 +35,7 @@ permissions:
 jobs:
   build-macos:
     runs-on: macos-latest
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,33 +57,196 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Cache Rust artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            app/src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
       - name: Write Apple API key to disk
         run: |
           mkdir -p ~/.appstoreconnect/private_keys
           echo "${{ secrets.APPLE_API_KEY_CONTENT }}" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPLE_API_KEY }}.p8
 
-      - name: Build and release
+      # Build only — no release creation (no tagName).
+      # tauri-action handles certificate import, code signing, .app notarization + stapling.
+      - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         with:
           projectPath: app
-          tagName: v__VERSION__
-          releaseName: Houston v__VERSION__
-          releaseBody: See the assets to download and install this version.
-          releaseDraft: true
-          prerelease: false
-          includeUpdaterJson: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Tauri updater signing
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # Apple code signing + notarization
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
           APPLE_API_KEY_PATH: ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPLE_API_KEY }}.p8
-          # Analytics + crash reporting (compiled into binary)
           APTABASE_APP_KEY: ${{ secrets.APTABASE_APP_KEY }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
+      - name: Locate build artifacts
+        id: artifacts
+        run: |
+          BUNDLE="app/src-tauri/target/release/bundle"
+
+          APP=$(ls -d "$BUNDLE/macos/"*.app 2>/dev/null | head -1)
+          DMG=$(ls -t "$BUNDLE/dmg/"*.dmg 2>/dev/null | head -1)
+          TAR=$(ls -t "$BUNDLE/macos/"*.app.tar.gz 2>/dev/null | head -1)
+          SIG=$(ls -t "$BUNDLE/macos/"*.app.tar.gz.sig 2>/dev/null | head -1)
+
+          missing=()
+          [ -e "$APP" ] || missing+=(".app")
+          [ -f "$DMG" ] || missing+=(".dmg")
+          [ -f "$TAR" ] || missing+=(".app.tar.gz")
+          [ -f "$SIG" ] || missing+=(".app.tar.gz.sig")
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing build artifacts: ${missing[*]}"
+            echo "--- Bundle contents ---"
+            ls -laR "$BUNDLE" || true
+            exit 1
+          fi
+
+          echo "app=$APP" >> "$GITHUB_OUTPUT"
+          echo "dmg=$DMG" >> "$GITHUB_OUTPUT"
+          echo "tar=$TAR" >> "$GITHUB_OUTPUT"
+          echo "sig=$SIG" >> "$GITHUB_OUTPUT"
+
+          echo "Artifacts:"
+          echo "  .app:        $APP"
+          echo "  .dmg:        $DMG"
+          echo "  .app.tar.gz: $TAR"
+          echo "  .sig:        $SIG"
+
+      - name: Verify .app signing and notarization
+        run: |
+          echo "=== Code signature ==="
+          codesign -vvv --deep --strict "${{ steps.artifacts.outputs.app }}"
+
+          echo "=== Notarization staple ==="
+          xcrun stapler validate "${{ steps.artifacts.outputs.app }}"
+
+      - name: Notarize DMG
+        timeout-minutes: 25
+        run: |
+          DMG="${{ steps.artifacts.outputs.dmg }}"
+          KEY=~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPLE_API_KEY }}.p8
+
+          for attempt in 1 2 3; do
+            echo "=== Attempt $attempt/3 ==="
+            if xcrun notarytool submit "$DMG" \
+                --key-id "${{ secrets.APPLE_API_KEY }}" \
+                --key "$KEY" \
+                --issuer "${{ secrets.APPLE_API_ISSUER }}" \
+                --wait; then
+              echo "Notarization succeeded"
+              xcrun stapler staple "$DMG"
+              exit 0
+            fi
+
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::DMG notarization failed after 3 attempts"
+              exit 1
+            fi
+
+            echo "Retrying in 30s..."
+            sleep 30
+          done
+
+      - name: Verify complete signing chain
+        run: |
+          DMG="${{ steps.artifacts.outputs.dmg }}"
+
+          echo "=== 1. DMG code signature ==="
+          codesign -vvv "$DMG"
+
+          echo "=== 2. DMG notarization staple ==="
+          xcrun stapler validate "$DMG"
+
+          echo "=== 3. DMG Gatekeeper assessment ==="
+          spctl -a -t open --context context:primary-signature -vv "$DMG" \
+            || echo "::warning::spctl returned non-zero (common on CI — not a real issue if steps 1-2 passed)"
+
+          echo "=== 4. .app inside DMG ==="
+          MOUNT=$(mktemp -d)
+          hdiutil attach "$DMG" -mountpoint "$MOUNT" -nobrowse -quiet
+
+          INNER_APP=$(ls -d "$MOUNT/"*.app 2>/dev/null | head -1)
+          if [ -z "$INNER_APP" ]; then
+            echo "::error::No .app found inside DMG"
+            hdiutil detach "$MOUNT" -quiet || true
+            exit 1
+          fi
+
+          codesign -vvv --deep --strict "$INNER_APP"
+          xcrun stapler validate "$INNER_APP"
+          hdiutil detach "$MOUNT" -quiet
+
+          echo "=== All checks passed ==="
+
+      - name: Generate checksums
+        run: |
+          shasum -a 256 \
+            "${{ steps.artifacts.outputs.dmg }}" \
+            "${{ steps.artifacts.outputs.tar }}" \
+            > checksums-sha256.txt
+          cat checksums-sha256.txt
+
+      - name: Generate updater manifest
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          TAR_NAME=$(basename "${{ steps.artifacts.outputs.tar }}")
+          SIG=$(cat "${{ steps.artifacts.outputs.sig }}")
+          URL="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/$TAR_NAME"
+
+          # Both keys required: darwin-aarch64 (generic) and darwin-aarch64-app (.app bundle).
+          # Tauri updater checks for the -app suffix first, falls back to generic.
+          jq -n \
+            --arg v "$VERSION" \
+            --arg sig "$SIG" \
+            --arg url "$URL" \
+            --arg date "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" \
+            --arg notes "See the assets to download and install this version." \
+            '{
+              version: $v,
+              notes: $notes,
+              pub_date: $date,
+              platforms: {
+                "darwin-aarch64": {
+                  signature: $sig,
+                  url: $url
+                },
+                "darwin-aarch64-app": {
+                  signature: $sig,
+                  url: $url
+                }
+              }
+            }' > latest.json
+
+          echo "latest.json:"
+          cat latest.json
+
+      - name: Create draft release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+
+          gh release create "$GITHUB_REF_NAME" \
+            --title "Houston v$VERSION" \
+            --notes "See the assets to download and install this version." \
+            --draft \
+            "${{ steps.artifacts.outputs.dmg }}" \
+            "${{ steps.artifacts.outputs.tar }}" \
+            "${{ steps.artifacts.outputs.sig }}" \
+            latest.json \
+            checksums-sha256.txt
+
+          echo "::notice::Draft release created — publish at https://github.com/${{ github.repository }}/releases/tag/$GITHUB_REF_NAME"
