@@ -163,7 +163,7 @@ export function useSessionEvents() {
           });
           break;
         case "AuthRequired":
-          h.setAuthRequired(true);
+          h.setAuthRequired(payload.data.provider);
           break;
       }
     });

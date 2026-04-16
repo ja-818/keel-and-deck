@@ -44,7 +44,7 @@ export type HoustonEvent =
     }
   | {
       type: "AuthRequired";
-      data: { message: string };
+      data: { provider: string; message: string };
     }
   | {
       type: "CompletionToast";
@@ -107,10 +107,6 @@ export type HoustonEvent =
       data: { agent_path: string };
     }
   | {
-      type: "IntegrationsChanged";
-      data: { agent_path: string };
-    }
-  | {
       type: "SkillsChanged";
       data: { agent_path: string };
     }
@@ -133,6 +129,14 @@ export type HoustonEvent =
   | {
       type: "ContextChanged";
       data: { agent_path: string };
+    }
+  | {
+      type: "ComposioCliReady";
+      data: Record<string, never>;
+    }
+  | {
+      type: "ComposioCliFailed";
+      data: { message: string };
     }
   | {
       type: "SlackSyncStarted";

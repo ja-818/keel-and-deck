@@ -10,7 +10,6 @@ import type {
   LearningsData,
   ChannelEntry,
   StoreListing,
-  TrackedIntegration,
   ImportedWorkspace,
 } from "./types";
 import { logger } from "./logger";
@@ -87,7 +86,7 @@ export const tauriChat = {
     prompt: string,
     sessionKey: string,
     opts?: {
-      promptFile?: string;
+      mode?: string;
       workingDirOverride?: string;
       providerOverride?: string;
       modelOverride?: string;
@@ -97,7 +96,7 @@ export const tauriChat = {
       agent_path: agentPath,
       prompt,
       session_key: sessionKey,
-      prompt_file: opts?.promptFile ?? null,
+      mode: opts?.mode ?? null,
       working_dir_override: opts?.workingDirOverride ?? null,
       provider_override: opts?.providerOverride ?? null,
       model_override: opts?.modelOverride ?? null,
@@ -253,15 +252,6 @@ export const tauriConnections = {
     invoke<void>("complete_composio_login", { cli_key: cliKey }),
   isCliInstalled: () => invoke<boolean>("is_composio_cli_installed"),
   installCli: () => invoke<void>("install_composio_cli"),
-};
-
-export const tauriIntegrations = {
-  list: (agentPath: string) =>
-    invoke<TrackedIntegration[]>("list_integrations", { agent_path: agentPath }),
-  track: (agentPath: string, toolkit: string) =>
-    invoke<TrackedIntegration>("track_integration", { agent_path: agentPath, toolkit }),
-  remove: (agentPath: string, toolkit: string) =>
-    invoke<void>("remove_integration", { agent_path: agentPath, toolkit }),
 };
 
 export const tauriChannels = {
@@ -485,11 +475,24 @@ export const tauriProvider = {
     invoke<string>("get_default_provider"),
   setDefault: (provider: string) =>
     invoke<void>("set_default_provider", { provider }),
+  launchLogin: (provider: string) =>
+    invoke<void>("launch_provider_login", { provider }),
 };
 
 export const tauriSystem = {
   checkClaudeCli: () => invoke<boolean>("check_claude_cli"),
   openUrl: (url: string) => invoke<void>("open_url", { url }),
+};
+
+export interface SyncInfo {
+  token: string;
+  pairing_url: string;
+}
+
+export const tauriSync = {
+  start: () => invoke<SyncInfo>("start_sync"),
+  stop: () => invoke<void>("stop_sync"),
+  status: () => invoke<SyncInfo | null>("get_sync_status"),
 };
 
 export const tauriWatcher = {

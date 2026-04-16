@@ -12,7 +12,8 @@ interface UIState {
   assistantPanelOpen: boolean;
   activityPanelId: string | null;
   claudeAvailable: boolean | null;
-  authRequired: boolean;
+  /** Provider ID that needs re-auth (e.g. "anthropic", "openai"), or null if OK */
+  authRequired: string | null;
   toasts: ToastItem[];
   createAgentDialogOpen: boolean;
   /** Callback registered by the board tab to open the new-mission panel */
@@ -25,7 +26,7 @@ interface UIState {
   setAssistantPanelOpen: (open: boolean) => void;
   setActivityPanelId: (id: string | null) => void;
   setClaudeAvailable: (available: boolean | null) => void;
-  setAuthRequired: (required: boolean) => void;
+  setAuthRequired: (provider: string | null) => void;
   addToast: (toast: Omit<ToastItem, "id">) => void;
   dismissToast: (id: string) => void;
   setCreateAgentDialogOpen: (open: boolean) => void;
@@ -41,7 +42,7 @@ export const useUIStore = create<UIState>((set) => ({
   assistantPanelOpen: false,
   activityPanelId: null,
   claudeAvailable: null,
-  authRequired: false,
+  authRequired: null,
   toasts: [],
   createAgentDialogOpen: false,
   onStartMission: null,

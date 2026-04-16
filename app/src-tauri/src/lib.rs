@@ -61,6 +61,10 @@ pub fn run() {
             let root = houston.join("workspaces");
             std::fs::create_dir_all(&root).ok();
 
+            // Clone DB handle before it moves into AppState — needed by
+            // the background Composio lifecycle task below.
+            let lifecycle_db = db.clone();
+
             app.manage(AppState {
                 db,
                 event_queue: None,
@@ -71,6 +75,17 @@ pub fn run() {
             app.manage(WorkspaceRoot(root.clone()));
             app.manage(houston_tauri::agent_watcher::WatcherState::default());
             app.manage(routine_runner::RoutineSchedulerState::default());
+            app.manage(commands::sync::SyncState::default());
+
+            // Composio CLI lifecycle: auto-install if missing, auto-upgrade
+            // when Houston's version changes. Emits ComposioCliReady so the
+            // frontend can refresh the integrations tab.
+            {
+                let handle = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    houston_tauri::composio_lifecycle::ensure_and_upgrade(handle, lifecycle_db).await;
+                });
+            }
 
             // Warm the Composio catalog cache in the background so the integrations
             // tab loads instantly when the user opens it.
@@ -113,6 +128,7 @@ pub fn run() {
             commands::provider::check_provider_status,
             commands::provider::get_default_provider,
             commands::provider::set_default_provider,
+            commands::provider::launch_provider_login,
             // Houston Store — installed agent configs
             commands::agent_configs::list_installed_configs,
             // Houston Store — remote registry
@@ -166,9 +182,6 @@ pub fn run() {
             houston_tauri::agent_store::commands::create_goal,
             houston_tauri::agent_store::commands::update_goal,
             houston_tauri::agent_store::commands::delete_goal,
-            houston_tauri::agent_store::commands::list_integrations,
-            houston_tauri::agent_store::commands::track_integration,
-            houston_tauri::agent_store::commands::remove_integration,
             houston_tauri::agent_store::commands::list_channels_config,
             houston_tauri::agent_store::commands::add_channel_config,
             houston_tauri::agent_store::commands::remove_channel_config,
@@ -217,6 +230,11 @@ pub fn run() {
             commands::worktree::list_worktrees,
             commands::worktree::run_shell,
             commands::worktree::open_terminal,
+            // Mobile sync
+            commands::sync::start_sync,
+            commands::sync::stop_sync,
+            commands::sync::get_sync_status,
+            commands::sync::send_sync_message,
             // Logging
             logging::write_frontend_log,
             logging::read_recent_logs,

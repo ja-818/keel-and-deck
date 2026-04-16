@@ -26,8 +26,9 @@ pub enum HoustonEvent {
         message: String,
         variant: String,
     },
-    /// CLI tool authentication required.
+    /// CLI tool authentication required — provider session returned 401 or similar.
     AuthRequired {
+        provider: String,
         message: String,
     },
     /// Activity completion notification.
@@ -102,10 +103,6 @@ pub enum HoustonEvent {
     ActivityChanged {
         agent_path: String,
     },
-    /// Integrations changed (.houston/integrations.json).
-    IntegrationsChanged {
-        agent_path: String,
-    },
     /// Skills changed (.agents/skills/ — skill.sh / Claude Code convention).
     SkillsChanged {
         agent_path: String,
@@ -135,6 +132,14 @@ pub enum HoustonEvent {
         project_id: String,
         agent_path: String,
     },
+
+    // ----- Composio CLI lifecycle -----
+
+    /// Composio CLI is installed and ready. Frontend should invalidate
+    /// the connections query so the integrations tab updates.
+    ComposioCliReady,
+    /// Composio CLI install or upgrade failed.
+    ComposioCliFailed { message: String },
 
     // ----- Slack Sync -----
 

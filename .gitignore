@@ -10,3 +10,6 @@ target/
 skills-lock.json
 .playwright-mcp/
 .wrangler/
+
+# CLI binaries fetched by scripts/fetch-cli-deps.sh (downloaded during CI, not committed)
+app/src-tauri/resources/bin/

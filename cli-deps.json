@@ -1,0 +1,46 @@
+{
+  "$schema": "./cli-deps.schema.json",
+  "$comment": "Pinned CLI versions shipped with Houston. Codex + Composio are bundled in the .app. Claude Code is downloaded at runtime (proprietary license prevents bundling).",
+  "claude-code": {
+    "version": "2.1.92",
+    "bundled": false,
+    "binary_name": "claude",
+    "license": "PROPRIETARY",
+    "urls": {
+      "darwin-arm64": "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/{version}/darwin-arm64/claude",
+      "darwin-x64": "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/{version}/darwin-x64/claude",
+      "manifest": "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/{version}/manifest.json"
+    },
+    "checksums": {
+      "darwin-arm64": "6d1b9657727dce81332b3cda11bfe0a8c83e2392e3c062a31022e10b0e71cdd1",
+      "darwin-x64": "d422b5cc974b3bc4b28f698144fd0316f3e17774babe0bc1eb76c2bb0858d0aa"
+    }
+  },
+  "codex": {
+    "version": "0.121.0",
+    "bundled": true,
+    "binary_name": "codex",
+    "license": "Apache-2.0",
+    "urls": {
+      "darwin-arm64": "https://github.com/openai/codex/releases/download/rust-v{version}/codex-aarch64-apple-darwin.tar.gz",
+      "darwin-x64": "https://github.com/openai/codex/releases/download/rust-v{version}/codex-x86_64-apple-darwin.tar.gz"
+    },
+    "checksums": {
+      "darwin-arm64": "60f7039e63a7de8ae474136ac6f593ec1a913e1ddca0df59ade1f6d6eb5f7fd0"
+    }
+  },
+  "composio": {
+    "version": "0.2.24",
+    "bundled": true,
+    "binary_name": "composio",
+    "license": "MIT",
+    "urls": {
+      "darwin-arm64": "https://github.com/ComposioHQ/composio/releases/download/@composio/cli@{version}/composio-darwin-aarch64.zip",
+      "darwin-x64": "https://github.com/ComposioHQ/composio/releases/download/@composio/cli@{version}/composio-darwin-x64.zip"
+    },
+    "checksums": {
+      "darwin-arm64": "fba0a57788ea50335507b2a38eccc67ebc051272f8393284b239875c4fdff8ef",
+      "darwin-x64": "94af160e5bb10be80218dd9377c79a72d5c5ab7e172a65da0607ec4ee4d019c6"
+    }
+  }
+}

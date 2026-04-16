@@ -56,6 +56,7 @@ pub fn spawn_and_monitor(
 
     // Clone working_dir — needed for per-session .sid persistence after spawn_session consumes one copy.
     let persist_dir = working_dir.clone();
+    let provider_str = provider.to_string();
 
     let (mut rx, _handle) = SessionManager::spawn_session(
         provider,
@@ -158,6 +159,29 @@ pub fn spawn_and_monitor(
                             ("error".into(), Some(e.clone()))
                         }
                     };
+
+                    // Detect auth failures and emit a dedicated event
+                    // so the frontend shows a branded reconnect banner.
+                    if let SessionStatus::Error(ref e) = status {
+                        let lower = e.to_lowercase();
+                        let is_auth_error = lower.contains("401")
+                            || lower.contains("unauthorized")
+                            || lower.contains("authentication")
+                            || lower.contains("api key")
+                            || lower.contains("invalid_api_key")
+                            || lower.contains("not authenticated")
+                            || lower.contains("expired");
+                        if is_auth_error {
+                            let _ = handle.emit(
+                                "houston-event",
+                                HoustonEvent::AuthRequired {
+                                    provider: provider_str.clone(),
+                                    message: e.clone(),
+                                },
+                            );
+                        }
+                    }
+
                     let _ = handle.emit(
                         "houston-event",
                         HoustonEvent::SessionStatus {

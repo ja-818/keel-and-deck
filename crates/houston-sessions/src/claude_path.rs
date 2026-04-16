@@ -54,13 +54,15 @@ pub fn init() {
             }
         }
 
-        // Also check for nvm-installed node (claude is often installed via npm)
+        // Also check for nvm-installed node (claude/codex are often installed via npm)
         let nvm_dir = PathBuf::from(&home).join(".nvm/versions/node");
         if nvm_dir.is_dir() {
             if let Ok(entries) = std::fs::read_dir(&nvm_dir) {
                 for entry in entries.flatten() {
                     let bin = entry.path().join("bin");
-                    if bin.join("claude").is_file() {
+                    let has_cli = bin.join("claude").is_file()
+                        || bin.join("codex").is_file();
+                    if has_cli {
                         let bin_str = bin.to_string_lossy();
                         let current = final_path.to_string_lossy();
                         if !current.contains(bin_str.as_ref()) {
