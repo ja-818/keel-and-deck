@@ -1,6 +1,6 @@
 [package]
 name = "houston-skills"
-version = "0.3.3"
+version = "0.3.2"
 edition = "2021"
 description = "Hermes-style self-improving skills for AI agents"
 license = "MIT"
