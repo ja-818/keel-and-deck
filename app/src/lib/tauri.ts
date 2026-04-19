@@ -211,7 +211,7 @@ export interface ComposioAppEntry {
 
 /**
  * Composio integration state as reported by Houston's CLI-backed backend.
- * Matches the `ComposioStatus` enum in `crates/houston-tauri/src/composio_cli.rs`.
+ * Matches the `ComposioStatus` enum in `engine/houston-composio/src/cli.rs`.
  */
 export type ComposioStatus =
   | { status: "not_installed" }

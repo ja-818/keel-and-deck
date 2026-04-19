@@ -6,7 +6,7 @@ the Cloudflare Worker relay (`relay/`).
 
 The canonical TypeScript types live in `packages/sync-protocol/` and are
 consumed by both `app/` (desktop renderer) and `mobile/`. The Rust crate
-`crates/houston-sync` only models the message envelope — it treats payloads
+`engine/houston-sync` only models the message envelope — it treats payloads
 as opaque JSON and never interprets them.
 
 ## Actors
@@ -23,7 +23,7 @@ a third connection with `error` / `room_full`.
 ## Pairing Flow
 
 1. Desktop generates a cryptographically random 32-byte `pairingToken`
-   (hex-encoded, 64 chars) via `crates/houston-sync` -> `generate_token()`.
+   (hex-encoded, 64 chars) via `engine/houston-sync` -> `generate_token()`.
 2. Desktop connects to
    `wss://relay.gethouston.ai/sync/{pairingToken}?role=desktop`
    (or `ws://localhost:8787/...` in dev).
@@ -178,7 +178,7 @@ payload: {
 ## Synthetic messages (desktop-local, NOT over the wire)
 
 ### `connection`
-The desktop Rust client (`crates/houston-sync`) pushes this onto its internal
+The desktop Rust client (`engine/houston-sync`) pushes this onto its internal
 broadcast channel so the renderer can react to WebSocket lifecycle events.
 This message is never serialised or sent to the relay.
 ```ts

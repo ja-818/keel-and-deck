@@ -16,7 +16,7 @@ for f in package.json app/package.json create-app/package.json; do
 done
 
 # Rust crates
-for toml in crates/*/Cargo.toml app/src-tauri/Cargo.toml; do
+for toml in engine/*/Cargo.toml app/src-tauri/Cargo.toml; do
   sed -i '' "s/^version = \".*\"/version = \"$VERSION\"/" "$toml"
 done
 

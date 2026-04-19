@@ -4,7 +4,7 @@
 
 An open source platform for AI-native products. Three layers:
 - **Houston App** (`app/`) — the platform's desktop client (Tauri 2). Individual users use it directly; founders build agents that run on it.
-- **Houston Engine** (Rust crates in `crates/`) — session management, database, agent persistence, Tauri integration
+- **Houston Engine** (Rust crates in `engine/`) — terminal manager, database, agent persistence, Tauri integration
 - **Houston UI** (React packages in `packages/`) — internal React components powering the platform UI
 
 **Architecture:** Library components are genericized and props-driven. No Zustand store dependencies, no app-specific logic in the library. All visual styling follows the Houston design system. The app wires stores to library component props.
@@ -30,7 +30,7 @@ houston/
 |   |   +-- lib/            Types, utilities, constants
 |   +-- src-tauri/      Rust backend
 |   |   +-- src/commands/   Tauri commands (workspaces, agents, sessions, preferences)
-+-- crates/
++-- engine/
 |   +-- houston-channels/  houston-channels     -- Channel adapters (Telegram, Slack), Channel trait, registry
 |   +-- houston-db/        houston-db           -- Database: chat_feed persistence + v1 compat models (libsql)
 |   +-- houston-events/    houston-events       -- Event queue for hooks, webhooks, lifecycle events

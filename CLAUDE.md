@@ -48,12 +48,12 @@ Houston is an open source **platform** for AI-native products. Not a framework, 
 | Directory | What |
 |-----------|------|
 | `packages/` | React UI packages (`@houston-ai/*`) — internal components powering the platform |
-| `crates/` | Rust crates (`houston-*`) — session management, database, agent persistence, Tauri integration |
+| `engine/` | Rust crates (`houston-*`) — terminal manager, database, agent persistence, Tauri integration |
 | `app/` | The Houston app — the platform's desktop client (Tauri 2) |
 | `website/` | gethouston.ai — landing, startups page, vision essay, learn guide |
 | `create-app/` | Scaffolding templates for custom agent React bundles |
 
-**Key distinction:** `packages/` and `crates/` are internal infrastructure, not the developer-facing product. External developers build agents by writing `houston.json` + `CLAUDE.md`, not by importing React components. The components exist to power the platform.
+**Key distinction:** `packages/` and `engine/` are internal infrastructure, not the developer-facing product. External developers build agents by writing `houston.json` + `CLAUDE.md`, not by importing React components. The components exist to power the platform.
 
 ---
 
@@ -76,9 +76,9 @@ Houston is an open source **platform** for AI-native products. Not a framework, 
 1. Print "PHASE 2: Understand the Request"
 2. Read any files the user references
 3. Identify the **direction of work**:
-   - **Library-first:** New capability in packages/ or crates/, then consumed by app/
+   - **Library-first:** New capability in packages/ or engine/, then consumed by app/
    - **App-first:** Feature needed in app/ that should be extracted to the library
-   - **Single-layer:** Work only touches one area (just packages/, just crates/, just app/)
+   - **Single-layer:** Work only touches one area (just packages/, just engine/, just app/)
 4. Ask clarifying questions if ANYTHING is unclear
 5. **STOP AND WAIT:** If you asked clarifying questions, end your turn immediately. Do NOT proceed to Phase 3 until the user answers.
 
@@ -211,7 +211,7 @@ Houston is an open source **platform** for AI-native products. Not a framework, 
 | Area | TypeScript | Rust | Full Build |
 |------|-----------|------|------------|
 | packages/ | `pnpm typecheck` | — | — |
-| crates/ | — | `cargo test --workspace` | `cargo build --workspace` |
+| engine/ | — | `cargo test --workspace` | `cargo build --workspace` |
 | app/ | `cd app && pnpm tsc --noEmit` | `cd app/src-tauri && cargo check` | `cd app && pnpm tauri build` |
 | showcase/ | `cd showcase && pnpm tsc --noEmit` | — | `cd showcase && pnpm build` |
 

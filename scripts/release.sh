@@ -36,11 +36,11 @@ done
 # 7. Publish Rust crates (in dependency order)
 echo "Publishing Rust crates..."
 for crate in houston-db houston-events houston-terminal-manager houston-scheduler houston-channels houston-memory houston-skills; do
-  (cd "crates/$crate" && cargo publish)
+  (cd "engine/$crate" && cargo publish)
   sleep 15  # crates.io rate limit
 done
 # houston-tauri last (depends on all others)
-(cd "crates/houston-tauri" && cargo publish)
+(cd "engine/houston-tauri" && cargo publish)
 
 # 8. Create GitHub release
 echo "Creating GitHub release..."

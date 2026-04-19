@@ -159,7 +159,7 @@ houston/
 │   ├── skills/         Skill management
 │   ├── review/         Review queue
 │   └── agent/          File browser
-├── crates/             houston-* — Rust crates
+├── engine/             houston-* — Rust crates
 │   ├── houston-terminal-manager/   Claude/Codex CLI process manager
 │   ├── houston-db/         SQLite (chat feed + preferences)
 │   ├── houston-tauri/      Tauri integration layer

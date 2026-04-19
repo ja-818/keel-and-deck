@@ -5,7 +5,7 @@
  * sync protocol. Zero runtime dependencies. No React, no Node-only APIs.
  *
  * This package is the single source of truth for message shapes that flow
- * over the relay. The Rust side (crates/houston-sync) only types the
+ * over the relay. The Rust side (engine/houston-sync) only types the
  * envelope and treats payloads as opaque JSON; desktop and mobile both
  * import from this package for typed payloads.
  */

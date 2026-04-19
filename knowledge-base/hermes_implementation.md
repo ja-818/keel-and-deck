@@ -377,7 +377,7 @@ Communication style: terse, direct. Hates filler words and unnecessary summaries
 ### Crate Setup
 
 ```
-houston/crates/houston-skills/
+houston/engine/houston-skills/
 ├── Cargo.toml
 ├── src/
 │   ├── lib.rs          # Public API
@@ -529,7 +529,7 @@ pub fn build_skills_index(skills_dir: &Path) -> Result<String, SkillError> {
 ### Crate Setup
 
 ```
-houston/crates/houston-memory/
+houston/engine/houston-memory/
 ├── Cargo.toml
 ├── src/
 │   ├── lib.rs          # Public API
@@ -822,7 +822,7 @@ houston search --recent [--limit 20] [--json]
 
 ### SKILL.md for houston CLI
 
-Update the existing `crates/houston-cli/skills/SKILL.md` to include the new commands. This is the self-describing document that agents read to learn all available commands. It already documents `houston task` commands — add `houston skill`, `houston memory`, and `houston search`.
+Update the existing `engine/houston-cli/skills/SKILL.md` to include the new commands. This is the self-describing document that agents read to learn all available commands. It already documents `houston task` commands — add `houston skill`, `houston memory`, and `houston search`.
 
 The SKILL.md should include:
 1. All commands with flags
