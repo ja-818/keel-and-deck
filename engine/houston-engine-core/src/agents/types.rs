@@ -1,4 +1,7 @@
 //! Data types for `.houston/` agent files.
+//!
+//! Relocated from `app/houston-tauri/src/agent_store/types.rs`. Wire-compatible
+//! with existing on-disk JSON.
 
 use serde::{Deserialize, Serialize};
 
@@ -16,7 +19,6 @@ pub struct Activity {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub session_key: Option<String>,
     /// Which agent mode created this activity (e.g. "execution", "planning").
-    /// Determines which prompt file is used for the session.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub agent: Option<String>,
     /// Absolute path to the git worktree for this activity, if worktree mode was used.
@@ -44,6 +46,18 @@ pub struct ActivityUpdate {
     pub worktree_path: Option<Option<String>>,
     pub routine_id: Option<String>,
     pub routine_run_id: Option<String>,
+}
+
+/// Fields for creating a new activity (no id — generated).
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct NewActivity {
+    pub title: String,
+    #[serde(default)]
+    pub description: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub worktree_path: Option<String>,
 }
 
 // -- Routines --
@@ -127,7 +141,7 @@ pub struct RoutineRunUpdate {
 
 // -- Config --
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ProjectConfig {
     #[serde(default)]
     pub name: String,
