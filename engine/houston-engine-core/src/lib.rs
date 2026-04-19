@@ -9,6 +9,7 @@ pub mod error;
 pub mod paths;
 pub mod preferences;
 pub mod state;
+pub mod store;
 pub mod workspaces;
 
 pub use error::{CoreError, CoreResult};

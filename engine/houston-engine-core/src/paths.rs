@@ -22,4 +22,9 @@ impl EnginePaths {
     pub fn home(&self) -> &Path {
         &self.home_dir
     }
+
+    /// Installed-agent definitions: `<home>/agents`.
+    pub fn agents_dir(&self) -> PathBuf {
+        self.home_dir.join("agents")
+    }
 }

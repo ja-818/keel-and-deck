@@ -18,6 +18,8 @@ houston-db = { workspace = true }
 houston-ui-events = { workspace = true }
 houston-agent-files = { workspace = true }
 houston-engine-protocol = { workspace = true }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+dirs = "5"
 
 [dev-dependencies]
 tempfile = "3"
