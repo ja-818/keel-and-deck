@@ -19,7 +19,6 @@ pub mod agent;
 pub mod agent_commands;
 pub mod agent_files;
 pub mod agent_store;
-pub mod agent_watcher;
 pub mod conversations;
 
 // Re-export sub-crates for convenience.

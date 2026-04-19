@@ -70,7 +70,7 @@ pub fn run() {
             app.manage(SessionIdTracker::default());
             app.manage(SessionPidMap::default());
             app.manage(WorkspaceRoot(root.clone()));
-            app.manage(houston_tauri::agent_watcher::WatcherState::default());
+            app.manage(houston_file_watcher::WatcherState::default());
             app.manage(routine_runner::RoutineSchedulerState::default());
             app.manage(commands::sync::SyncState::default());
 
@@ -171,8 +171,8 @@ pub fn run() {
             houston_tauri::agent_commands::list_recent_sessions,
             houston_tauri::agent_commands::load_session_feed,
             // Agent file watcher (AI-native reactivity)
-            houston_tauri::agent_watcher::start_agent_watcher,
-            houston_tauri::agent_watcher::stop_agent_watcher,
+            houston_file_watcher::start_agent_watcher,
+            houston_file_watcher::stop_agent_watcher,
             // Routine scheduler
             routine_runner::run_routine_now,
             routine_runner::start_routine_scheduler,

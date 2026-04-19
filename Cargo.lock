@@ -2205,6 +2205,7 @@ dependencies = [
  "dirs 5.0.1",
  "houston-agent-files",
  "houston-agents-conversations",
+ "houston-file-watcher",
  "houston-skills",
  "houston-sync",
  "houston-tauri",
@@ -2251,6 +2252,18 @@ dependencies = [
  "tokio",
  "tracing",
  "uuid",
+]
+
+[[package]]
+name = "houston-file-watcher"
+version = "0.3.2"
+dependencies = [
+ "houston-ui-events",
+ "notify",
+ "notify-debouncer-mini",
+ "tauri",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -2322,8 +2335,6 @@ dependencies = [
  "houston-sync",
  "houston-ui-events",
  "libsql",
- "notify",
- "notify-debouncer-mini",
  "reqwest 0.12.28",
  "serde",
  "serde_json",

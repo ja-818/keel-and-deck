@@ -11,6 +11,7 @@ members = [
     "crates/houston-agent-files",
     "crates/houston-ui-events",
     "crates/houston-agents-conversations",
+    "crates/houston-file-watcher",
     "app/src-tauri",
 ]
 
@@ -35,3 +36,4 @@ houston-sync = { version = "0.3.2", path = "crates/houston-sync" }
 houston-agent-files = { version = "0.3.2", path = "crates/houston-agent-files" }
 houston-ui-events = { version = "0.3.2", path = "crates/houston-ui-events" }
 houston-agents-conversations = { version = "0.3.2", path = "crates/houston-agents-conversations" }
+houston-file-watcher = { version = "0.3.2", path = "crates/houston-file-watcher" }

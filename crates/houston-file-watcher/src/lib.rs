@@ -1,11 +1,12 @@
-//! File watcher for agent directories.
+//! Filesystem watcher for agent directories.
 //!
-//! Watches agent files and emits `HoustonEvent` variants when they change.
-//! This catches agent writes that bypass Tauri commands — the key piece
-//! of AI-native reactivity.
+//! Watches an agent's workspace (`~/Documents/Houston/<name>/`) and emits
+//! `HoustonEvent` variants when files change. This catches writes made
+//! directly by the CLI agent that bypass Tauri commands — the key piece
+//! of Houston's AI-native reactivity model.
 //!
-//! Uses `notify` with debouncing (500ms) to avoid flooding events during
-//! rapid writes (e.g., agent streaming to a file).
+//! Uses `notify` with 500ms debouncing to avoid flooding events during
+//! rapid writes (e.g., an agent streaming output to a file).
 
 use houston_ui_events::HoustonEvent;
 use notify_debouncer_mini::{new_debouncer, DebouncedEventKind};
@@ -157,31 +158,5 @@ pub fn start_watching(
     })
 }
 
-// -- Tauri commands --
-
-/// Start watching the current agent for file changes.
-#[tauri::command(rename_all = "snake_case")]
-pub async fn start_agent_watcher(
-    app_handle: tauri::AppHandle,
-    state: tauri::State<'_, WatcherState>,
-    agent_path: String,
-) -> Result<(), String> {
-    let mut guard = state.0.lock().await;
-    // Stop any existing watcher
-    *guard = None;
-    // Start new watcher
-    let watcher = start_watching(&app_handle, agent_path)?;
-    *guard = Some(watcher);
-    Ok(())
-}
-
-/// Stop watching the current agent.
-#[tauri::command(rename_all = "snake_case")]
-pub async fn stop_agent_watcher(
-    state: tauri::State<'_, WatcherState>,
-) -> Result<(), String> {
-    let mut guard = state.0.lock().await;
-    *guard = None;
-    tracing::info!("[watcher] Stopped");
-    Ok(())
-}
+pub mod commands;
+pub use commands::{start_agent_watcher, stop_agent_watcher};
