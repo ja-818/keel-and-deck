@@ -17,6 +17,7 @@ thiserror = "1"
 houston-db = { workspace = true }
 houston-ui-events = { workspace = true }
 houston-agent-files = { workspace = true }
+houston-skills = { workspace = true, features = ["remote"] }
 houston-engine-protocol = { workspace = true }
 
 [dev-dependencies]

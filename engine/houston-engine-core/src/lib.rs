@@ -8,6 +8,7 @@ pub mod conversations;
 pub mod error;
 pub mod paths;
 pub mod preferences;
+pub mod skills;
 pub mod state;
 pub mod workspaces;
 
