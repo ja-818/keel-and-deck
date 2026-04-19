@@ -1,0 +1,15 @@
+//! REST routes.
+
+pub mod health;
+
+use axum::{extract::Request, http::HeaderValue, middleware::Next, response::Response};
+use houston_engine_protocol::{ENGINE_VERSION, HEADER_ENGINE_VERSION};
+
+/// Inject `X-Houston-Engine-Version` on every response.
+pub async fn version_header(req: Request, next: Next) -> Response {
+    let mut res = next.run(req).await;
+    if let Ok(v) = HeaderValue::from_str(ENGINE_VERSION) {
+        res.headers_mut().insert(HEADER_ENGINE_VERSION, v);
+    }
+    res
+}
