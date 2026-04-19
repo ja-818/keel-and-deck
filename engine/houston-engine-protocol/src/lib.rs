@@ -116,6 +116,63 @@ pub fn event_envelope(event: &HoustonEvent) -> EngineEnvelope {
     }
 }
 
+/// Map a `HoustonEvent` to its WS topic.
+///
+/// Topics are the routing key clients subscribe to via `ClientRequest::Sub`.
+/// Naming convention: `{category}:{id}` for scoped events, bare `{category}`
+/// for singleton categories.
+///
+/// Session events (`FeedItem`, `SessionStatus`) route to `session:{session_key}`.
+/// All other categories get a fixed topic so clients can choose what to hear.
+pub fn event_topic(event: &HoustonEvent) -> String {
+    match event {
+        HoustonEvent::FeedItem { session_key, .. }
+        | HoustonEvent::SessionStatus { session_key, .. } => format!("session:{session_key}"),
+        HoustonEvent::AuthRequired { .. } => "auth".into(),
+        HoustonEvent::Toast { .. } | HoustonEvent::CompletionToast { .. } => "toast".into(),
+        HoustonEvent::EventReceived { .. } | HoustonEvent::EventProcessed { .. } => {
+            "events".into()
+        }
+        HoustonEvent::HeartbeatFired { .. } | HoustonEvent::CronFired { .. } => {
+            "scheduler".into()
+        }
+        HoustonEvent::RoutinesChanged { agent_path }
+        | HoustonEvent::RoutineRunsChanged { agent_path } => format!("routines:{agent_path}"),
+        HoustonEvent::ActivityChanged { agent_path }
+        | HoustonEvent::SkillsChanged { agent_path }
+        | HoustonEvent::FilesChanged { agent_path }
+        | HoustonEvent::ConfigChanged { agent_path }
+        | HoustonEvent::ContextChanged { agent_path }
+        | HoustonEvent::LearningsChanged { agent_path } => format!("agent:{agent_path}"),
+        HoustonEvent::ConversationsChanged { agent_path, .. } => format!("agent:{agent_path}"),
+        HoustonEvent::ComposioCliReady | HoustonEvent::ComposioCliFailed { .. } => {
+            "composio".into()
+        }
+    }
+}
+
+/// Whether a feed item is "low severity" — i.e. streaming deltas that can be
+/// dropped under backpressure without breaking the conversation (because the
+/// final non-streaming variant will follow).
+pub fn is_low_severity_feed(item: &houston_terminal_manager::FeedItem) -> bool {
+    matches!(
+        item,
+        houston_terminal_manager::FeedItem::AssistantTextStreaming(_)
+            | houston_terminal_manager::FeedItem::ThinkingStreaming(_)
+    )
+}
+
+/// Build a `LagMarker` event envelope suitable for sending on the WS.
+pub fn lag_marker_envelope(dropped: u64) -> EngineEnvelope {
+    EngineEnvelope {
+        v: PROTOCOL_VERSION,
+        id: uuid::Uuid::new_v4().to_string(),
+        kind: EnvelopeKind::Event,
+        ts: chrono::Utc::now().timestamp_millis(),
+        payload: serde_json::json!({ "type": "Lag", "dropped": dropped }),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -144,5 +201,38 @@ mod tests {
     fn client_request_sub() {
         let r: ClientRequest = serde_json::from_str(r#"{"op":"sub","topics":["a","b"]}"#).unwrap();
         matches!(r, ClientRequest::Sub { .. });
+    }
+
+    #[test]
+    fn event_topic_session_scoped() {
+        let ev = HoustonEvent::FeedItem {
+            agent_path: "/a".into(),
+            session_key: "k1".into(),
+            item: houston_terminal_manager::FeedItem::AssistantText("hi".into()),
+        };
+        assert_eq!(event_topic(&ev), "session:k1");
+
+        let ev = HoustonEvent::SessionStatus {
+            agent_path: "/a".into(),
+            session_key: "k1".into(),
+            status: "running".into(),
+            error: None,
+        };
+        assert_eq!(event_topic(&ev), "session:k1");
+    }
+
+    #[test]
+    fn event_topic_singletons() {
+        let ev = HoustonEvent::Toast { message: "x".into(), variant: "info".into() };
+        assert_eq!(event_topic(&ev), "toast");
+        assert_eq!(event_topic(&HoustonEvent::ComposioCliReady), "composio");
+    }
+
+    #[test]
+    fn low_severity_feed_detection() {
+        use houston_terminal_manager::FeedItem;
+        assert!(is_low_severity_feed(&FeedItem::AssistantTextStreaming("x".into())));
+        assert!(is_low_severity_feed(&FeedItem::ThinkingStreaming("x".into())));
+        assert!(!is_low_severity_feed(&FeedItem::AssistantText("x".into())));
     }
 }
