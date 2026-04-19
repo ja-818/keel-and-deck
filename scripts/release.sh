@@ -39,8 +39,8 @@ for crate in houston-db houston-events houston-terminal-manager houston-schedule
   (cd "engine/$crate" && cargo publish)
   sleep 15  # crates.io rate limit
 done
-# houston-tauri last (depends on all others)
-(cd "engine/houston-tauri" && cargo publish)
+# houston-tauri lives in app/ (Tauri adapter, not part of Engine)
+(cd "app/houston-tauri" && cargo publish)
 
 # 8. Create GitHub release
 echo "Creating GitHub release..."

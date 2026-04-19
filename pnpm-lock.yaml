@@ -118,7 +118,7 @@ importers:
         specifier: ^6.3.5
         version: 6.4.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)
 
-  bridge:
+  desktop-mobile-bridge:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20241205.0

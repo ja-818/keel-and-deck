@@ -2,7 +2,7 @@
 name = "houston-tauri"
 version = "0.3.2"
 edition = "2021"
-description = "Tauri plugin wrapping houston-terminal-manager and houston-db for AI agent desktop apps"
+description = "Tauri adapter for Houston Engine. Applies engine crates to the Houston desktop app. Not part of Engine — Engine stays frontend-agnostic."
 license = "MIT"
 repository = "https://github.com/ja-818/houston"
 

@@ -2,4 +2,4 @@ packages:
   - "ui/*"
   - "app"
   - "mobile"
-  - "bridge"
+  - "desktop-mobile-bridge"

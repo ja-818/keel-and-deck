@@ -16,7 +16,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
 dirs = "5"
-houston-tauri = { path = "../../engine/houston-tauri" }
+houston-tauri = { path = "../houston-tauri" }
 houston-skills = { path = "../../engine/houston-skills", features = ["remote"] }
 uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }

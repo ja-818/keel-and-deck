@@ -3,7 +3,7 @@ resolver = "2"
 members = [
     "engine/houston-terminal-manager",
     "engine/houston-db",
-    "engine/houston-tauri",
+    "app/houston-tauri",
     "engine/houston-events",
     "engine/houston-scheduler",
     "engine/houston-skills",
@@ -29,7 +29,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 tracing-appender = "0.2"
 houston-terminal-manager = { version = "0.3.2", path = "engine/houston-terminal-manager" }
 houston-db = { version = "0.3.2", path = "engine/houston-db" }
-houston-tauri = { version = "0.3.2", path = "engine/houston-tauri" }
+houston-tauri = { version = "0.3.2", path = "app/houston-tauri" }
 houston-events = { version = "0.3.2", path = "engine/houston-events" }
 houston-scheduler = { version = "0.3.2", path = "engine/houston-scheduler" }
 houston-skills = { version = "0.3.2", path = "engine/houston-skills" }
