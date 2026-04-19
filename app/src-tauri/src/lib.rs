@@ -4,7 +4,8 @@ mod logging;
 mod routine_runner;
 
 use commands::agents::WorkspaceRoot;
-use houston_tauri::session_id_tracker::SessionIdTracker;
+use houston_agents_conversations::session_id_tracker::SessionIdTracker;
+use houston_agents_conversations::session_pids::SessionPidMap;
 use houston_tauri::houston_db::Database;
 use houston_tauri::state::AppState;
 use tauri::{Emitter, Manager};
@@ -67,7 +68,7 @@ pub fn run() {
                 scheduler: None,
             });
             app.manage(SessionIdTracker::default());
-            app.manage(houston_tauri::session_pids::SessionPidMap::default());
+            app.manage(SessionPidMap::default());
             app.manage(WorkspaceRoot(root.clone()));
             app.manage(houston_tauri::agent_watcher::WatcherState::default());
             app.manage(routine_runner::RoutineSchedulerState::default());

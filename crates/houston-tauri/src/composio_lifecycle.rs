@@ -8,7 +8,7 @@
 //! invalidate the connections query and update the integrations tab.
 
 use crate::composio_install;
-use crate::events::HoustonEvent;
+use houston_ui_events::HoustonEvent;
 use houston_db::db::Database;
 use tauri::{AppHandle, Emitter};
 

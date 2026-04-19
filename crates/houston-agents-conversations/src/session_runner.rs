@@ -3,11 +3,11 @@
 //! Replaces the duplicated "spawn + tokio::spawn + match update" pattern
 //! that apps previously implemented manually.
 
-use crate::events::HoustonEvent;
 use crate::session_id_tracker::SessionIdHandle;
 use crate::session_pids::SessionPidMap;
 use houston_db::Database;
 use houston_sessions::{FeedItem, Provider, SessionManager, SessionStatus, SessionUpdate};
+use houston_ui_events::HoustonEvent;
 use std::path::PathBuf;
 use tauri::Emitter;
 

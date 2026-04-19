@@ -18,7 +18,8 @@
 //!
 //! These pair with `@houston-ai/agent`'s `FilesBrowser` component on the frontend.
 
-use crate::events::HoustonEvent;
+use houston_ui_events::HoustonEvent;
+
 use crate::paths::expand_tilde;
 use crate::state::AppState;
 use crate::agent;

@@ -7,13 +7,13 @@
 use crate::agent;
 use chrono::Utc;
 use cron::Schedule;
-use houston_tauri::session_id_tracker::SessionIdTracker;
+use houston_agents_conversations::session_id_tracker::SessionIdTracker;
+use houston_agents_conversations::session_runner::{self, PersistOptions};
 use houston_tauri::agent_store::types::{ActivityUpdate, RoutineRunUpdate};
 use houston_tauri::agent_store::AgentStore;
-use houston_tauri::events::HoustonEvent;
 use houston_tauri::paths::expand_tilde;
-use houston_tauri::session_runner::PersistOptions;
 use houston_tauri::state::AppState;
+use houston_ui_events::HoustonEvent;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -213,12 +213,12 @@ pub async fn run_routine(
         run.session_key
     );
     let sid_handle = session_ids
-        .get_for_session(&agent_key, agent_path, &run.session_key)
+        .get_for_session(&agent_key, &working_dir, &run.session_key)
         .await;
     let resume_id = sid_handle.get().await;
 
     // Spawn session and wait for completion
-    let join_handle = houston_tauri::session_runner::spawn_and_monitor(
+    let join_handle = session_runner::spawn_and_monitor(
         app_handle,
         agent_path.to_string(),
         run.session_key.clone(),

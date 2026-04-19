@@ -1,13 +1,13 @@
 use crate::agent;
-use houston_tauri::session_id_tracker::SessionIdTracker;
+use houston_agents_conversations::session_id_tracker::SessionIdTracker;
+use houston_agents_conversations::session_pids::SessionPidMap;
+use houston_agents_conversations::session_runner::{self, PersistOptions};
 use houston_tauri::agent_store::AgentStore;
-use houston_tauri::events::HoustonEvent;
 use houston_tauri::houston_sessions;
 use houston_tauri::houston_sessions::Provider;
 use houston_tauri::paths::expand_tilde;
-use houston_tauri::session_pids::SessionPidMap;
-use houston_tauri::session_runner::PersistOptions;
 use houston_tauri::state::AppState;
+use houston_ui_events::HoustonEvent;
 use std::path::PathBuf;
 use tauri::{Emitter, State};
 use tokio::io::AsyncWriteExt;
@@ -156,7 +156,7 @@ pub async fn send_message(
     let session_key = session_key.ok_or_else(|| "session_key is required".to_string())?;
     let agent_key = format!("{}:{}", working_dir.to_string_lossy(), session_key);
     let sid_handle = session_ids
-        .get_for_session(&agent_key, &agent_path, &session_key)
+        .get_for_session(&agent_key, &working_dir, &session_key)
         .await;
     let resume_id = sid_handle.get().await;
     tracing::debug!(
@@ -164,7 +164,7 @@ pub async fn send_message(
         resume_id, agent_key
     );
 
-    houston_tauri::session_runner::spawn_and_monitor(
+    session_runner::spawn_and_monitor(
         &app_handle,
         agent_path.clone(),
         session_key.clone(),
@@ -194,7 +194,7 @@ pub async fn load_chat_history(
     session_key: String,
 ) -> Result<Vec<serde_json::Value>, String> {
     let working_dir = expand_tilde(&PathBuf::from(&agent_path));
-    let sid_path = houston_tauri::session_id_tracker::session_id_path(&working_dir, &session_key);
+    let sid_path = houston_agents_conversations::session_id_tracker::session_id_path(&working_dir, &session_key);
 
     let Some(claude_session_id) = std::fs::read_to_string(&sid_path)
         .ok()
@@ -264,13 +264,13 @@ pub async fn start_onboarding_session(
 
     let agent_key = format!("{}:{}", working_dir.to_string_lossy(), session_key);
     let sid_handle = session_ids
-        .get_for_session(&agent_key, &agent_path, &session_key)
+        .get_for_session(&agent_key, &working_dir, &session_key)
         .await;
     let resume_id = sid_handle.get().await;
 
     let provider = resolve_provider(&working_dir);
 
-    houston_tauri::session_runner::spawn_and_monitor(
+    session_runner::spawn_and_monitor(
         &app_handle,
         agent_path.clone(),
         session_key.clone(),

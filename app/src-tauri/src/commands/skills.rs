@@ -1,4 +1,4 @@
-use houston_tauri::events::HoustonEvent;
+use houston_ui_events::HoustonEvent;
 use houston_tauri::paths::expand_tilde;
 use serde::Serialize;
 use std::path::{Path, PathBuf};

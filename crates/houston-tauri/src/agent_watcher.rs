@@ -7,7 +7,7 @@
 //! Uses `notify` with debouncing (500ms) to avoid flooding events during
 //! rapid writes (e.g., agent streaming to a file).
 
-use crate::events::HoustonEvent;
+use houston_ui_events::HoustonEvent;
 use notify_debouncer_mini::{new_debouncer, DebouncedEventKind};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;

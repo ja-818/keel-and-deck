@@ -1,4 +1,4 @@
-//! Tracks Claude CLI session IDs per `(agent_path, session_key)` pair so
+//! Tracks Claude CLI session IDs per `(agent_dir, session_key)` pair so
 //! `--resume` continues the right conversation across turns and app restarts.
 //!
 //! Each handle owns its disk path: setting a new ID updates the in-memory
@@ -6,15 +6,14 @@
 //! agent directory. No shared "main" session file — every conversation is
 //! independently scoped.
 
-use crate::paths::expand_tilde;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 
 /// Return the disk path where a given session_key's Claude session ID is persisted.
-pub fn session_id_path(agent_path: &Path, session_key: &str) -> PathBuf {
-    agent_path
+pub fn session_id_path(agent_dir: &Path, session_key: &str) -> PathBuf {
+    agent_dir
         .join(".houston")
         .join("sessions")
         .join(format!("{session_key}.sid"))
@@ -49,7 +48,7 @@ impl SessionIdHandle {
     }
 }
 
-/// Managed Tauri state: one `SessionIdHandle` per `(agent_path, session_key)`.
+/// Managed Tauri state: one `SessionIdHandle` per `(agent_dir, session_key)`.
 /// Lazy-loads persisted IDs from disk on first access.
 #[derive(Default, Clone)]
 pub struct SessionIdTracker {
@@ -60,12 +59,13 @@ impl SessionIdTracker {
     /// Get (or lazily create) the handle for a given conversation.
     ///
     /// `agent_key` is a unique identifier combining agent + session
-    /// (e.g. `"{agent_path}:{session_key}"`).
-    /// `agent_path` is the filesystem path where `.houston/sessions/{session_key}.sid` lives.
+    /// (e.g. `"{agent_dir}:{session_key}"`).
+    /// `agent_dir` is the expanded agent filesystem path — where
+    /// `.houston/sessions/{session_key}.sid` is stored.
     pub async fn get_for_session(
         &self,
         agent_key: &str,
-        agent_path: &str,
+        agent_dir: &Path,
         session_key: &str,
     ) -> SessionIdHandle {
         // Fast path: already in memory.
@@ -77,8 +77,7 @@ impl SessionIdTracker {
         }
 
         // Slow path: create handle and try to load the persisted ID from disk.
-        let agent_dir = expand_tilde(&PathBuf::from(agent_path));
-        let sid_path = session_id_path(&agent_dir, session_key);
+        let sid_path = session_id_path(agent_dir, session_key);
         let initial = std::fs::read_to_string(&sid_path)
             .ok()
             .map(|s| s.trim().to_string())
@@ -96,7 +95,7 @@ impl SessionIdTracker {
     }
 
     /// Remove in-memory handles for a deleted agent.
-    /// `agent_key_prefix` should match the `"{agent_path}:"` prefix used when storing.
+    /// `agent_key_prefix` should match the `"{agent_dir}:"` prefix used when storing.
     pub async fn remove_agent(&self, agent_key_prefix: &str) {
         let mut map = self.inner.write().await;
         map.retain(|k, _| !k.starts_with(agent_key_prefix));

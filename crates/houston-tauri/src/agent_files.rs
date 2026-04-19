@@ -11,7 +11,8 @@ use std::path::PathBuf;
 use houston_agent_files as files;
 use tauri::Emitter;
 
-use crate::events::HoustonEvent;
+use houston_ui_events::HoustonEvent;
+
 use crate::paths::expand_tilde;
 
 fn resolve_agent_dir(agent_path: &str) -> Result<PathBuf, String> {

@@ -2182,6 +2182,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "houston-agents-conversations"
+version = "0.3.2"
+dependencies = [
+ "houston-db",
+ "houston-sessions",
+ "houston-ui-events",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "houston-app"
 version = "0.3.2"
 dependencies = [
@@ -2190,9 +2204,11 @@ dependencies = [
  "cron",
  "dirs 5.0.1",
  "houston-agent-files",
+ "houston-agents-conversations",
  "houston-skills",
  "houston-sync",
  "houston-tauri",
+ "houston-ui-events",
  "open",
  "reqwest 0.12.28",
  "sentry",
@@ -2298,11 +2314,13 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "houston-agent-files",
+ "houston-agents-conversations",
  "houston-db",
  "houston-events",
  "houston-scheduler",
  "houston-sessions",
  "houston-sync",
+ "houston-ui-events",
  "libsql",
  "notify",
  "notify-debouncer-mini",
@@ -2314,6 +2332,14 @@ dependencies = [
  "tokio",
  "tracing",
  "uuid",
+]
+
+[[package]]
+name = "houston-ui-events"
+version = "0.3.2"
+dependencies = [
+ "houston-sessions",
+ "serde",
 ]
 
 [[package]]

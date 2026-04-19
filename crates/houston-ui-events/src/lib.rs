@@ -1,10 +1,16 @@
+//! Event types emitted from the Rust backend to the UI via Tauri's event bus.
+//!
+//! Every variant is a message the frontend reacts to (feed updates, status
+//! changes, toasts, file-change notifications for query invalidation, etc.).
+//! Emit via `app_handle.emit("houston-event", HoustonEvent::...)`.
+//!
+//! This crate is intentionally a tiny leaf — no Tauri dep, just the wire
+//! contract — so any backend crate can construct events without pulling in
+//! the full Tauri framework.
+
 use houston_sessions::FeedItem;
 use serde::Serialize;
 
-/// Generic events emitted from the Rust backend to the frontend via Tauri's event system.
-///
-/// Applications can extend this with their own event types or use it directly.
-/// Emit via `app_handle.emit("houston-event", HoustonEvent::...)`.
 #[derive(Clone, Serialize)]
 #[serde(tag = "type", content = "data")]
 pub enum HoustonEvent {

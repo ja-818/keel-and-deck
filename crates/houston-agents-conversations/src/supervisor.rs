@@ -1,4 +1,4 @@
-use crate::events::HoustonEvent;
+use houston_ui_events::HoustonEvent;
 use tauri::Emitter;
 use tokio::task::JoinSet;
 
