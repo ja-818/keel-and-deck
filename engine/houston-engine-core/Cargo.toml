@@ -18,6 +18,9 @@ houston-db = { workspace = true }
 houston-ui-events = { workspace = true }
 houston-agent-files = { workspace = true }
 houston-engine-protocol = { workspace = true }
+houston-agents-conversations = { workspace = true }
+houston-terminal-manager = { workspace = true }
+dirs-next = "2"
 
 [dev-dependencies]
 tempfile = "3"
