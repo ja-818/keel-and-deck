@@ -2,4 +2,4 @@ packages:
   - "ui/*"
   - "app"
   - "mobile"
-  - "relay"
+  - "bridge"

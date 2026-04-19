@@ -2,7 +2,7 @@
 
 This document is the authoritative contract for the WebSocket sync channel
 between the Houston desktop app and the Houston mobile companion, brokered by
-the Cloudflare Worker relay (`relay/`).
+the Cloudflare Worker relay (`bridge/`).
 
 The canonical TypeScript types live in `ui/sync-protocol/` and are
 consumed by both `app/` (desktop renderer) and `mobile/`. The Rust crate
