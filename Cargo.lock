@@ -2327,6 +2327,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "houston-engine-core"
+version = "0.4.0"
+dependencies = [
+ "chrono",
+ "houston-agent-files",
+ "houston-db",
+ "houston-engine-protocol",
+ "houston-ui-events",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "houston-engine-protocol"
 version = "0.4.0"
 dependencies = [
@@ -2345,6 +2363,7 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "futures-util",
+ "houston-engine-core",
  "houston-engine-protocol",
  "houston-ui-events",
  "rand 0.8.5",
@@ -2352,6 +2371,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "tempfile",
  "tokio",
  "tokio-tungstenite",
  "tower 0.5.3",

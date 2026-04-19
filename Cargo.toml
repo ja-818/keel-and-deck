@@ -13,6 +13,7 @@ members = [
     "engine/houston-agents-conversations",
     "engine/houston-file-watcher",
     "engine/houston-composio",
+    "engine/houston-engine-core",
     "engine/houston-engine-protocol",
     "engine/houston-engine-server",
     "app/src-tauri",
@@ -41,5 +42,6 @@ houston-ui-events = { version = "0.3.2", path = "engine/houston-ui-events" }
 houston-agents-conversations = { version = "0.3.2", path = "engine/houston-agents-conversations" }
 houston-file-watcher = { version = "0.3.2", path = "engine/houston-file-watcher" }
 houston-composio = { version = "0.3.2", path = "engine/houston-composio" }
+houston-engine-core = { version = "0.4.0", path = "engine/houston-engine-core" }
 houston-engine-protocol = { version = "0.4.0", path = "engine/houston-engine-protocol" }
 houston-engine-server = { version = "0.4.0", path = "engine/houston-engine-server" }

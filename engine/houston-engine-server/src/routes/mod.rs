@@ -1,6 +1,8 @@
 //! REST routes.
 
+pub mod error;
 pub mod health;
+pub mod workspaces;
 
 use axum::{extract::Request, http::HeaderValue, middleware::Next, response::Response};
 use houston_engine_protocol::{ENGINE_VERSION, HEADER_ENGINE_VERSION};
