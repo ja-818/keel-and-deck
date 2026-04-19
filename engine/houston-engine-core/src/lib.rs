@@ -11,6 +11,7 @@ pub mod paths;
 pub mod preferences;
 pub mod skills;
 pub mod state;
+pub mod worktree;
 pub mod workspaces;
 
 pub use error::{CoreError, CoreResult};

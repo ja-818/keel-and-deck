@@ -2337,6 +2337,7 @@ dependencies = [
  "houston-db",
  "houston-engine-protocol",
  "houston-skills",
+ "houston-terminal-manager",
  "houston-ui-events",
  "serde",
  "serde_json",
