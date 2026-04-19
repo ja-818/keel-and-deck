@@ -48,13 +48,16 @@ All pure libraries. No frontend assumptions.
 - `houston-scheduler` — cron + heartbeat
 - `houston-agent-files` — `.houston/` file I/O, schemas, migration
 - `houston-agents-conversations` — chat feed persistence
-- `houston-ui-events` — typed event bus (frontend-neutral — Tauri adapter wires it)
+- `houston-ui-events` — typed event bus + `EventSink` trait (Tauri/broadcast impls, frontend-neutral)
 - `houston-file-watcher` — `notify` on `.houston/`, emits events
 - `houston-composio` — Composio MCP server lifecycle
-- `houston-sync` — WebSocket sync envelope
+- `houston-sync` — WebSocket sync envelope (desktop↔mobile pairing; engine WS lives in `houston-engine-server`)
 - `houston-skills` — skill discovery + management
+- `houston-engine-core` — runtime container (`EngineState`, paths, domain logic relocated from Tauri adapter)
+- `houston-engine-protocol` — wire types (REST DTOs, WS envelope, error codes). Matches `ui/engine-client/src/types.ts`.
+- `houston-engine-server` — axum HTTP+WS binary `houston-engine`. The process every client talks to.
 
-**Missing for Engine standalone:** HTTP/WS server binary. Today Engine is Rust-dep-only. Always On + Teams can't ship until this exists.
+**Standalone engine, shipping now:** Phase 0-3 of the engine rollout is merged (trait-based decoupling, HTTP+WS binary with health/workspaces/ws, TS client scaffold). Phases 4-5 complete the desktop subprocess flip and public deploy story — see `engine-server.md`.
 
 ## App-side Rust (`app/`)
 
@@ -63,9 +66,11 @@ All pure libraries. No frontend assumptions.
 
 ## UI packages (`ui/`)
 
-`@houston-ai/` + `core, chat, board, layout, connections, events, memory, routines, skills, review, agent, agent-schemas, sync-protocol`
+`@houston-ai/` + `core, chat, board, layout, connections, events, memory, routines, skills, review, agent, agent-schemas, sync-protocol, engine-client`
 
-Internal. External devs don't `npm install` these — they write `houston.json` + `CLAUDE.md` + optional `bundle.js`.
+Mostly internal. `@houston-ai/engine-client` is the one package we expect
+third-party devs to install — it's the TypeScript front door to the engine
+HTTP+WS protocol.
 
 ## Current gap to vision
 
@@ -74,8 +79,9 @@ Internal. External devs don't `npm install` these — they write `houston.json` 
 | Clear product dirs | ✅ done |
 | App ↔ Engine clear boundary | ✅ `app/houston-tauri` split |
 | UI standalone | ✅ |
-| Engine reusable by non-Tauri frontends | ❌ no server binary |
-| Always On / Teams / Cloud | ❌ TBD placeholders |
+| Engine reusable by non-Tauri frontends | 🟡 binary ships, protocol drafted, command migration in progress |
+| Always On | 🟡 Dockerfile + compose + systemd unit shipped; needs docs polish |
+| Teams / Cloud | ❌ TBD placeholders |
 | Store populated | ❌ placeholder |
 
 ## Direction of work

@@ -41,6 +41,9 @@ importers:
       '@houston-ai/core':
         specifier: workspace:*
         version: link:../ui/core
+      '@houston-ai/engine-client':
+        specifier: workspace:*
+        version: link:../ui/engine-client
       '@houston-ai/events':
         specifier: workspace:*
         version: link:../ui/events
@@ -330,6 +333,12 @@ importers:
       tailwindcss:
         specifier: ^4.0.0
         version: 4.2.2
+
+  ui/engine-client:
+    devDependencies:
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
 
   ui/events:
     dependencies:

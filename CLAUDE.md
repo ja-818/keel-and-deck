@@ -25,6 +25,8 @@ Need specific knowledge? Load on demand:
 - Colors, typography, components, animation → `knowledge-base/design-system.md`
 - `.houston/` layout, schemas, reactivity → `knowledge-base/files-first.md`
 - Agent manifest, tiers, sidebar, workspaces → `knowledge-base/agent-manifest.md`
+- Engine wire protocol (REST + WS) → `knowledge-base/engine-protocol.md`
+- `houston-engine` binary ops → `knowledge-base/engine-server.md`
 - Desktop ↔ Mobile WS contract → `knowledge-base/sync-protocol.md`
 - Updater, analytics, Sentry, env vars, CI → `knowledge-base/production-infra.md`
 

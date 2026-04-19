@@ -1,5 +1,6 @@
 mod commands;
 mod agent;
+mod engine_supervisor;
 mod logging;
 mod routine_runner;
 

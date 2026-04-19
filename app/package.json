@@ -18,6 +18,7 @@
     "@houston-ai/board": "workspace:*",
     "@houston-ai/chat": "workspace:*",
     "@houston-ai/core": "workspace:*",
+    "@houston-ai/engine-client": "workspace:*",
     "@houston-ai/events": "workspace:*",
     "@houston-ai/layout": "workspace:*",
     "@houston-ai/review": "workspace:*",

@@ -8,6 +8,8 @@ Load on demand. Style: caveman.
 | [design-system.md](design-system.md) | Colors, typography, spacing, components, animation |
 | [files-first.md](files-first.md) | `.houston/` layout, atomic writes, schemas, AI-native reactivity |
 | [agent-manifest.md](agent-manifest.md) | Three tiers, manifest shape, workspace templates, sidebar |
+| [engine-protocol.md](engine-protocol.md) | HTTP + WS wire contract every client speaks (REST, envelope, auth) |
+| [engine-server.md](engine-server.md) | `houston-engine` binary — config, startup handshake, supervision, deployment |
 | [sync-protocol.md](sync-protocol.md) | Desktop↔mobile WebSocket contract, envelope, dedupe |
 | [production-infra.md](production-infra.md) | Auto-updater, analytics, Sentry, env vars, CI/CD |
 
