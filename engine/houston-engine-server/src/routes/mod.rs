@@ -6,6 +6,7 @@ pub mod error;
 pub mod health;
 pub mod preferences;
 pub mod providers;
+pub mod sessions;
 pub mod workspaces;
 
 use axum::{extract::Request, http::HeaderValue, middleware::Next, response::Response};
