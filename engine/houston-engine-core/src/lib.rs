@@ -5,13 +5,16 @@
 //! CLI tools, tests, and the desktop adapter all consume this crate.
 
 pub mod agent_configs;
+pub mod attachments;
 pub mod conversations;
 pub mod error;
 pub mod paths;
 pub mod preferences;
 pub mod provider;
 pub mod sessions;
+pub mod skills;
 pub mod state;
+pub mod worktree;
 pub mod workspaces;
 
 pub use error::{CoreError, CoreResult};

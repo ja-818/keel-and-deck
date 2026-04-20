@@ -2352,12 +2352,14 @@ dependencies = [
 name = "houston-engine-core"
 version = "0.4.0"
 dependencies = [
+ "base64 0.22.1",
  "chrono",
  "dirs-next",
  "houston-agent-files",
  "houston-agents-conversations",
  "houston-db",
  "houston-engine-protocol",
+ "houston-skills",
  "houston-terminal-manager",
  "houston-ui-events",
  "serde",
@@ -2393,6 +2395,7 @@ dependencies = [
  "houston-db",
  "houston-engine-core",
  "houston-engine-protocol",
+ "houston-skills",
  "houston-terminal-manager",
  "houston-ui-events",
  "rand 0.8.5",
