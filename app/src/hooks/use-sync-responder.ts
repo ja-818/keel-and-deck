@@ -7,8 +7,8 @@
  */
 
 import { useEffect } from "react";
-import { listen, emit } from "@tauri-apps/api/event";
 import { tauriSync, tauriConversations, tauriChat } from "../lib/tauri";
+import { emitOsEvent, listenOsEvent, subscribeHoustonEvents } from "../lib/events";
 import { useAgentStore } from "../stores/agents";
 import { useWorkspaceStore } from "../stores/workspaces";
 import { useFeedStore } from "../stores/feeds";
@@ -183,23 +183,22 @@ function handleCreateMission(p: CreateMissionPayload): void {
  */
 export function useSyncResponder(): void {
   useEffect(() => {
-    // 1) Listen for sync messages from mobile (via relay)
-    const unlistenSync = listen<SyncMessage>("sync-message", (event) => {
-      const msg = event.payload;
-
+    // 1) Listen for sync messages from mobile (via relay).
+    // Backed by Tauri `emit("sync-message", ...)` today — engine path not yet wired.
+    const unlistenSync = listenOsEvent<SyncMessage>("sync-message", (msg) => {
       switch (msg.type) {
         case SYNC_MSG_TYPES.PEER_CONNECTED:
           mobileConnected = true;
           fetchAndSendAgentList();
           // Surface phone-connected state to the QR dialog.
-          emit("sync-connection", { state: "connected" } satisfies ConnectionPayload).catch(
+          emitOsEvent("sync-connection", { state: "connected" } satisfies ConnectionPayload).catch(
             () => {},
           );
           break;
 
         case SYNC_MSG_TYPES.PEER_DISCONNECTED:
           mobileConnected = false;
-          emit("sync-connection", { state: "disconnected" } satisfies ConnectionPayload).catch(
+          emitOsEvent("sync-connection", { state: "disconnected" } satisfies ConnectionPayload).catch(
             () => {},
           );
           break;
@@ -208,7 +207,7 @@ export function useSyncResponder(): void {
           // Re-emit dedicated Tauri event for UI layers (QR dialog) that
           // only care about the connection state, not the full sync stream.
           const p = msg.payload as ConnectionPayload;
-          emit("sync-connection", p).catch(() => {});
+          emitOsEvent("sync-connection", p).catch(() => {});
           break;
         }
 
@@ -239,9 +238,8 @@ export function useSyncResponder(): void {
     });
 
     // 2) Forward real-time houston events to mobile
-    const unlistenEvents = listen<HoustonEvent>("houston-event", (event) => {
+    const unlistenEvents = subscribeHoustonEvents((payload: HoustonEvent) => {
       if (!mobileConnected) return;
-      const payload = event.payload;
 
       switch (payload.type) {
         case "FeedItem":
@@ -271,8 +269,8 @@ export function useSyncResponder(): void {
     });
 
     return () => {
-      unlistenSync.then((fn) => fn());
-      unlistenEvents.then((fn) => fn());
+      unlistenSync();
+      unlistenEvents();
       mobileConnected = false;
     };
   }, []);

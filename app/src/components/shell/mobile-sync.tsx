@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Smartphone, Loader2, Unplug, CheckCircle2 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { listen } from "@tauri-apps/api/event";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +11,7 @@ import {
 } from "@houston-ai/core";
 import type { ConnectionPayload } from "@houston-ai/sync-protocol";
 import { tauriSync } from "../../lib/tauri";
+import { listenOsEvent } from "../../lib/events";
 
 type SyncState =
   | { step: "idle" }
@@ -64,8 +64,7 @@ export function MobileSyncButton() {
   // Only meaningful once the relay is live (we have a token); otherwise we
   // have nothing to downgrade back to.
   useEffect(() => {
-    const unlisten = listen<ConnectionPayload>("sync-connection", (event) => {
-      const p = event.payload;
+    const unlisten = listenOsEvent<ConnectionPayload>("sync-connection", (p) => {
       setState((prev) => {
         const hasToken =
           prev.step === "paired" ||
@@ -84,7 +83,7 @@ export function MobileSyncButton() {
       });
     });
     return () => {
-      unlisten.then((fn) => fn()).catch(() => {});
+      unlisten();
     };
   }, []);
 

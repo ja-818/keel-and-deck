@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { HoustonEvent } from "@houston-ai/core";
 import type { FeedItem } from "@houston-ai/chat";
@@ -8,6 +7,7 @@ import { useUIStore } from "../stores/ui";
 import { useWorkspaceStore } from "../stores/workspaces";
 import { useAgentStore } from "../stores/agents";
 import { tauriActivity } from "../lib/tauri";
+import { subscribeHoustonEvents, listenOsEvent } from "../lib/events";
 import { logger } from "../lib/logger";
 
 // Pending navigation set when a completion notification fires.
@@ -108,9 +108,8 @@ export function useSessionEvents() {
       Notification.requestPermission();
     }
 
-    const unlisten = listen<HoustonEvent>("houston-event", (event) => {
+    const unlisten = subscribeHoustonEvents((payload: HoustonEvent) => {
       const h = handlersRef.current;
-      const payload = event.payload;
 
       switch (payload.type) {
         case "FeedItem":
@@ -197,7 +196,7 @@ export function useSessionEvents() {
     // Case: app in background — user clicks notification → OS activates app →
     // Rust emits "app-activated" via RunEvent::Resumed → we consume pending nav.
     // Also refresh the agent list so any external changes (e.g. Finder delete) are picked up.
-    const unlistenActivated = listen("app-activated", () => {
+    const unlistenActivated = listenOsEvent<unknown>("app-activated", () => {
       logger.debug(`[notification] app-activated event fired: pendingNav=${JSON.stringify(pendingNotificationNav)}`);
       consumePendingNav();
       const ws = useWorkspaceStore.getState().current;
@@ -216,8 +215,8 @@ export function useSessionEvents() {
     });
 
     return () => {
-      unlisten.then((fn) => fn());
-      unlistenActivated.then((fn) => fn());
+      unlisten();
+      unlistenActivated();
       unlistenNotificationAction?.();
       unlistenTauriFocus.then((fn) => fn());
     };
