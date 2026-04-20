@@ -4,7 +4,9 @@
 //! and `app/src-tauri/src/routine_runner.rs`. Transport-neutral: REST routes
 //! call these, so do tests and CLI tools.
 
+pub mod runner;
 pub mod runs;
+pub mod scheduler;
 pub mod types;
 
 use crate::error::{CoreError, CoreResult};
