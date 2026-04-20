@@ -84,6 +84,33 @@ export interface UpdateProvider {
   model?: string;
 }
 
+// ---------- Workspace-scoped agent CRUD ----------
+
+export interface Agent {
+  id: string;
+  name: string;
+  folderPath: string;
+  configId: string;
+  color?: string;
+  createdAt: string;
+  lastOpenedAt?: string;
+}
+
+export interface CreateAgent {
+  name: string;
+  configId: string;
+  color?: string;
+  claudeMd?: string;
+  installedPath?: string;
+  seeds?: Record<string, string>;
+  existingPath?: string;
+}
+
+export interface CreateAgentResult {
+  agent: Agent;
+  onboardingActivityId: string | null;
+}
+
 // ---------- Agents / agent-data files ----------
 
 export interface Activity {
@@ -362,6 +389,16 @@ export interface SessionStartResponse {
 
 export interface SessionCancelResponse {
   cancelled: boolean;
+}
+
+export interface ChatHistoryEntry {
+  feed_type: string;
+  data: unknown;
+}
+
+export interface SummarizeResult {
+  title: string;
+  description: string;
 }
 
 // ---------- Attachments ----------

@@ -17,8 +17,11 @@
 //! lives in the adapter today; it will move into `engine-core` in a later
 //! phase once `agent_store` is ported.
 
+pub mod history;
 pub mod provider;
+pub mod summarize;
 
+use crate::agents::prompt as agent_prompt;
 use crate::paths::EnginePaths;
 use houston_agents_conversations::session_id_tracker::SessionIdTracker;
 use houston_agents_conversations::session_pids::SessionPidMap;
@@ -83,6 +86,23 @@ pub async fn start(
     if !agent_dir.exists() {
         std::fs::create_dir_all(&agent_dir)?;
     }
+    agent_prompt::seed_agent(&agent_dir).map_err(crate::CoreError::Internal)?;
+
+    // If the caller didn't supply a system prompt, assemble Houston's
+    // standard one + Composio guidance. Keeps the engine equivalent with
+    // the former Tauri `send_message` command.
+    let system_prompt = match system_prompt {
+        Some(s) => Some(s),
+        None => {
+            let mut assembled = agent_prompt::build_houston_system_prompt(
+                &agent_dir,
+                Some(working_dir.as_path()),
+                None,
+            );
+            assembled.push_str(agent_prompt::COMPOSIO_GUIDANCE);
+            Some(assembled)
+        }
+    };
 
     let source = source.unwrap_or_else(|| "desktop".to_string());
     let agent_key = format!("{}:{}", working_dir.to_string_lossy(), session_key);
@@ -173,6 +193,45 @@ pub async fn cancel(
         error: None,
     });
     true
+}
+
+/// Start an onboarding session: seeds the agent and runs the first turn with
+/// onboarding guidance baked into the system prompt.
+///
+/// Mirrors the former Tauri `start_onboarding_session` command. Uses the
+/// agent/workspace-resolved provider (no override surface) because onboarding
+/// runs before the user has tuned anything.
+pub async fn start_onboarding(
+    rt: &SessionRuntime,
+    events: DynEventSink,
+    db: Database,
+    paths: &EnginePaths,
+    agent_dir: PathBuf,
+    session_key: String,
+) -> Result<String, crate::CoreError> {
+    agent_prompt::seed_agent(&agent_dir).map_err(crate::CoreError::Internal)?;
+    let mut system_prompt =
+        agent_prompt::build_houston_system_prompt(&agent_dir, None, None);
+    system_prompt.push_str(agent_prompt::ONBOARDING_GUIDANCE);
+
+    let resolved = resolve_provider(paths, &agent_dir);
+
+    start(
+        rt,
+        events,
+        db,
+        StartParams {
+            agent_dir: agent_dir.clone(),
+            working_dir: agent_dir,
+            session_key,
+            prompt: ".".to_string(),
+            system_prompt: Some(system_prompt),
+            source: Some("desktop".into()),
+            provider: resolved.provider,
+            model: resolved.model,
+        },
+    )
+    .await
 }
 
 /// Expand a leading `~` to `$HOME`. Mirrors the one-liner the Tauri adapter

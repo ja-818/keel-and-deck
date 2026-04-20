@@ -13,13 +13,17 @@
 import type {
   Activity,
   ActivityUpdate,
+  Agent,
   AttachmentInput,
+  ChatHistoryEntry,
   CommunitySkill,
   ComposioAppEntry,
   ComposioStartLinkResponse,
   ComposioStartLoginResponse,
   ComposioStatus,
   ConversationEntry,
+  CreateAgent,
+  CreateAgentResult,
   CreateSkillRequest,
   CreateWorkspace,
   CreateWorktreeRequest,
@@ -53,6 +57,7 @@ import type {
   SkillDetail,
   SkillSummary,
   StoreListing,
+  SummarizeResult,
   SyncInfo,
   SyncMessage,
   UpdateProvider,
@@ -142,6 +147,28 @@ export class HoustonClient {
   }
   installWorkspaceFromGithub(req: InstallFromGithub): Promise<ImportedWorkspace> {
     return this.request("POST", "/workspaces/install-from-github", req);
+  }
+
+  // ---------- workspace-scoped agents ----------
+
+  listAgents(workspaceId: string): Promise<Agent[]> {
+    return this.request("GET", `/workspaces/${this.seg(workspaceId)}/agents`);
+  }
+  createAgent(workspaceId: string, req: CreateAgent): Promise<CreateAgentResult> {
+    return this.request("POST", `/workspaces/${this.seg(workspaceId)}/agents`, req);
+  }
+  deleteAgent(workspaceId: string, agentId: string): Promise<void> {
+    return this.request(
+      "DELETE",
+      `/workspaces/${this.seg(workspaceId)}/agents/${this.seg(agentId)}`,
+    );
+  }
+  renameAgent(workspaceId: string, agentId: string, newName: string): Promise<Agent> {
+    return this.request(
+      "POST",
+      `/workspaces/${this.seg(workspaceId)}/agents/${this.seg(agentId)}/rename`,
+      { newName },
+    );
   }
 
   // ---------- agent files (typed .houston data) ----------
@@ -438,6 +465,48 @@ export class HoustonClient {
       "POST",
       `/agents/${this.seg(agentPath)}/sessions/${this.seg(sessionKey)}:cancel`,
     );
+  }
+  startOnboarding(agentPath: string, sessionKey: string): Promise<SessionStartResponse> {
+    return this.request(
+      "POST",
+      `/agents/${this.seg(agentPath)}/sessions/onboarding`,
+      { sessionKey },
+    );
+  }
+  loadChatHistory(agentPath: string, sessionKey: string): Promise<ChatHistoryEntry[]> {
+    return this.request(
+      "GET",
+      `/agents/${this.seg(agentPath)}/sessions/${this.seg(sessionKey)}/history`,
+    );
+  }
+  summarizeActivity(message: string): Promise<SummarizeResult> {
+    return this.request("POST", "/sessions/summarize", { message });
+  }
+
+  // ---------- routine scheduler ----------
+
+  runRoutineNow(agentPath: string, routineId: string): Promise<void> {
+    return this.request("POST", `/routines/${this.seg(routineId)}/run-now`, undefined, {
+      agentPath,
+    });
+  }
+  startRoutineScheduler(agentPath: string): Promise<void> {
+    return this.request("POST", "/routines/scheduler/start", undefined, { agentPath });
+  }
+  stopRoutineScheduler(): Promise<void> {
+    return this.request("POST", "/routines/scheduler/stop");
+  }
+  syncRoutineScheduler(): Promise<void> {
+    return this.request("POST", "/routines/scheduler/sync");
+  }
+
+  // ---------- agent file watcher ----------
+
+  startAgentWatcher(agentPath: string): Promise<void> {
+    return this.request("POST", "/watcher/start", { agentPath });
+  }
+  stopAgentWatcher(): Promise<void> {
+    return this.request("POST", "/watcher/stop");
   }
 
   // ---------- composio ----------

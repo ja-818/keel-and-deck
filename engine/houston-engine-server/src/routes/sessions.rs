@@ -18,11 +18,11 @@ use crate::routes::error::ApiError;
 use crate::state::ServerState;
 use axum::{
     extract::{Path, State},
-    routing::post,
+    routing::{get, post},
     Json, Router,
 };
 use houston_engine_core::sessions::{
-    self, resolve_agent_dir, resolve_provider, SessionRuntime, StartParams,
+    self, history, resolve_agent_dir, resolve_provider, summarize, SessionRuntime, StartParams,
 };
 use houston_engine_core::CoreError;
 use houston_terminal_manager::Provider;
@@ -36,9 +36,18 @@ pub fn router() -> Router<Arc<ServerState>> {
             post(start_session),
         )
         .route(
+            "/agents/:agent_path/sessions/onboarding",
+            post(start_onboarding),
+        )
+        .route(
             "/agents/:agent_path/sessions/:key_action",
             post(cancel_session),
         )
+        .route(
+            "/agents/:agent_path/sessions/:key/history",
+            get(load_history),
+        )
+        .route("/sessions/summarize", post(summarize_activity))
 }
 
 #[derive(Debug, Deserialize)]
@@ -110,6 +119,52 @@ async fn start_session(
 #[serde(rename_all = "camelCase")]
 pub struct CancelResponse {
     pub cancelled: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OnboardingRequest {
+    pub session_key: String,
+}
+
+async fn start_onboarding(
+    State(st): State<Arc<ServerState>>,
+    Path(agent_path): Path<String>,
+    Json(req): Json<OnboardingRequest>,
+) -> Result<Json<StartResponse>, ApiError> {
+    let agent_dir = resolve_agent_dir(&st.engine.paths, &agent_path);
+    let rt = SessionRuntime::clone(&st.engine.sessions);
+    let sink = st.engine.events.clone();
+    let db = st.engine.db.clone();
+    let key = sessions::start_onboarding(
+        &rt,
+        sink,
+        db,
+        &st.engine.paths,
+        agent_dir,
+        req.session_key,
+    )
+    .await?;
+    Ok(Json(StartResponse { session_key: key }))
+}
+
+async fn load_history(
+    State(st): State<Arc<ServerState>>,
+    Path((agent_path, key)): Path<(String, String)>,
+) -> Result<Json<Vec<history::ChatHistoryEntry>>, ApiError> {
+    let agent_dir = resolve_agent_dir(&st.engine.paths, &agent_path);
+    Ok(Json(history::load(&st.engine.db, &agent_dir, &key).await?))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SummarizeRequest {
+    pub message: String,
+}
+
+async fn summarize_activity(
+    Json(req): Json<SummarizeRequest>,
+) -> Result<Json<summarize::SummarizeResult>, ApiError> {
+    Ok(Json(summarize::summarize(&req.message).await?))
 }
 
 async fn cancel_session(

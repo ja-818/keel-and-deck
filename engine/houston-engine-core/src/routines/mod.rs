@@ -4,6 +4,7 @@
 //! and `app/src-tauri/src/routine_runner.rs`. Transport-neutral: REST routes
 //! call these, so do tests and CLI tools.
 
+pub mod engine_dispatcher;
 pub mod runner;
 pub mod runs;
 pub mod scheduler;

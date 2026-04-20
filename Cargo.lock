@@ -2412,6 +2412,7 @@ dependencies = [
  "houston-db",
  "houston-engine-core",
  "houston-engine-protocol",
+ "houston-file-watcher",
  "houston-skills",
  "houston-sync",
  "houston-terminal-manager",

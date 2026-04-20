@@ -33,6 +33,7 @@ houston-db = { workspace = true }
 houston-skills = { workspace = true, features = ["remote"] }
 houston-ui-events = { workspace = true }
 houston-terminal-manager = { workspace = true }
+houston-file-watcher = { workspace = true }
 anyhow = { workspace = true }
 
 [dev-dependencies]

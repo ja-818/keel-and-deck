@@ -12,7 +12,11 @@ use axum::{
     Json, Router,
 };
 use houston_engine_core::routines::{
-    self, runs as routine_runs,
+    self,
+    engine_dispatcher::{EngineActivitySurface, EngineRoutineDispatcher},
+    runner::run_routine,
+    runs as routine_runs,
+    scheduler::RoutineScheduler,
     types::{NewRoutine, Routine, RoutineRun, RoutineUpdate},
 };
 use serde::Deserialize;
@@ -44,6 +48,11 @@ pub fn router() -> Router<Arc<ServerState>> {
         .route("/routine-runs", get(list_runs))
         .route("/routine-runs/:id", patch(update_run))
         .route("/routines/:id/runs", post(create_run))
+        // Scheduler lifecycle + manual trigger
+        .route("/routines/:id/run-now", post(run_now))
+        .route("/routines/scheduler/start", post(scheduler_start))
+        .route("/routines/scheduler/stop", post(scheduler_stop))
+        .route("/routines/scheduler/sync", post(scheduler_sync))
 }
 
 async fn list(
@@ -106,4 +115,73 @@ async fn update_run(
     Json(req): Json<houston_engine_core::routines::types::RoutineRunUpdate>,
 ) -> Result<Json<RoutineRun>, ApiError> {
     Ok(Json(routine_runs::update(&agent_root(&q.agent_path), &id, req)?))
+}
+
+// -- Scheduler lifecycle --
+
+fn make_dispatcher(st: &Arc<ServerState>) -> EngineRoutineDispatcher {
+    EngineRoutineDispatcher {
+        rt: st.engine.sessions.clone(),
+        events: st.engine.events.clone(),
+        db: st.engine.db.clone(),
+        paths: st.engine.paths.clone(),
+    }
+}
+
+async fn run_now(
+    State(st): State<Arc<ServerState>>,
+    Path(id): Path<String>,
+    Query(q): Query<AgentQuery>,
+) -> Result<(), ApiError> {
+    let dispatcher: Arc<dyn routines::runner::RoutineDispatcher> =
+        Arc::new(make_dispatcher(&st));
+    let surface: Arc<dyn routines::runner::ActivitySurface> = Arc::new(EngineActivitySurface);
+    run_routine(
+        st.engine.events.clone(),
+        dispatcher,
+        surface,
+        &q.agent_path,
+        &id,
+    )
+    .await?;
+    Ok(())
+}
+
+async fn scheduler_start(
+    State(st): State<Arc<ServerState>>,
+    Query(q): Query<AgentQuery>,
+) -> Result<(), ApiError> {
+    let mut guard = st.routine_scheduler.0.lock().await;
+    if let Some(ref mut existing) = *guard {
+        existing.shutdown();
+    }
+    let dispatcher: Arc<dyn routines::runner::RoutineDispatcher> =
+        Arc::new(make_dispatcher(&st));
+    let surface: Arc<dyn routines::runner::ActivitySurface> = Arc::new(EngineActivitySurface);
+    let mut scheduler = RoutineScheduler::new(
+        &q.agent_path,
+        st.engine.events.clone(),
+        dispatcher,
+        surface,
+    );
+    scheduler.sync();
+    *guard = Some(scheduler);
+    Ok(())
+}
+
+async fn scheduler_stop(State(st): State<Arc<ServerState>>) -> Result<(), ApiError> {
+    let mut guard = st.routine_scheduler.0.lock().await;
+    if let Some(ref mut existing) = *guard {
+        existing.shutdown();
+    }
+    *guard = None;
+    Ok(())
+}
+
+async fn scheduler_sync(State(st): State<Arc<ServerState>>) -> Result<(), ApiError> {
+    let mut guard = st.routine_scheduler.0.lock().await;
+    if let Some(ref mut existing) = *guard {
+        existing.sync();
+    }
+    Ok(())
 }

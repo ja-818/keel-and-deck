@@ -6,6 +6,7 @@
 
 pub mod agent_configs;
 pub mod agents;
+pub mod agents_crud;
 pub mod attachments;
 pub mod conversations;
 pub mod error;
