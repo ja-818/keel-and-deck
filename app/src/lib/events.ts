@@ -1,17 +1,18 @@
 /**
  * Unified subscription helpers.
  *
- * When `VITE_HOUSTON_USE_ENGINE_SERVER=1`, events flow over the engine
- * WebSocket (topic-scoped). When the flag is off, we fall back to Tauri's
- * `houston-event` / `sync-message` / `sync-connection` channels.
+ * Events flow over the engine WebSocket (topic-scoped). The only calls that
+ * still use Tauri IPC are OS-level events (`app-activated`,
+ * `sync-connection`) that the webview emits locally without going through
+ * the engine.
  *
  * Callers should NOT import `listen` from `@tauri-apps/api/event` — go
- * through this module so the Phase 3 switchover stays in one place.
+ * through this module so any future transport switch stays in one place.
  */
 
 import type { HoustonEvent } from "@houston-ai/core";
 import { topics } from "@houston-ai/engine-client";
-import { getEngineWs, useEngineServer } from "./engine";
+import { getEngineWs } from "./engine";
 import { legacyEmit, legacyListen } from "./os-bridge";
 
 type Unsub = () => void;
@@ -31,7 +32,6 @@ function toHandler<T>(handler: (ev: T) => void) {
 }
 
 function ensureBroadSubscription(): void {
-  if (!useEngineServer) return;
   const ws = getEngineWs();
   ws.subscribe([...BROAD_TOPICS]);
 }
@@ -39,35 +39,18 @@ function ensureBroadSubscription(): void {
 /**
  * Subscribe to every `HoustonEvent` emitted by the backend.
  *
- * Over the engine path the caller still needs to request agent- and
- * session-scoped topics via [`subscribeAgentTopics`] / [`subscribeSession`] —
- * broad (non-scoped) topics are subscribed automatically on first call.
+ * The caller still needs to request agent- and session-scoped topics via
+ * [`subscribeAgentTopics`] / [`subscribeSession`] — broad (non-scoped)
+ * topics are subscribed automatically on first call.
  */
 export function subscribeHoustonEvents(handler: (ev: HoustonEvent) => void): Unsub {
-  if (useEngineServer) {
-    ensureBroadSubscription();
-    const ws = getEngineWs();
-    return ws.onEvent(toHandler(handler));
-  }
-  let off: Unsub | undefined;
-  legacyListen<HoustonEvent>("houston-event", (ev) => handler(ev.payload))
-    .then((fn) => {
-      off = fn;
-    })
-    .catch(() => {});
-  return () => {
-    off?.();
-  };
+  ensureBroadSubscription();
+  const ws = getEngineWs();
+  return ws.onEvent(toHandler(handler));
 }
 
-/**
- * Subscribe to the agent-scoped topics (`agent:<path>`, `routines:<path>`).
- *
- * No-op on the Tauri path — `listen("houston-event", ...)` already gets
- * every event globally.
- */
+/** Subscribe to the agent-scoped topics (`agent:<path>`, `routines:<path>`). */
 export function subscribeAgentTopics(agentPath: string): Unsub {
-  if (!useEngineServer) return () => {};
   const ws = getEngineWs();
   const t = [topics.agent(agentPath), topics.routines(agentPath)];
   ws.subscribe(t);
@@ -76,7 +59,6 @@ export function subscribeAgentTopics(agentPath: string): Unsub {
 
 /** Subscribe to a single session topic (`session:<key>`). */
 export function subscribeSession(sessionKey: string): Unsub {
-  if (!useEngineServer) return () => {};
   const ws = getEngineWs();
   const t = [topics.session(sessionKey)];
   ws.subscribe(t);

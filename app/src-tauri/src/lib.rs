@@ -5,11 +5,45 @@ mod logging;
 mod routine_runner;
 
 use commands::agents::WorkspaceRoot;
+use engine_supervisor::{
+    resolve_engine_binary, spawn_supervisor, wait_until_healthy, EngineHandshake,
+    SupervisorCallbacks,
+};
 use houston_agents_conversations::session_id_tracker::SessionIdTracker;
 use houston_agents_conversations::session_pids::SessionPidMap;
 use houston_tauri::houston_db::Database;
 use houston_tauri::state::AppState;
+use houston_ui_events::HoustonEvent;
+use std::sync::Arc;
+use std::time::Duration;
 use tauri::{Emitter, Manager};
+
+/// Supervisor callback that toasts the UI on each engine restart.
+struct TauriSupervisorCallbacks {
+    handle: tauri::AppHandle,
+}
+
+impl SupervisorCallbacks for TauriSupervisorCallbacks {
+    fn on_restart(&self, handshake: &EngineHandshake) {
+        tracing::info!(
+            "[engine] restarted on {} (token redacted)",
+            handshake.base_url()
+        );
+        // Push the refreshed bootstrap + a toast to the webview.
+        let payload = serde_json::json!({
+            "baseUrl": handshake.base_url(),
+            "token": handshake.token,
+        });
+        let _ = self.handle.emit("houston-engine-restarted", payload);
+        let _ = self.handle.emit(
+            "houston-event",
+            HoustonEvent::CompletionToast {
+                title: "Engine reconnected".into(),
+                issue_id: None,
+            },
+        );
+    }
+}
 
 pub fn run() {
     // Initialize logging before anything else
@@ -74,6 +108,47 @@ pub fn run() {
             app.manage(houston_file_watcher::WatcherState::default());
             app.manage(routine_runner::RoutineSchedulerState::default());
             app.manage(commands::sync::SyncState::default());
+
+            // --- Spawn houston-engine as a subprocess --------------------
+            //
+            // All domain calls go through the engine over HTTP/WS. The
+            // supervisor thread restarts it with exponential backoff on
+            // crash and emits a toast via `houston-event` on each reconnect.
+            let resource_dir = app.path().resource_dir().ok();
+            let binary = resolve_engine_binary(resource_dir.as_ref())
+                .expect("houston-engine binary missing — check externalBin bundling");
+            tracing::info!("[engine] spawning {}", binary.display());
+
+            let cb: Arc<TauriSupervisorCallbacks> = Arc::new(TauriSupervisorCallbacks {
+                handle: app.handle().clone(),
+            });
+            let slot = spawn_supervisor(binary, Duration::from_secs(10), cb)
+                .expect("failed to spawn houston-engine");
+            let handshake = {
+                let guard = slot
+                    .lock()
+                    .expect("engine slot poisoned");
+                guard
+                    .as_ref()
+                    .expect("engine subprocess missing after spawn")
+                    .handshake
+                    .clone()
+            };
+            wait_until_healthy(&handshake, Duration::from_secs(5))
+                .expect("engine did not pass /v1/health in time");
+
+            // Inject bootstrap so `app/src/lib/engine.ts::resolveConfig`
+            // picks it up before any HoustonClient call fires.
+            let init_script = format!(
+                "window.__HOUSTON_ENGINE__ = {{ baseUrl: \"{}\", token: \"{}\" }};",
+                handshake.base_url(),
+                handshake.token.replace('"', "\\\"")
+            );
+            if let Some(window) = app.get_webview_window("main") {
+                if let Err(e) = window.eval(&init_script) {
+                    tracing::error!("[engine] failed to inject bootstrap: {e}");
+                }
+            }
 
             // Warm the Composio catalog cache in the background so the integrations
             // tab loads instantly when the user opens it.

@@ -12,6 +12,7 @@
  */
 
 import { HoustonClient, EngineWebSocket } from "@houston-ai/engine-client";
+import { listen } from "@tauri-apps/api/event";
 
 declare global {
   interface Window {
@@ -34,23 +35,19 @@ function resolveConfig(): { baseUrl: string; token: string } | null {
   return null;
 }
 
-const config = resolveConfig();
-
-/**
- * Shared engine client. `null` until the Tauri supervisor injects the
- * bootstrap config; modules that need it should read via `getEngine()`.
- */
-export const engine: HoustonClient | null = config
-  ? new HoustonClient(config)
-  : null;
+let _client: HoustonClient | null = null;
+const initial = resolveConfig();
+if (initial) {
+  _client = new HoustonClient(initial);
+}
 
 export function getEngine(): HoustonClient {
-  if (!engine) {
+  if (!_client) {
     throw new Error(
-      "[engine] not bootstrapped. window.__HOUSTON_ENGINE__ missing."
+      "[engine] not bootstrapped. window.__HOUSTON_ENGINE__ missing.",
     );
   }
-  return engine;
+  return _client;
 }
 
 /** Lazily-created shared WS instance. */
@@ -63,6 +60,25 @@ export function getEngineWs(): EngineWebSocket {
   return _ws;
 }
 
-/** Flag for staged migration — set `VITE_HOUSTON_USE_ENGINE_SERVER=1` in dev. */
-export const useEngineServer: boolean =
-  (import.meta as any).env?.VITE_HOUSTON_USE_ENGINE_SERVER === "1";
+// --- Auto-reconnect on engine restart --------------------------------
+//
+// The Tauri supervisor restarts `houston-engine` with a fresh port + token
+// on crash and emits `houston-engine-restarted` with the new handshake.
+// Rebuild the client + WS so in-flight hooks pick up the new transport.
+listen<{ baseUrl: string; token: string }>(
+  "houston-engine-restarted",
+  (ev) => {
+    window.__HOUSTON_ENGINE__ = ev.payload;
+    _client = new HoustonClient(ev.payload);
+    if (_ws) {
+      try {
+        _ws.disconnect();
+      } catch {
+        /* ignore */
+      }
+      _ws = null;
+    }
+  },
+).catch(() => {
+  // Non-Tauri environment (tests, mobile web) — no-op.
+});
