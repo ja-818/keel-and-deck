@@ -5,6 +5,7 @@
 //! CLI tools, tests, and the desktop adapter all consume this crate.
 
 pub mod agent_configs;
+pub mod agents;
 pub mod attachments;
 pub mod conversations;
 pub mod error;

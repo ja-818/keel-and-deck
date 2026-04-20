@@ -1,35 +1,30 @@
-//! CRUD operations for `.houston/activity.json`.
+//! CRUD operations for `.houston/activity/activity.json`.
 
-use super::helpers::{read_json, write_json};
-use super::types::{Activity, ActivityUpdate};
+use super::store::{read_json, write_json};
+use super::types::{Activity, ActivityUpdate, NewActivity};
+use crate::error::{CoreError, CoreResult};
 use chrono::Utc;
 use std::path::Path;
 use uuid::Uuid;
 
 const FILE: &str = "activity";
 
-pub fn list(root: &Path) -> Result<Vec<Activity>, String> {
+pub fn list(root: &Path) -> CoreResult<Vec<Activity>> {
     read_json::<Vec<Activity>>(root, FILE)
 }
 
-pub fn create(
-    root: &Path,
-    title: &str,
-    description: &str,
-    agent: Option<&str>,
-    worktree_path: Option<&str>,
-) -> Result<Activity, String> {
+pub fn create(root: &Path, input: NewActivity) -> CoreResult<Activity> {
     let mut items = list(root)?;
     let now = Utc::now().to_rfc3339();
     let item = Activity {
         id: Uuid::new_v4().to_string(),
-        title: title.to_string(),
-        description: description.to_string(),
+        title: input.title,
+        description: input.description,
         status: "running".to_string(),
         claude_session_id: None,
         session_key: None,
-        agent: agent.map(|s| s.to_string()),
-        worktree_path: worktree_path.map(|s| s.to_string()),
+        agent: input.agent,
+        worktree_path: input.worktree_path,
         routine_id: None,
         routine_run_id: None,
         updated_at: Some(now),
@@ -39,12 +34,12 @@ pub fn create(
     Ok(item)
 }
 
-pub fn update(root: &Path, id: &str, updates: ActivityUpdate) -> Result<Activity, String> {
+pub fn update(root: &Path, id: &str, updates: ActivityUpdate) -> CoreResult<Activity> {
     let mut items = list(root)?;
     let item = items
         .iter_mut()
         .find(|t| t.id == id)
-        .ok_or_else(|| format!("Activity not found: {id}"))?;
+        .ok_or_else(|| CoreError::NotFound(format!("activity {id}")))?;
 
     if let Some(title) = updates.title {
         item.title = title;
@@ -81,12 +76,12 @@ pub fn update(root: &Path, id: &str, updates: ActivityUpdate) -> Result<Activity
     Ok(result)
 }
 
-pub fn delete(root: &Path, id: &str) -> Result<(), String> {
+pub fn delete(root: &Path, id: &str) -> CoreResult<()> {
     let mut items = list(root)?;
     let before = items.len();
     items.retain(|t| t.id != id);
     if items.len() == before {
-        return Err(format!("Activity not found: {id}"));
+        return Err(CoreError::NotFound(format!("activity {id}")));
     }
     write_json(root, FILE, &items)
 }

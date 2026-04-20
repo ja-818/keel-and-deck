@@ -1,9 +1,10 @@
-//! CRUD operations for `.houston/routine_runs.json`.
+//! CRUD operations for `.houston/routine_runs/routine_runs.json`.
 //!
 //! Auto-prunes to keep at most `MAX_RUNS_PER_ROUTINE` runs per routine.
 
-use super::helpers::{read_json, write_json};
+use super::store::{read_json, write_json};
 use super::types::{RoutineRun, RoutineRunUpdate};
+use crate::error::{CoreError, CoreResult};
 use chrono::Utc;
 use std::path::Path;
 use uuid::Uuid;
@@ -11,16 +12,16 @@ use uuid::Uuid;
 const FILE: &str = "routine_runs";
 const MAX_RUNS_PER_ROUTINE: usize = 50;
 
-pub fn list(root: &Path) -> Result<Vec<RoutineRun>, String> {
+pub fn list(root: &Path) -> CoreResult<Vec<RoutineRun>> {
     read_json::<Vec<RoutineRun>>(root, FILE)
 }
 
-pub fn list_for_routine(root: &Path, routine_id: &str) -> Result<Vec<RoutineRun>, String> {
+pub fn list_for_routine(root: &Path, routine_id: &str) -> CoreResult<Vec<RoutineRun>> {
     let runs = list(root)?;
     Ok(runs.into_iter().filter(|r| r.routine_id == routine_id).collect())
 }
 
-pub fn create(root: &Path, routine_id: &str) -> Result<RoutineRun, String> {
+pub fn create(root: &Path, routine_id: &str) -> CoreResult<RoutineRun> {
     let mut runs = list(root)?;
     let id = Uuid::new_v4().to_string();
     let session_key = format!("routine-{routine_id}-run-{id}");
@@ -40,12 +41,12 @@ pub fn create(root: &Path, routine_id: &str) -> Result<RoutineRun, String> {
     Ok(run)
 }
 
-pub fn update(root: &Path, id: &str, updates: RoutineRunUpdate) -> Result<RoutineRun, String> {
+pub fn update(root: &Path, id: &str, updates: RoutineRunUpdate) -> CoreResult<RoutineRun> {
     let mut runs = list(root)?;
     let run = runs
         .iter_mut()
         .find(|r| r.id == id)
-        .ok_or_else(|| format!("Routine run not found: {id}"))?;
+        .ok_or_else(|| CoreError::NotFound(format!("routine run {id}")))?;
 
     if let Some(status) = updates.status {
         run.status = status;
@@ -69,13 +70,11 @@ pub fn update(root: &Path, id: &str, updates: RoutineRunUpdate) -> Result<Routin
 fn prune(runs: &mut Vec<RoutineRun>) {
     use std::collections::HashMap;
 
-    // Count runs per routine
     let mut counts: HashMap<String, usize> = HashMap::new();
     for run in runs.iter() {
         *counts.entry(run.routine_id.clone()).or_default() += 1;
     }
 
-    // Find routines that exceed the limit
     let over: HashMap<String, usize> = counts
         .into_iter()
         .filter(|(_, c)| *c > MAX_RUNS_PER_ROUTINE)
@@ -86,7 +85,6 @@ fn prune(runs: &mut Vec<RoutineRun>) {
         return;
     }
 
-    // Track how many to remove per routine
     let mut remaining = over;
     runs.retain(|r| {
         if let Some(to_remove) = remaining.get_mut(&r.routine_id) {

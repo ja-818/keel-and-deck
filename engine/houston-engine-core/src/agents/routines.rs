@@ -1,18 +1,19 @@
-//! CRUD operations for `.houston/routines.json`.
+//! CRUD operations for `.houston/routines/routines.json`.
 
-use super::helpers::{read_json, write_json};
+use super::store::{read_json, write_json};
 use super::types::{NewRoutine, Routine, RoutineUpdate};
+use crate::error::{CoreError, CoreResult};
 use chrono::Utc;
 use std::path::Path;
 use uuid::Uuid;
 
 const FILE: &str = "routines";
 
-pub fn list(root: &Path) -> Result<Vec<Routine>, String> {
+pub fn list(root: &Path) -> CoreResult<Vec<Routine>> {
     read_json::<Vec<Routine>>(root, FILE)
 }
 
-pub fn create(root: &Path, input: NewRoutine) -> Result<Routine, String> {
+pub fn create(root: &Path, input: NewRoutine) -> CoreResult<Routine> {
     let mut routines = list(root)?;
     let now = Utc::now().to_rfc3339();
     let routine = Routine {
@@ -31,12 +32,12 @@ pub fn create(root: &Path, input: NewRoutine) -> Result<Routine, String> {
     Ok(routine)
 }
 
-pub fn update(root: &Path, id: &str, updates: RoutineUpdate) -> Result<Routine, String> {
+pub fn update(root: &Path, id: &str, updates: RoutineUpdate) -> CoreResult<Routine> {
     let mut routines = list(root)?;
     let routine = routines
         .iter_mut()
         .find(|r| r.id == id)
-        .ok_or_else(|| format!("Routine not found: {id}"))?;
+        .ok_or_else(|| CoreError::NotFound(format!("routine {id}")))?;
 
     if let Some(name) = updates.name {
         routine.name = name;
@@ -63,12 +64,12 @@ pub fn update(root: &Path, id: &str, updates: RoutineUpdate) -> Result<Routine, 
     Ok(result)
 }
 
-pub fn delete(root: &Path, id: &str) -> Result<(), String> {
+pub fn delete(root: &Path, id: &str) -> CoreResult<()> {
     let mut routines = list(root)?;
     let before = routines.len();
     routines.retain(|r| r.id != id);
     if routines.len() == before {
-        return Err(format!("Routine not found: {id}"));
+        return Err(CoreError::NotFound(format!("routine {id}")));
     }
     write_json(root, FILE, &routines)
 }

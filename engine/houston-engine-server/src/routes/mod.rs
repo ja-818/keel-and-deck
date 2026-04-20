@@ -1,6 +1,8 @@
 //! REST routes.
 
 pub mod agent_configs;
+pub mod agent_files;
+pub mod agents;
 pub mod attachments;
 pub mod conversations;
 pub mod error;
