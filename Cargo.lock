@@ -1050,6 +1050,17 @@ dependencies = [
 
 [[package]]
 name = "cron"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6f8c3e73077b4b4a6ab1ea5047c37c57aee77657bc8ecd6f29b0af082d0b0c07"
+dependencies = [
+ "chrono",
+ "nom",
+ "once_cell",
+]
+
+[[package]]
+name = "cron"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5877d3fbf742507b66bc2a1945106bd30dd8504019d596901ddd012a4dd01740"
@@ -2291,7 +2302,7 @@ version = "0.3.2"
 dependencies = [
  "base64 0.22.1",
  "chrono",
- "cron",
+ "cron 0.15.0",
  "dirs 5.0.1",
  "houston-agent-files",
  "houston-agents-conversations",
@@ -2352,8 +2363,11 @@ dependencies = [
 name = "houston-engine-core"
 version = "0.4.0"
 dependencies = [
+ "async-trait",
  "base64 0.22.1",
  "chrono",
+ "cron 0.12.1",
+ "dirs 5.0.1",
  "dirs-next",
  "houston-agent-files",
  "houston-agents-conversations",
@@ -2362,6 +2376,7 @@ dependencies = [
  "houston-skills",
  "houston-terminal-manager",
  "houston-ui-events",
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "tempfile",
@@ -2445,7 +2460,7 @@ version = "0.3.2"
 dependencies = [
  "anyhow",
  "chrono",
- "cron",
+ "cron 0.15.0",
  "houston-events",
  "serde",
  "serde_json",

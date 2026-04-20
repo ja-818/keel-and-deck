@@ -7,8 +7,10 @@ pub mod error;
 pub mod health;
 pub mod preferences;
 pub mod providers;
+pub mod routines;
 pub mod sessions;
 pub mod skills;
+pub mod store;
 pub mod worktree;
 pub mod workspaces;
 

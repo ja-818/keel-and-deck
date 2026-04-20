@@ -11,9 +11,11 @@ pub mod error;
 pub mod paths;
 pub mod preferences;
 pub mod provider;
+pub mod routines;
 pub mod sessions;
 pub mod skills;
 pub mod state;
+pub mod store;
 pub mod worktree;
 pub mod workspaces;
 
