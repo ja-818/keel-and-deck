@@ -126,14 +126,35 @@ impl Drop for EngineSubprocess {
 ///
 /// Resolution order:
 /// 1. `HOUSTON_ENGINE_BIN` env var (dev override).
-/// 2. Tauri bundle sidecar: `<resources>/binaries/houston-engine` (optionally
-///    with target-triple suffix, as produced by tauri `externalBin`).
-/// 3. Cargo workspace target: `<workspace>/target/{release,debug}/houston-engine`.
+/// 2. In debug builds: cargo workspace target first (freshest during
+///    `pnpm tauri dev` — the staged sidecar can be stale if you rebuild
+///    just the engine crate).
+/// 3. Tauri bundle sidecar: `<resources>/binaries/houston-engine`
+///    (authoritative in release builds, where the binary is bundled by
+///    `externalBin`).
+/// 4. In release builds: cargo workspace target (last-resort fallback).
 pub fn resolve_engine_binary(resource_dir: Option<&PathBuf>) -> Result<PathBuf, String> {
     if let Ok(p) = std::env::var("HOUSTON_ENGINE_BIN") {
         let pb = PathBuf::from(p);
         if pb.exists() {
             return Ok(pb);
+        }
+    }
+
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..");
+    let target_debug = workspace_root.join("target").join("debug").join(bin_name());
+    let target_release = workspace_root.join("target").join("release").join(bin_name());
+
+    #[cfg(debug_assertions)]
+    {
+        // Dev: prefer the freshest cargo target.
+        if target_debug.exists() {
+            return Ok(target_debug);
+        }
+        if target_release.exists() {
+            return Ok(target_release);
         }
     }
 
@@ -151,14 +172,14 @@ pub fn resolve_engine_binary(resource_dir: Option<&PathBuf>) -> Result<PathBuf, 
         }
     }
 
-    // Cargo workspace fallback — useful in `pnpm tauri dev`.
-    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("..");
-    for mode in ["release", "debug"] {
-        let p = workspace_root.join("target").join(mode).join(bin_name());
-        if p.exists() {
-            return Ok(p);
+    #[cfg(not(debug_assertions))]
+    {
+        // Release: only fall back to cargo target if no sidecar bundled.
+        if target_release.exists() {
+            return Ok(target_release);
+        }
+        if target_debug.exists() {
+            return Ok(target_debug);
         }
     }
 
