@@ -264,13 +264,20 @@ function SetupGuidance({
   const installed = status?.cli_installed ?? false;
   const authenticated = status?.authenticated ?? false;
   const [loginLaunched, setLoginLaunched] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   const handleSignIn = async () => {
+    setLoginError(null);
     try {
       await tauriProvider.launchLogin(provider.id);
       setLoginLaunched(true);
-    } catch {
-      // CLI not installed — fall through to install guidance
+    } catch (e) {
+      // Surface it. Previously we swallowed every error which made the
+      // onboarding screen look completely unresponsive to users whose
+      // `claude`/`codex` CLI was on a PATH the .app bundle couldn't see.
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error(`[provider-picker] launchLogin(${provider.id}) failed:`, msg);
+      setLoginError(msg);
     }
   };
 
@@ -329,6 +336,13 @@ function SetupGuidance({
           >
             Open browser again
           </button>
+        </div>
+      )}
+
+      {loginError && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-2.5 text-xs text-destructive">
+          <div className="font-medium mb-0.5">Couldn't launch {provider.cliName}</div>
+          <div className="text-destructive/80">{loginError}</div>
         </div>
       )}
 

@@ -61,17 +61,13 @@ impl ServerConfig {
         let docs_dir = std::env::var("HOUSTON_DOCS")
             .map(PathBuf::from)
             .unwrap_or_else(|_| {
-                if cfg!(debug_assertions) {
-                    // Dev: workspaces live INSIDE `~/.dev-houston/workspaces/`.
-                    dirs_home()
-                        .map(|h| h.join(".dev-houston").join("workspaces"))
-                        .expect("no home directory")
-                } else {
-                    // Release: preserve legacy `~/Documents/Houston/`.
-                    dirs_home()
-                        .map(|h| h.join("Documents").join("Houston"))
-                        .expect("no home directory")
-                }
+                // Workspaces always live under `$HOUSTON_HOME/workspaces/` so
+                // everything Houston writes is rooted at one discoverable
+                // location. Applies to both debug (`~/.dev-houston/`) and
+                // release (`~/.houston/`). The Houston desktop app handles a
+                // one-time migration from the legacy `~/Documents/Houston/`
+                // path in `app/src-tauri/src/lib.rs::migrate_legacy_docs_dir`.
+                home_dir.join("workspaces")
             });
 
         let app_system_prompt = std::env::var("HOUSTON_APP_SYSTEM_PROMPT").unwrap_or_default();
