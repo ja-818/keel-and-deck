@@ -24,6 +24,17 @@ struct EngineManifest<'a> {
 #[tokio::main]
 async fn main() {
     init_tracing();
+
+    // Resolve the real user PATH (login + interactive shell + common install
+    // dirs) BEFORE any route handler runs. Without this, the engine inherits
+    // the minimal GUI PATH passed by the Tauri supervisor (which itself ran
+    // in a Gatekeeper-launched .app) and `is_command_available("claude")`
+    // falsely reports the user's CLI as missing — which is what made the
+    // onboarding "Connect your AI" screen show "claude CLI not found" even
+    // for users with claude installed via Homebrew / nvm / npm.
+    // `init` is idempotent thanks to a `OnceLock`.
+    houston_terminal_manager::claude_path::init();
+
     let cfg = ServerConfig::from_env();
     let listener = TcpListener::bind(cfg.bind)
         .await
