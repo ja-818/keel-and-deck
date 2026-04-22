@@ -108,9 +108,15 @@ export function ProviderPicker({ value, model: controlledModel, onSelect }: Prop
         })}
       </div>
 
-      {/* Setup guidance — rendered below the grid when a disconnected card is expanded */}
+      {/* Setup guidance — rendered below the grid when a disconnected card
+          is expanded. `key={expanded}` remounts the component when the user
+          switches between OpenAI and Anthropic, resetting local state
+          (`loginLaunched`, `loginError`) so the previous provider's
+          "Waiting for browser sign-in..." banner doesn't linger under the
+          new provider's heading. */}
       {expanded && !(statuses[expanded]?.cli_installed && statuses[expanded]?.authenticated) && (
         <SetupGuidance
+          key={expanded}
           provider={PROVIDERS.find((p) => p.id === expanded)!}
           status={statuses[expanded]}
           isSelected={value === expanded}
