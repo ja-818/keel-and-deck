@@ -12,6 +12,13 @@
 //!     * everything else bumps a dropped counter and we emit a `LagMarker`
 //!       event so the client can refetch.
 //!
+//! # Topic matching
+//!
+//! Exact string match by default. Subscribing to the literal topic [`FIREHOSE`]
+//! (`"*"`) means "every event regardless of its scoped topic" — desktop-style
+//! clients that want to react to everything use this instead of enumerating
+//! every `agent:<path>` / `routines:<path>` / `session:<key>` they care about.
+//!
 //! Heartbeat: server pings every 20s.
 
 use crate::state::ServerState;
@@ -40,6 +47,18 @@ const OUTBOUND_CAPACITY: usize = 1024;
 
 /// Heartbeat interval.
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(20);
+
+/// Firehose topic — subscribing to this receives every event regardless of
+/// the event's own routing topic. Intended for desktop-style clients that
+/// need the full stream; narrower consumers subscribe to specific topics.
+pub const FIREHOSE: &str = "*";
+
+/// Decide whether a connection subscribed to `subscriptions` wants to receive
+/// an event routed to `topic`. Centralized so the rule is impossible to get
+/// wrong at each call site.
+fn is_subscribed(subscriptions: &HashSet<String>, topic: &str) -> bool {
+    subscriptions.contains(FIREHOSE) || subscriptions.contains(topic)
+}
 
 pub async fn ws_upgrade(
     ws: WebSocketUpgrade,
@@ -145,9 +164,10 @@ async fn forward_events(
         );
 
         // Topic filter — skip if this connection isn't listening.
+        // `FIREHOSE` ("*") subscribers receive every topic.
         {
             let topics = topics.read().await;
-            if !topics.contains(&topic) {
+            if !is_subscribed(&topics, &topic) {
                 continue;
             }
         }
@@ -241,5 +261,60 @@ async fn handle_client_frame(txt: &str, topics: &RwLock<HashSet<String>>) {
                 set.remove(&topic);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    //! Unit tests for the topic-filter contract.
+    //!
+    //! These exist because the filter used to be a plain `HashSet::contains`,
+    //! which silently dropped every scoped event for clients that only
+    //! subscribed to the documented firehose `"*"`. That caused every
+    //! `SessionStatus` / `ActivityChanged` / `RoutinesChanged` event to be
+    //! invisible to the Houston desktop app for an entire release cycle.
+    //! End-to-end integration tests for the WS pipeline live in
+    //! `tests/http.rs`; these micro-tests pin the subscription rule itself so
+    //! a future refactor can't quietly reintroduce the regression.
+    use super::*;
+    use std::collections::HashSet;
+    fn subs(items: &[&str]) -> HashSet<String> {
+        items.iter().map(|s| (*s).to_string()).collect()
+    }
+
+    #[test]
+    fn explicit_topic_match_delivers() {
+        let s = subs(&["agent:/path/to/agent"]);
+        assert!(is_subscribed(&s, "agent:/path/to/agent"));
+    }
+
+    #[test]
+    fn non_matching_topic_filtered_out() {
+        let s = subs(&["agent:/path/to/agent"]);
+        assert!(!is_subscribed(&s, "agent:/different/agent"));
+        assert!(!is_subscribed(&s, "session:abc"));
+    }
+
+    #[test]
+    fn firehose_delivers_every_topic() {
+        let s = subs(&[FIREHOSE]);
+        assert!(is_subscribed(&s, "agent:/any/path"));
+        assert!(is_subscribed(&s, "session:xyz"));
+        assert!(is_subscribed(&s, "routines:/a"));
+        assert!(is_subscribed(&s, "composio"));
+        assert!(is_subscribed(&s, "toast"));
+    }
+
+    #[test]
+    fn firehose_alongside_specific_subscriptions_is_still_firehose() {
+        let s = subs(&[FIREHOSE, "auth", "toast"]);
+        assert!(is_subscribed(&s, "session:whatever"));
+    }
+
+    #[test]
+    fn empty_subscriptions_delivers_nothing() {
+        let s = HashSet::new();
+        assert!(!is_subscribed(&s, "agent:/x"));
+        assert!(!is_subscribed(&s, FIREHOSE));
     }
 }

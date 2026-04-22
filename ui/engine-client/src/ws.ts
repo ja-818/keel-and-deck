@@ -10,6 +10,8 @@
  * ```
  *
  * The engine topic map (see `engine/houston-engine-protocol/src/lib.rs::event_topic`):
+ * - `*` — firehose; matches every topic below (see
+ *    `engine/houston-engine-server/src/ws.rs::is_subscribed`)
  * - `session:{session_key}` — FeedItem, SessionStatus
  * - `auth` — AuthRequired
  * - `toast` — Toast, CompletionToast
@@ -30,6 +32,8 @@ type EventHandler = (event: unknown) => void;
 
 /** Convenience topic helpers. */
 export const topics = {
+  /** Firehose — matches every scoped event. Use for desktop-style clients. */
+  firehose: "*",
   session: (sessionKey: string) => `session:${sessionKey}`,
   agent: (agentPath: string) => `agent:${agentPath}`,
   routines: (agentPath: string) => `routines:${agentPath}`,
