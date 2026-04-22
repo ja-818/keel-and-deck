@@ -109,8 +109,12 @@ pub fn run() {
                     .expect("Failed to open database")
             });
 
-            let root = houston.join("workspaces");
-            std::fs::create_dir_all(&root).ok();
+            // One-time migration: earlier versions stored workspaces under
+            // `~/Documents/Houston/`. New default is `$HOUSTON_HOME/workspaces/`
+            // so everything Houston owns is under a single discoverable root.
+            // Move the legacy directory if it exists and the new location is
+            // empty. Idempotent on subsequent launches.
+            migrate_legacy_docs_dir(&houston);
 
             // AppState keeps a DB handle for any OS-native lookup (log
             // reading, session search). Domain state now lives in the
@@ -139,18 +143,11 @@ pub fn run() {
             // as opaque strings — it has no hardcoded Houston copy.
             //
             // Also pin HOUSTON_HOME + HOUSTON_DOCS so the engine uses the
-            // same data roots as the app (matters if someone ever runs a
-            // release engine binary against a debug app or vice-versa).
-            // Dev: workspaces live INSIDE `~/.dev-houston/workspaces/`.
-            // Release: preserve legacy `~/Documents/Houston/` for existing users.
-            let docs_dir = if cfg!(debug_assertions) {
-                houston.join("workspaces")
-            } else {
-                houston
-                    .parent()
-                    .map(|h| h.join("Documents").join("Houston"))
-                    .unwrap_or_else(|| PathBuf::from("Documents").join("Houston"))
-            };
+            // same data roots as the app. Workspaces live under
+            // `$HOUSTON_HOME/workspaces/` in both debug (`~/.dev-houston/`)
+            // and release (`~/.houston/`) — everything Houston writes is
+            // rooted at a single discoverable location.
+            let docs_dir = houston.join("workspaces");
             let engine_env: Vec<(String, String)> = vec![
                 (
                     "HOUSTON_APP_SYSTEM_PROMPT".into(),
@@ -270,4 +267,78 @@ pub fn run() {
                 _ => {}
             }
         });
+}
+
+/// Move `~/Documents/Houston/` to `$houston/workspaces/` if:
+///   - the legacy dir exists and has content (workspaces.json),
+///   - the new location is empty or missing workspaces.json.
+///
+/// Idempotent. Safe to call on every launch — real work only on the
+/// first v0.4.2+ boot for anyone who previously ran v0.3.x/v0.4.0–v0.4.1.
+/// On any error we log + bail; the engine will still run against the new
+/// empty path. Original legacy dir is left in place as manual rollback.
+fn migrate_legacy_docs_dir(houston: &std::path::Path) {
+    let home = match std::env::var("HOME") {
+        Ok(h) => PathBuf::from(h),
+        Err(_) => return,
+    };
+    let legacy = home.join("Documents").join("Houston");
+    let new_root = houston.join("workspaces");
+
+    let legacy_manifest = legacy.join("workspaces.json");
+    if !legacy_manifest.is_file() {
+        return; // nothing to migrate
+    }
+
+    let new_manifest = new_root.join("workspaces.json");
+    if new_manifest.is_file() {
+        tracing::debug!(
+            "[migrate] skipping — {} already has content",
+            new_root.display()
+        );
+        return;
+    }
+
+    if let Err(e) = std::fs::create_dir_all(&new_root) {
+        tracing::warn!("[migrate] create_dir_all({}) failed: {e}", new_root.display());
+        return;
+    }
+
+    let entries = match std::fs::read_dir(&legacy) {
+        Ok(it) => it,
+        Err(e) => {
+            tracing::warn!("[migrate] read_dir({}) failed: {e}", legacy.display());
+            return;
+        }
+    };
+
+    let mut moved = 0u32;
+    for entry in entries.flatten() {
+        let src = entry.path();
+        let name = match src.file_name() {
+            Some(n) => n.to_os_string(),
+            None => continue,
+        };
+        let dst = new_root.join(&name);
+        if dst.exists() {
+            continue; // don't clobber anything at the new root
+        }
+        if let Err(e) = std::fs::rename(&src, &dst) {
+            tracing::warn!(
+                "[migrate] rename {} -> {} failed: {e}",
+                src.display(),
+                dst.display()
+            );
+            continue;
+        }
+        moved += 1;
+    }
+
+    if moved > 0 {
+        tracing::info!(
+            "[migrate] moved {moved} entries from {} to {}",
+            legacy.display(),
+            new_root.display()
+        );
+    }
 }
