@@ -493,11 +493,11 @@ export class HoustonClient {
   startRoutineScheduler(agentPath: string): Promise<void> {
     return this.request("POST", "/routines/scheduler/start", undefined, { agentPath });
   }
-  stopRoutineScheduler(): Promise<void> {
-    return this.request("POST", "/routines/scheduler/stop");
+  stopRoutineScheduler(agentPath: string): Promise<void> {
+    return this.request("POST", "/routines/scheduler/stop", undefined, { agentPath });
   }
-  syncRoutineScheduler(): Promise<void> {
-    return this.request("POST", "/routines/scheduler/sync");
+  syncRoutineScheduler(agentPath: string): Promise<void> {
+    return this.request("POST", "/routines/scheduler/sync", undefined, { agentPath });
   }
 
   // ---------- agent file watcher ----------

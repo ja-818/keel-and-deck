@@ -6,6 +6,10 @@
 use crate::error::{CoreError, CoreResult};
 use houston_db::Database;
 
+/// Preference key for the user's IANA timezone (e.g. `"America/Bogota"`).
+/// Cron schedules without a per-routine override are interpreted in this zone.
+pub const TIMEZONE_KEY: &str = "timezone";
+
 pub async fn get(db: &Database, key: &str) -> CoreResult<Option<String>> {
     db.get_preference(key)
         .await
@@ -16,6 +20,16 @@ pub async fn set(db: &Database, key: &str, value: &str) -> CoreResult<()> {
     db.set_preference(key, value)
         .await
         .map_err(|e| CoreError::Internal(e.to_string()))
+}
+
+/// Resolve the user's effective timezone. Returns `"UTC"` if unset.
+pub async fn timezone(db: &Database) -> String {
+    get(db, TIMEZONE_KEY)
+        .await
+        .ok()
+        .flatten()
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| "UTC".to_string())
 }
 
 #[cfg(test)]

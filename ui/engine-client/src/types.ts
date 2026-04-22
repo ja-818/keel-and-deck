@@ -154,6 +154,8 @@ export interface Routine {
   schedule: string;
   enabled: boolean;
   suppress_when_silent: boolean;
+  /** IANA timezone override; absent means use the user's preference. */
+  timezone?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -165,6 +167,8 @@ export interface NewRoutine {
   schedule: string;
   enabled?: boolean;
   suppress_when_silent?: boolean;
+  /** IANA timezone override (e.g. "America/Bogota"). Falls back to user pref. */
+  timezone?: string | null;
 }
 
 export interface RoutineUpdate {
@@ -174,12 +178,16 @@ export interface RoutineUpdate {
   schedule?: string;
   enabled?: boolean;
   suppress_when_silent?: boolean;
+  /** Set to a string to override, `null` to clear, omit to leave unchanged. */
+  timezone?: string | null;
 }
+
+export type RoutineRunStatus = "running" | "silent" | "surfaced" | "error";
 
 export interface RoutineRun {
   id: string;
   routine_id: string;
-  status: string;
+  status: RoutineRunStatus;
   session_key: string;
   activity_id?: string;
   summary?: string;
@@ -188,7 +196,7 @@ export interface RoutineRun {
 }
 
 export interface RoutineRunUpdate {
-  status?: string;
+  status?: RoutineRunStatus;
   activity_id?: string;
   summary?: string;
   completed_at?: string;

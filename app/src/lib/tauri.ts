@@ -468,26 +468,36 @@ function conversationToRaw(
   };
 }
 
-// ─── Routines (agent data + scheduler passthrough) ────────────────────
+// ─── Routines (engine-backed: CRUD + scheduler) ───────────────────────
 
 import * as activityData from "../data/activity";
-import * as routinesData from "../data/routines";
-import * as routineRunsData from "../data/routine-runs";
 import * as configData from "../data/config";
+import type {
+  NewRoutine as EngineNewRoutine,
+  RoutineUpdate as EngineRoutineUpdate,
+} from "@houston-ai/engine-client";
 
 export const tauriRoutines = {
-  list: (agentPath: string) => routinesData.list(agentPath),
-  create: (agentPath: string, input: routinesData.NewRoutine) =>
-    routinesData.create(agentPath, input),
+  list: (agentPath: string) =>
+    call("list_routines", () => getEngine().listRoutines(agentPath)),
+  create: (agentPath: string, input: EngineNewRoutine) =>
+    call("create_routine", () => getEngine().createRoutine(agentPath, input)),
   update: (
     agentPath: string,
     routineId: string,
-    updates: routinesData.RoutineUpdate,
-  ) => routinesData.update(agentPath, routineId, updates),
+    updates: EngineRoutineUpdate,
+  ) =>
+    call("update_routine", () =>
+      getEngine().updateRoutine(agentPath, routineId, updates),
+    ),
   delete: (agentPath: string, routineId: string) =>
-    routinesData.remove(agentPath, routineId),
+    call<void>("delete_routine", () =>
+      getEngine().deleteRoutine(agentPath, routineId),
+    ),
   listRuns: (agentPath: string, routineId?: string) =>
-    routineRunsData.list(agentPath, routineId),
+    call("list_routine_runs", () =>
+      getEngine().listRoutineRuns(agentPath, routineId),
+    ),
   runNow: (agentPath: string, routineId: string) =>
     call<void>("run_routine_now", () =>
       getEngine().runRoutineNow(agentPath, routineId),
@@ -496,10 +506,14 @@ export const tauriRoutines = {
     call<void>("start_routine_scheduler", () =>
       getEngine().startRoutineScheduler(agentPath),
     ),
-  stopScheduler: () =>
-    call<void>("stop_routine_scheduler", () => getEngine().stopRoutineScheduler()),
-  syncScheduler: () =>
-    call<void>("sync_routine_scheduler", () => getEngine().syncRoutineScheduler()),
+  stopScheduler: (agentPath: string) =>
+    call<void>("stop_routine_scheduler", () =>
+      getEngine().stopRoutineScheduler(agentPath),
+    ),
+  syncScheduler: (agentPath: string) =>
+    call<void>("sync_routine_scheduler", () =>
+      getEngine().syncRoutineScheduler(agentPath),
+    ),
 };
 
 export const tauriActivity = {

@@ -3,7 +3,6 @@ export interface Skill {
   name: string
   description: string
   instructions: string
-  learnings: string
   file_path: string
 }
 

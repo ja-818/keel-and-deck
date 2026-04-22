@@ -37,3 +37,14 @@ export function useRemoveLearning(agentPath: string | undefined) {
     },
   });
 }
+
+export function useUpdateLearning(agentPath: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, text }: { id: string; text: string }) =>
+      learnings.update(agentPath!, id, text),
+    onSuccess: () => {
+      if (agentPath) qc.invalidateQueries({ queryKey: queryKeys.learnings(agentPath) });
+    },
+  });
+}

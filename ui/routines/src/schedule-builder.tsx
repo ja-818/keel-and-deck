@@ -91,7 +91,7 @@ export function ScheduleBuilder({
               "h-8 px-3 rounded-full text-xs font-medium transition-colors",
               activePreset === preset
                 ? "bg-primary text-primary-foreground"
-                : "border border-border text-muted-foreground hover:bg-secondary",
+                : "bg-background border border-black/[0.04] text-muted-foreground hover:text-foreground",
             )}
           >
             {SCHEDULE_PRESET_LABELS[preset]}

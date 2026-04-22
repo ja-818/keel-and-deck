@@ -160,6 +160,7 @@ async fn create_routine(
     let root = resolve_root(&q.agent_path)?;
     houston_engine_core::agents::store::ensure_houston_dir(&root)?;
     let result = routines::create(&root, input)?;
+    st.routine_scheduler.sync_agent(&q.agent_path).await;
     emit(
         &st,
         HoustonEvent::RoutinesChanged {
@@ -177,6 +178,7 @@ async fn update_routine(
 ) -> Result<Json<Routine>, ApiError> {
     let root = resolve_root(&q.agent_path)?;
     let result = routines::update(&root, &id, updates)?;
+    st.routine_scheduler.sync_agent(&q.agent_path).await;
     emit(
         &st,
         HoustonEvent::RoutinesChanged {
@@ -193,6 +195,7 @@ async fn delete_routine(
 ) -> Result<(), ApiError> {
     let root = resolve_root(&q.agent_path)?;
     routines::delete(&root, &id)?;
+    st.routine_scheduler.sync_agent(&q.agent_path).await;
     emit(
         &st,
         HoustonEvent::RoutinesChanged {

@@ -69,6 +69,7 @@ pub fn create(root: &Path, input: NewRoutine) -> CoreResult<Routine> {
         schedule: input.schedule,
         enabled: input.enabled,
         suppress_when_silent: input.suppress_when_silent,
+        timezone: input.timezone,
         created_at: now.clone(),
         updated_at: now,
     };
@@ -102,6 +103,9 @@ pub fn update(root: &Path, id: &str, updates: RoutineUpdate) -> CoreResult<Routi
     if let Some(suppress) = updates.suppress_when_silent {
         routine.suppress_when_silent = suppress;
     }
+    if let Some(tz) = updates.timezone {
+        routine.timezone = tz;
+    }
     routine.updated_at = Utc::now().to_rfc3339();
 
     let result = routine.clone();
@@ -132,6 +136,7 @@ mod tests {
             schedule: "0 9 * * 1-5".into(),
             enabled: true,
             suppress_when_silent: true,
+            timezone: None,
         }
     }
 

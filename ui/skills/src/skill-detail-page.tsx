@@ -1,11 +1,22 @@
 /**
- * SkillDetailPage — View and edit a skill's instructions + learnings.
- * Fully props-driven: host app provides the skill data and save callback.
+ * SkillDetailPage — view and edit a skill's instructions.
+ *
+ * Visual: Mercury-style single header bar (back · live-title · Save · ⋯) and
+ * a body that places the instructions inside a gray section card with a white
+ * textarea well — same rhythm as the Routines editor.
  */
 import { useCallback, useEffect, useState } from "react"
-import { ConfirmDialog } from "@houston-ai/core"
+import {
+  cn,
+  Button,
+  ConfirmDialog,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@houston-ai/core"
+import { ArrowLeft, MoreHorizontal, Trash2 } from "lucide-react"
 import type { Skill } from "./types"
-import { ArrowLeft, FileText, Trash2 } from "lucide-react"
 
 export interface SkillDetailPageProps {
   skill: Skill | undefined
@@ -62,88 +73,88 @@ export function SkillDetailPage({
   const isDirty = instructions !== skill.instructions
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-      {/* Header */}
-      <div className="shrink-0 px-6 py-3 border-b border-border">
-        <div className="max-w-2xl mx-auto flex items-center gap-3">
-          <button
+    <div className="flex-1 flex flex-col min-h-0 bg-background">
+      {/* Single action bar — back · context · primary on right */}
+      <header className="px-4 py-2.5 shrink-0">
+        <div className="max-w-3xl mx-auto flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={onBack}
-            className="size-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            aria-label="Back to skills"
           >
             <ArrowLeft className="size-4" />
-          </button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-sm font-medium text-foreground truncate">
-              {skill.name}
-            </h1>
-            <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
-              <FileText className="size-3" />
-              {skill.file_path}
-            </p>
+          </Button>
+
+          <p className="text-sm font-medium text-foreground truncate min-w-0 flex-1">
+            {skill.name}
+          </p>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={!isDirty || saving || deleting}
+            >
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="More actions"
+                  disabled={deleting}
+                >
+                  <MoreHorizontal className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => setConfirmOpen(true)}
+                >
+                  <Trash2 className="size-3.5" />
+                  Delete skill
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-          <button
-            onClick={() => setConfirmOpen(true)}
-            disabled={deleting}
-            title="Delete skill"
-            className="size-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <Trash2 className="size-4" />
-          </button>
         </div>
-      </div>
+      </header>
 
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
         title={`Delete "${skill.name}"?`}
-        description="This removes the skill folder from .agents/skills and cannot be undone."
+        description="This removes the skill from your agent. You can reinstall it later."
         confirmLabel="Delete"
         onConfirm={handleConfirmDelete}
       />
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
-        <div className="max-w-2xl mx-auto space-y-8">
-          {/* Instructions */}
-          <section>
-            <label className="block text-xs font-medium text-muted-foreground tracking-wider mb-2">
-              Instructions
-            </label>
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="max-w-3xl mx-auto px-6 pt-3 pb-12">
+          <section className="rounded-xl bg-secondary p-3">
+            {skill.description && (
+              <p className="text-xs text-muted-foreground px-2 pb-2">
+                {skill.description}
+              </p>
+            )}
             <textarea
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
-              rows={12}
-              className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-border/80 resize-y font-mono"
-              placeholder="Instructions for this skill..."
-            />
-            <div className="flex items-center gap-3 mt-3">
-              <button
-                onClick={handleSave}
-                disabled={!isDirty || saving}
-                className="px-4 py-2 rounded-full text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                {saving ? "Saving..." : "Save"}
-              </button>
-              {isDirty && (
-                <span className="text-xs text-muted-foreground">Unsaved changes</span>
+              rows={18}
+              placeholder="Instructions for this skill…"
+              className={cn(
+                "w-full px-4 py-3 text-sm text-foreground leading-relaxed font-mono",
+                "placeholder:text-muted-foreground/60",
+                "bg-background border border-black/[0.04] rounded-lg",
+                "outline-none resize-y transition-shadow duration-200",
+                "focus:shadow-[0_1px_2px_rgba(0,0,0,0.04)]",
               )}
-            </div>
+            />
           </section>
-
-          {/* Learnings */}
-          {skill.learnings.trim() && (
-            <section>
-              <label className="block text-xs font-medium text-muted-foreground tracking-wider mb-2">
-                Learnings
-              </label>
-              <div className="rounded-xl border border-border bg-secondary px-4 py-3 text-sm text-muted-foreground whitespace-pre-wrap font-mono">
-                {skill.learnings}
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Learnings are added automatically when you give feedback on completed tasks.
-              </p>
-            </section>
-          )}
         </div>
       </div>
     </div>

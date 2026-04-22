@@ -272,6 +272,7 @@ mod tests {
             schedule: "0 9 * * *".into(),
             enabled: true,
             suppress_when_silent: true,
+            timezone: None,
         }
     }
 

@@ -23,6 +23,10 @@ pub struct Routine {
     /// (no activity surfaces on the board).
     #[serde(default = "default_true")]
     pub suppress_when_silent: bool,
+    /// IANA timezone override (e.g. `"America/Bogota"`). When `None`, the
+    /// scheduler falls back to the user's `timezone` preference, then UTC.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timezone: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -38,6 +42,8 @@ pub struct NewRoutine {
     pub enabled: bool,
     #[serde(default = "default_true")]
     pub suppress_when_silent: bool,
+    #[serde(default)]
+    pub timezone: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -48,6 +54,9 @@ pub struct RoutineUpdate {
     pub schedule: Option<String>,
     pub enabled: Option<bool>,
     pub suppress_when_silent: Option<bool>,
+    /// `Some(Some("..."))` sets a tz override, `Some(None)` clears it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timezone: Option<Option<String>>,
 }
 
 // -- RoutineRun --

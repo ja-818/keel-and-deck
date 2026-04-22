@@ -1,12 +1,19 @@
 /**
- * SkillsGrid — Installed skills list with "Add skill" button that opens
- * a marketplace modal for searching and installing from skills.sh.
+ * SkillsGrid — installed-skills surface.
+ *
+ * Two layouts:
+ *   - Empty: a centered `<Empty>` element on the host's white page (no card).
+ *   - Has content: a meta row (count + Add CTA) above a gray section card
+ *     containing the row list. Title is omitted because the host tab already
+ *     labels this surface "Skills".
  */
 import { useMemo, useState } from "react"
 import {
   Button,
   ConfirmDialog,
-  Empty, EmptyHeader, EmptyTitle, EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
 } from "@houston-ai/core"
 import { Plus } from "lucide-react"
 import type { Skill, CommunitySkill, RepoSkill } from "./types"
@@ -49,9 +56,10 @@ export function SkillsGrid({
     await onDelete(name)
   }
 
-  const sorted = useMemo(() => {
-    return [...skills].sort((a, b) => a.name.localeCompare(b.name))
-  }, [skills])
+  const sorted = useMemo(
+    () => [...skills].sort((a, b) => a.name.localeCompare(b.name)),
+    [skills],
+  )
 
   const canAdd = !!onSearch && !!onInstallCommunity
 
@@ -59,81 +67,86 @@ export function SkillsGrid({
     return (
       <div className="flex-1 flex items-center justify-center">
         <p className="text-sm text-muted-foreground animate-pulse">
-          Loading skills...
+          Loading skills…
         </p>
       </div>
     )
   }
 
-  return (
-    <div className="flex-1 overflow-y-auto">
-      <div className="max-w-3xl mx-auto px-6 py-6 space-y-8">
-        {/* Empty state */}
-        {sorted.length === 0 && (
-          <Empty className="border-0">
-            <EmptyHeader>
-              <EmptyTitle>No skills yet</EmptyTitle>
-              <EmptyDescription>
-                Skills teach your agent reusable procedures. Install skills
-                from the community or let your agent learn them over time.
-              </EmptyDescription>
-            </EmptyHeader>
-            {canAdd && (
-              <Button
-                onClick={() => setDialogOpen(true)}
-                className="rounded-full"
-              >
-                <Plus className="size-4" />
-                Add skill
-              </Button>
-            )}
-          </Empty>
-        )}
+  // Empty: text + CTA centered on the host's white page, top-aligned.
+  if (sorted.length === 0) {
+    return (
+      <>
+        <div className="mx-auto max-w-md flex flex-col items-center gap-6 text-center pt-24 px-6">
+          <EmptyHeader>
+            <EmptyTitle>No skills installed</EmptyTitle>
+            <EmptyDescription>
+              Skills are reusable procedures your agent can lean on.
+            </EmptyDescription>
+          </EmptyHeader>
+          {canAdd && (
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="size-4" />
+              Add skill
+            </Button>
+          )}
+        </div>
 
-        {/* Installed section */}
-        {sorted.length > 0 && (
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-medium text-foreground">
-                Installed
-              </h2>
-              {canAdd && (
-                <Button
-                  size="sm"
-                  onClick={() => setDialogOpen(true)}
-                  className="rounded-full"
-                >
-                  <Plus className="size-3.5" />
-                  Add skill
-                </Button>
-              )}
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-              {sorted.map((skill) => (
-                <SkillRow
-                  key={skill.id}
-                  skill={skill}
-                  onClick={() => onSkillClick(skill)}
-                  onDelete={onDelete ? () => setPendingDelete(skill) : undefined}
-                />
-              ))}
-            </div>
-          </section>
+        {canAdd && (
+          <AddSkillDialog
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
+            onSearch={onSearch}
+            onInstallCommunity={onInstallCommunity}
+            onListFromRepo={onListFromRepo}
+            onInstallFromRepo={onInstallFromRepo}
+          />
         )}
+      </>
+    )
+  }
+
+  // Has content: description + Add CTA above a 2-col grid of gray cards.
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-4 mb-4">
+        <p className="text-xs text-muted-foreground max-w-md">
+          Reusable procedures your agent can lean on.
+        </p>
+        {canAdd && (
+          <Button size="sm" onClick={() => setDialogOpen(true)} className="shrink-0">
+            <Plus className="size-3.5" />
+            Add skill
+          </Button>
+        )}
+      </div>
+
+      <div className="rounded-xl bg-secondary overflow-hidden divide-y divide-border/60">
+        {sorted.map((skill) => (
+          <SkillRow
+            key={skill.id}
+            skill={skill}
+            onClick={() => onSkillClick(skill)}
+            onDelete={onDelete ? () => setPendingDelete(skill) : undefined}
+          />
+        ))}
       </div>
 
       {onDelete && (
         <ConfirmDialog
           open={pendingDelete !== null}
-          onOpenChange={(open) => { if (!open) setPendingDelete(null) }}
-          title={pendingDelete ? `Delete "${pendingDelete.name}"?` : "Delete skill?"}
-          description="This removes the skill folder from .agents/skills and cannot be undone."
+          onOpenChange={(open) => {
+            if (!open) setPendingDelete(null)
+          }}
+          title={
+            pendingDelete ? `Delete "${pendingDelete.name}"?` : "Delete skill?"
+          }
+          description="This removes the skill from your agent. You can reinstall it later."
           confirmLabel="Delete"
           onConfirm={handleConfirmDelete}
         />
       )}
 
-      {/* Marketplace modal */}
       {canAdd && (
         <AddSkillDialog
           open={dialogOpen}

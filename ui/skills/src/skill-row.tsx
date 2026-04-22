@@ -1,5 +1,18 @@
-import { useState } from "react"
-import { Check, Copy, Trash2 } from "lucide-react"
+/**
+ * SkillRow — one row in the Skills list.
+ *
+ * Visual: transparent row sitting on a gray container card. Whole row
+ * clickable; delete tucked into an overflow menu.
+ */
+import {
+  cn,
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@houston-ai/core"
+import { MoreHorizontal, Trash2 } from "lucide-react"
 import type { Skill } from "./types"
 
 export interface SkillRowProps {
@@ -9,55 +22,54 @@ export interface SkillRowProps {
 }
 
 export function SkillRow({ skill, onClick, onDelete }: SkillRowProps) {
-  const [copied, setCopied] = useState(false)
-
-  const handleCopy = async (e: React.MouseEvent) => {
-    e.stopPropagation()
-    try {
-      await navigator.clipboard.writeText(skill.name)
-      setCopied(true)
-      window.setTimeout(() => setCopied(false), 1500)
-    } catch (err) {
-      console.error("[skills] Copy failed:", err)
-    }
-  }
-
   return (
     <div
-      className="group w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-border
-                 bg-background hover:border-border/80 transition-all"
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          onClick()
+        }
+      }}
+      className={cn(
+        "group flex items-start gap-3 px-5 py-4 cursor-pointer",
+        "transition-colors duration-150",
+        "hover:bg-black/[0.03]",
+        "focus-visible:outline-none focus-visible:bg-black/[0.03]",
+      )}
     >
-      <button
-        onClick={onClick}
-        className="flex-1 min-w-0 text-left"
-      >
+      <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-foreground truncate">
           {skill.name}
         </p>
         {skill.description && (
-          <p className="text-xs text-muted-foreground truncate mt-0.5">
+          <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5 leading-snug">
             {skill.description}
           </p>
         )}
-      </button>
-      <button
-        onClick={handleCopy}
-        title={copied ? "Copied!" : "Copy skill name"}
-        className="shrink-0 size-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-      >
-        {copied ? <Check className="size-4 text-emerald-600" /> : <Copy className="size-4" />}
-      </button>
+      </div>
       {onDelete && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onDelete()
-          }}
-          title="Delete skill"
-          className="shrink-0 size-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-        >
-          <Trash2 className="size-4" />
-        </button>
+        <div onClick={(e) => e.stopPropagation()} className="shrink-0 -mr-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="More actions"
+              >
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem variant="destructive" onClick={onDelete}>
+                <Trash2 className="size-3.5" />
+                Delete skill
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       )}
     </div>
   )

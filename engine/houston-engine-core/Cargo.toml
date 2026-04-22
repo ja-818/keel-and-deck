@@ -28,6 +28,7 @@ dirs = "5"
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
 async-trait = { workspace = true }
 cron = "0.12"
+chrono-tz = "0.9"
 
 [dev-dependencies]
 tempfile = "3"

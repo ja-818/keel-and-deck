@@ -22,4 +22,9 @@ export {
   useDeleteRoutine,
   useRunRoutineNow,
 } from "./use-routines";
-export { useLearnings, useAddLearning, useRemoveLearning } from "./use-learnings";
+export {
+  useLearnings,
+  useAddLearning,
+  useRemoveLearning,
+  useUpdateLearning,
+} from "./use-learnings";

@@ -23,6 +23,21 @@ export async function add(agentPath: string, text: string): Promise<Learning> {
   return learning;
 }
 
+export async function update(
+  agentPath: string,
+  id: string,
+  text: string,
+): Promise<Learning> {
+  const items = await list(agentPath);
+  const idx = items.findIndex((l) => l.id === id);
+  if (idx === -1) throw new Error(`Learning not found: ${id}`);
+  const updated: Learning = { ...items[idx], text };
+  const next = [...items];
+  next[idx] = updated;
+  await writeAgentJson(agentPath, NAME, s, next);
+  return updated;
+}
+
 export async function remove(agentPath: string, id: string): Promise<void> {
   const items = await list(agentPath);
   const next = items.filter((l) => l.id !== id);

@@ -41,5 +41,10 @@ async fn upsert(
     Json(req): Json<SetPreference>,
 ) -> Result<(), ApiError> {
     preferences::set(&st.engine.db, &key, &req.value).await?;
+    // Push a tz change into every running scheduler so existing cron jobs
+    // reflect the new zone without requiring an agent restart.
+    if key == preferences::TIMEZONE_KEY {
+        st.routine_scheduler.update_default_tz(&req.value).await;
+    }
     Ok(())
 }
