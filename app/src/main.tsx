@@ -15,6 +15,7 @@ import { initFrontendLogging, logger } from "./lib/logger";
 import { whenEngineReady, isEngineReady } from "./lib/engine";
 import i18n, { applyEngineLocale, LOCALE_PREF_KEY } from "./lib/i18n";
 import { tauriPreferences } from "./lib/tauri";
+import { DisclaimerGate } from "./components/shell/disclaimer-gate";
 
 // Initialize file-based logging — patches console.error/warn to write to
 // ~/.houston/logs/frontend.log (or ~/.dev-houston/logs/frontend.log in dev).
@@ -149,7 +150,9 @@ createRoot(document.getElementById("root")!).render(
     <ErrorBoundary>
       <EngineGate>
         <I18nextProvider i18n={i18n}>
-          <App />
+          <DisclaimerGate>
+            <App />
+          </DisclaimerGate>
         </I18nextProvider>
       </EngineGate>
     </ErrorBoundary>
