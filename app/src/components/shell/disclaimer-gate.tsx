@@ -6,11 +6,16 @@ import {
   type ReactNode,
   type UIEvent,
 } from "react";
+import { useTranslation } from "react-i18next";
 
 import { Button, cn } from "@houston-ai/core";
 
 import { useLegalAcceptance } from "../../hooks/use-legal-acceptance";
-import { PLACEHOLDER_DISCLAIMER_TEXT } from "../../lib/legal";
+
+interface Section {
+  heading: string;
+  body: string;
+}
 
 /**
  * Full-screen security-disclaimer gate. Renders `children` as-is once
@@ -19,16 +24,12 @@ import { PLACEHOLDER_DISCLAIMER_TEXT } from "../../lib/legal";
  * by clicking Accept (enabled only after the user has scrolled to the
  * end of the text) or Decline (closes the window).
  *
- * Must mount INSIDE a `QueryClientProvider` and AFTER the engine
- * handshake — see `DISCLAIMER-WIRING.md`.
+ * Copy lives in `app/src/locales/<lang>/legal.json`.
  */
 export function DisclaimerGate({ children }: { children: ReactNode }) {
   const { isAccepted, isLoading, accept, decline } = useLegalAcceptance();
 
   if (isLoading) {
-    // Neutral silent placeholder — deliberately not the gate. Flashing the
-    // gate and then hiding it would look like a bug. Matches the plain
-    // background used by EngineGate in main.tsx.
     return (
       <div
         aria-hidden
@@ -49,18 +50,14 @@ function DisclaimerOverlay({
   onAccept: () => Promise<void>;
   onDecline: () => Promise<void>;
 }) {
+  const { t } = useTranslation("legal");
   const scrollRef = useRef<HTMLDivElement>(null);
   const [hasScrolledToEnd, setHasScrolledToEnd] = useState(false);
   const [busy, setBusy] = useState<"accept" | "decline" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const paragraphs = PLACEHOLDER_DISCLAIMER_TEXT.split(/\n{2,}/).map((p) =>
-    p.trim(),
-  );
+  const sections = (t("sections", { returnObjects: true }) as Section[]) ?? [];
 
-  // If the content is short enough that there's nothing to scroll
-  // through, unlock the Accept button immediately. Otherwise the user
-  // would be stranded with a disabled primary action.
   useEffect(() => {
     const node = scrollRef.current;
     if (!node) return;
@@ -71,7 +68,6 @@ function DisclaimerOverlay({
 
   const handleScroll = useCallback((event: UIEvent<HTMLDivElement>) => {
     const node = event.currentTarget;
-    // 8px tolerance for sub-pixel rounding at the bottom edge.
     if (node.scrollTop + node.clientHeight >= node.scrollHeight - 8) {
       setHasScrolledToEnd(true);
     }
@@ -96,9 +92,6 @@ function DisclaimerOverlay({
     try {
       await onDecline();
     } catch (err) {
-      // If window.close() fails (e.g. in a non-Tauri dev context) we
-      // surface it instead of silently swallowing so the user isn't
-      // left wondering why nothing happened.
       setError(err instanceof Error ? err.message : String(err));
       setBusy(null);
     }
@@ -114,13 +107,13 @@ function DisclaimerOverlay({
       <div className="flex max-h-[min(720px,90vh)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#141414] shadow-2xl">
         <header className="flex flex-col gap-1 border-b border-white/5 px-8 py-6">
           <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
-            Before you continue
+            {t("kicker")}
           </p>
           <h1
             id="disclaimer-gate-title"
             className="text-2xl font-semibold text-white"
           >
-            Security disclaimer
+            {t("title")}
           </h1>
         </header>
 
@@ -130,19 +123,16 @@ function DisclaimerOverlay({
           className="flex-1 overflow-y-auto px-8 py-6 text-[15px] leading-relaxed text-gray-300"
           data-testid="disclaimer-scroll"
         >
-          {paragraphs.map((para, i) => (
-            <p
-              key={i}
-              className={cn(
-                "whitespace-pre-wrap",
-                i === 0
-                  ? "mb-5 rounded-md border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-sm text-amber-200"
-                  : "mb-4 last:mb-0",
-              )}
-            >
-              {para}
-            </p>
+          <p className="mb-5 text-gray-300">{t("intro")}</p>
+          {sections.map((section, i) => (
+            <section key={i} className="mb-5 last:mb-0">
+              <h2 className="mb-1.5 text-sm font-semibold text-white">
+                {section.heading}
+              </h2>
+              <p className="text-gray-300">{section.body}</p>
+            </section>
           ))}
+          <p className="mt-6 text-xs text-gray-500">{t("closing")}</p>
         </div>
 
         <footer className="flex flex-col gap-3 border-t border-white/5 px-8 py-5">
@@ -154,8 +144,8 @@ function DisclaimerOverlay({
             aria-live="polite"
           >
             {hasScrolledToEnd
-              ? "You've reached the end. Accept to continue or Decline to close Houston."
-              : "Scroll to the end to enable the Accept button."}
+              ? t("scroll_hint.done")
+              : t("scroll_hint.pending")}
           </p>
           {error ? (
             <p className="text-xs text-red-300" role="alert">
@@ -170,7 +160,7 @@ function DisclaimerOverlay({
               disabled={busy !== null}
               className="border-black/15 bg-transparent text-gray-200 hover:bg-white/5"
             >
-              {busy === "decline" ? "Closing…" : "Decline"}
+              {busy === "decline" ? t("buttons.decline_busy") : t("buttons.decline")}
             </Button>
             <Button
               type="button"
@@ -178,7 +168,7 @@ function DisclaimerOverlay({
               disabled={!hasScrolledToEnd || busy !== null}
               className="bg-gray-950 text-white hover:bg-black"
             >
-              {busy === "accept" ? "Saving…" : "Accept"}
+              {busy === "accept" ? t("buttons.accept_busy") : t("buttons.accept")}
             </Button>
           </div>
         </footer>

@@ -14,10 +14,13 @@ import { initReactI18next } from "react-i18next";
 
 import commonEn from "../locales/en/common.json";
 import setupEn from "../locales/en/setup.json";
+import legalEn from "../locales/en/legal.json";
 import commonEs from "../locales/es/common.json";
 import setupEs from "../locales/es/setup.json";
+import legalEs from "../locales/es/legal.json";
 import commonPt from "../locales/pt/common.json";
 import setupPt from "../locales/pt/setup.json";
+import legalPt from "../locales/pt/legal.json";
 
 export const SUPPORTED_LOCALES = ["en", "es", "pt"] as const;
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
@@ -63,9 +66,9 @@ export function normalizeLocale(value: string | null | undefined): SupportedLoca
 }
 
 const resources = {
-  en: { common: commonEn, setup: setupEn },
-  es: { common: commonEs, setup: setupEs },
-  pt: { common: commonPt, setup: setupPt },
+  en: { common: commonEn, setup: setupEn, legal: legalEn },
+  es: { common: commonEs, setup: setupEs, legal: legalEs },
+  pt: { common: commonPt, setup: setupPt, legal: legalPt },
 } as const;
 
 // Pick an initial language: cached pref → navigator → 'en'.
@@ -86,7 +89,7 @@ void i18n
     supportedLngs: SUPPORTED_LOCALES as unknown as string[],
     nonExplicitSupportedLngs: true, // map pt-BR → pt, es-ES → es, etc.
     defaultNS: "common",
-    ns: ["common", "setup"],
+    ns: ["common", "setup", "legal"],
     interpolation: { escapeValue: false }, // react already escapes
     detection: {
       // Cache only — the engine preference is source of truth, applied by
