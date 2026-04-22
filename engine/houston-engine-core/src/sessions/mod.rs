@@ -70,6 +70,7 @@ pub async fn start(
     rt: &SessionRuntime,
     events: DynEventSink,
     db: Database,
+    app_system_prompt: &str,
     params: StartParams,
 ) -> Result<String, crate::CoreError> {
     let StartParams {
@@ -88,20 +89,24 @@ pub async fn start(
     }
     agent_prompt::seed_agent(&agent_dir).map_err(crate::CoreError::Internal)?;
 
-    // If the caller didn't supply a system prompt, assemble Houston's
-    // standard one + Composio guidance. Keeps the engine equivalent with
-    // the former Tauri `send_message` command.
-    let system_prompt = match system_prompt {
-        Some(s) => Some(s),
-        None => {
-            let mut assembled = agent_prompt::build_houston_system_prompt(
-                &agent_dir,
-                Some(working_dir.as_path()),
-                None,
-            );
-            assembled.push_str(agent_prompt::COMPOSIO_GUIDANCE);
-            Some(assembled)
-        }
+    // Final system prompt is always `<product_prompt>\n\n---\n\n<agent_context>`.
+    // - `product_prompt`: caller-supplied if present, otherwise whatever the
+    //   embedding app (Houston desktop) passed in via `HOUSTON_APP_SYSTEM_PROMPT`.
+    // - `agent_context`: assembled by the engine from disk (working-dir header,
+    //   mode overlay, skills index, integrations list). Product-neutral.
+    let agent_context = agent_prompt::build_agent_context(
+        &agent_dir,
+        Some(working_dir.as_path()),
+        None,
+    );
+    let product_prompt = system_prompt
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .unwrap_or(app_system_prompt);
+    let system_prompt = if product_prompt.is_empty() {
+        Some(agent_context)
+    } else {
+        Some(format!("{product_prompt}\n\n---\n\n{agent_context}"))
     };
 
     let source = source.unwrap_or_else(|| "desktop".to_string());
@@ -206,13 +211,16 @@ pub async fn start_onboarding(
     events: DynEventSink,
     db: Database,
     paths: &EnginePaths,
+    app_system_prompt: &str,
+    app_onboarding_prompt: &str,
     agent_dir: PathBuf,
     session_key: String,
 ) -> Result<String, crate::CoreError> {
     agent_prompt::seed_agent(&agent_dir).map_err(crate::CoreError::Internal)?;
-    let mut system_prompt =
-        agent_prompt::build_houston_system_prompt(&agent_dir, None, None);
-    system_prompt.push_str(agent_prompt::ONBOARDING_GUIDANCE);
+
+    // Onboarding system prompt = product prompt + onboarding suffix. Engine
+    // appends its own agent context in `start()` below.
+    let product_prompt = format!("{app_system_prompt}{app_onboarding_prompt}");
 
     let resolved = resolve_provider(paths, &agent_dir);
 
@@ -220,12 +228,13 @@ pub async fn start_onboarding(
         rt,
         events,
         db,
+        app_system_prompt,
         StartParams {
             agent_dir: agent_dir.clone(),
             working_dir: agent_dir,
             session_key,
             prompt: ".".to_string(),
-            system_prompt: Some(system_prompt),
+            system_prompt: Some(product_prompt),
             source: Some("desktop".into()),
             provider: resolved.provider,
             model: resolved.model,

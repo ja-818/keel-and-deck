@@ -27,6 +27,9 @@ pub struct EngineRoutineDispatcher {
     pub events: DynEventSink,
     pub db: Database,
     pub paths: crate::paths::EnginePaths,
+    /// Product-layer prompt injected at the top of every routine run.
+    /// Supplied by the embedding app (see `EngineState::app_system_prompt`).
+    pub app_system_prompt: String,
 }
 
 #[async_trait]
@@ -38,8 +41,13 @@ impl RoutineDispatcher for EngineRoutineDispatcher {
                 error: Some(format!("seed failed: {e}")),
             };
         }
-        let system_prompt =
-            agent_prompt::build_houston_system_prompt(ctx.working_dir, None, None);
+        let agent_context =
+            agent_prompt::build_agent_context(ctx.working_dir, None, None);
+        let system_prompt = if self.app_system_prompt.is_empty() {
+            agent_context
+        } else {
+            format!("{}\n\n---\n\n{agent_context}", self.app_system_prompt)
+        };
 
         let agent_key = format!(
             "{}:{}",

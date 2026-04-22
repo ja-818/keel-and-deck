@@ -13,6 +13,7 @@
 
 import { HoustonClient, EngineWebSocket } from "@houston-ai/engine-client";
 import { listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
 
 declare global {
   interface Window {
@@ -55,6 +56,38 @@ function applyConfig(config: { baseUrl: string; token: string }) {
 const initial = resolveConfig();
 if (initial) {
   applyConfig(initial);
+}
+
+// Race-safe fallback: pull the handshake directly from Tauri. Wins the race
+// when the one-shot `houston-engine-ready` event fires before `listen()`
+// below registers. The Rust command errors with "engine not ready" until
+// setup() finishes; retry with backoff.
+async function pullHandshakeWithRetry() {
+  const deadline = Date.now() + 60_000;
+  let delay = 100;
+  while (Date.now() < deadline) {
+    if (_client) return;
+    try {
+      const config = await invoke<{ baseUrl: string; token: string }>(
+        "get_engine_handshake",
+      );
+      if (config?.baseUrl && config?.token) {
+        applyConfig(config);
+        return;
+      }
+    } catch {
+      /* engine not ready yet — retry */
+    }
+    await new Promise((r) => setTimeout(r, delay));
+    delay = Math.min(delay * 1.5, 1000);
+  }
+  console.error("[engine] handshake pull timed out after 60s");
+}
+
+if (!_client) {
+  pullHandshakeWithRetry().catch(() => {
+    /* non-Tauri env — listen() path covers other callers */
+  });
 }
 
 /**

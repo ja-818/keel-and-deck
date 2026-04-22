@@ -54,7 +54,16 @@ pub struct EngineSubprocess {
 
 impl EngineSubprocess {
     /// Spawn `houston-engine` and wait up to `timeout` for the banner.
-    pub fn spawn(binary: &PathBuf, timeout: Duration) -> Result<Self, String> {
+    ///
+    /// `env` is merged on top of the inherited environment — used by the
+    /// Houston app to pass product-layer prompts (`HOUSTON_APP_SYSTEM_PROMPT`,
+    /// `HOUSTON_APP_ONBOARDING_PROMPT`) into the engine at boot so the engine
+    /// itself carries no product copy.
+    pub fn spawn(
+        binary: &PathBuf,
+        timeout: Duration,
+        env: &[(String, String)],
+    ) -> Result<Self, String> {
         let mut cmd = Command::new(binary);
         cmd.stdout(Stdio::piped())
             .stderr(Stdio::inherit())
@@ -65,6 +74,9 @@ impl EngineSubprocess {
             // preventing orphan engines holding ports after the app
             // force-quits.
             .stdin(Stdio::piped());
+        for (k, v) in env {
+            cmd.env(k, v);
+        }
 
         #[cfg(unix)]
         unsafe {
@@ -296,9 +308,10 @@ pub trait SupervisorCallbacks: Send + Sync + 'static {
 pub fn spawn_supervisor<C: SupervisorCallbacks>(
     binary: PathBuf,
     banner_timeout: Duration,
+    env: Vec<(String, String)>,
     cb: Arc<C>,
 ) -> Result<Arc<Mutex<Option<EngineSubprocess>>>, String> {
-    let initial = EngineSubprocess::spawn(&binary, banner_timeout)?;
+    let initial = EngineSubprocess::spawn(&binary, banner_timeout, &env)?;
     let slot: Arc<Mutex<Option<EngineSubprocess>>> = Arc::new(Mutex::new(Some(initial)));
     let slot_clone = slot.clone();
 
@@ -320,7 +333,7 @@ pub fn spawn_supervisor<C: SupervisorCallbacks>(
 
             thread::sleep(backoff);
 
-            match EngineSubprocess::spawn(&binary, banner_timeout) {
+            match EngineSubprocess::spawn(&binary, banner_timeout, &env) {
                 Ok(new) => {
                     cb.on_restart(&new.handshake);
                     if let Ok(mut guard) = slot_clone.lock() {

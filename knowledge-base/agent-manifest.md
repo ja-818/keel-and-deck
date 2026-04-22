@@ -100,17 +100,21 @@ Engine route: `POST /v1/store/workspaces/install-from-github`. Rust impl: `houst
 - Store: `useWorkspaceStore` — `loadWorkspaces()`, `setCurrent()`, `create()`, `rename()`, `delete()`
 
 ## Prompt assembly
-Order (in `engine/houston-engine-core/src/agents/prompt.rs::build_houston_system_prompt`):
+The final system prompt is `<product_prompt>\n\n---\n\n<agent_context>`, built in two layers:
+
+**Product layer (owned by the embedding app, not the engine).**
+Lives in `app/src-tauri/src/houston_prompt.rs` for the Houston desktop app. Covers the non-technical-user voice rules, self-improvement skills/learnings protocol, and Composio integration guidance. Passed to the engine at boot via env vars `HOUSTON_APP_SYSTEM_PROMPT` + `HOUSTON_APP_ONBOARDING_PROMPT` — the engine keeps them as opaque strings. Callers can also override per-session via the `systemPrompt` field on `startSession`.
+
+**Agent-context layer (engine-owned).**
+Built in `engine/houston-engine-core/src/agents/prompt.rs::build_agent_context`:
 1. **Working directory block** — hard rules scoping file I/O to `<agent-root>`.
-2. `.houston/prompts/system.md` — base prompt (falls back to `DEFAULT_SYSTEM_PROMPT`, which includes the non-technical-user voice rules).
-3. Mode file `.houston/prompts/modes/<mode>.md` (optional).
-4. `SELF_IMPROVEMENT_GUIDANCE` const (`engine/houston-engine-core/src/agents/self_improvement.rs`) — skills/learnings/CLAUDE.md directives. Source of truth; the per-agent seed file is reference-only.
-5. Skills index — `.agents/skills/` via `houston_skills::build_skills_index`.
-6. Integrations block — based on `.houston/integrations.json` if present.
+2. Mode file `.houston/prompts/modes/<mode>.md` (optional, user-editable).
+3. Skills index — `.agents/skills/` via `houston_skills::build_skills_index`.
+4. Integrations block — based on `.houston/integrations.json` if present.
 
 `CLAUDE.md` is read by the CLI (claude/codex) itself at startup, not injected by the engine.
 
-Prompt files are seeded on agent creation via `seed_file()` (write-once, never overwrite). Runtime behavior uses the engine constants — editing the seed files affects only what the UI displays, not what the agent actually runs.
+Users cannot edit the product prompt — it's compiled into the app binary. Per-agent surfaces that ARE user-editable: `CLAUDE.md` (job description), `.agents/skills/` (skills), `.houston/memory/LEARNINGS.md` (learnings), `.houston/prompts/modes/*.md` (mode overrides).
 
 ## Board / Activity tab
 `@houston-ai/board::AIBoard` = `KanbanBoard` + `KanbanDetailPanel` + `ChatPanel`. Each card = activity from `.houston/activity/activity.json`. Click → opens chat w/ conversation history. App `board-tab.tsx` ~140 lines, thin store wrapper.

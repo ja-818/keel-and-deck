@@ -1,5 +1,4 @@
 import {
-  StrictMode,
   Component,
   useEffect,
   useState,
@@ -15,7 +14,7 @@ import { initFrontendLogging, logger } from "./lib/logger";
 import { whenEngineReady, isEngineReady } from "./lib/engine";
 
 // Initialize file-based logging — patches console.error/warn to write to
-// ~/Library/Application Support/houston/logs/frontend.log
+// ~/.houston/logs/frontend.log (or ~/.dev-houston/logs/frontend.log in dev).
 initFrontendLogging();
 
 // Global error handlers — surface ALL uncaught errors as toasts
@@ -51,10 +50,27 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
   render() {
     if (this.state.error) {
       return (
-        <div style={{ padding: 32, fontFamily: "monospace", whiteSpace: "pre-wrap" }}>
-          <h1 style={{ color: "red" }}>App crashed</h1>
-          <p>{this.state.error.message}</p>
-          <pre>{this.state.error.stack}</pre>
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            padding: 32,
+            background: "#1e1e1e",
+            color: "#ffdddd",
+            fontFamily: "ui-monospace, Menlo, monospace",
+            fontSize: 13,
+            whiteSpace: "pre-wrap",
+            overflow: "auto",
+            zIndex: 999999,
+          }}
+        >
+          <h1 style={{ color: "#ff6666", fontSize: 24, margin: 0, marginBottom: 16 }}>
+            App crashed
+          </h1>
+          <p style={{ fontSize: 15, marginBottom: 16, color: "#ffffff" }}>
+            {this.state.error.message}
+          </p>
+          <pre style={{ fontSize: 12, opacity: 0.85 }}>{this.state.error.stack}</pre>
         </div>
       );
     }
@@ -101,14 +117,16 @@ function EngineGate({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+// StrictMode intentionally remounts components to catch bugs. In Tauri's
+// WKWebView that double-mount collides with portal DOM + Tauri event
+// listeners and throws NotFoundError on removeChild. Skipping it for now;
+// revisit once the underlying portal/listener churn is fixed.
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <ErrorBoundary>
-        <EngineGate>
-          <App />
-        </EngineGate>
-      </ErrorBoundary>
-    </QueryClientProvider>
-  </StrictMode>,
+  <QueryClientProvider client={queryClient}>
+    <ErrorBoundary>
+      <EngineGate>
+        <App />
+      </EngineGate>
+    </ErrorBoundary>
+  </QueryClientProvider>,
 );

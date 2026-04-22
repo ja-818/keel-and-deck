@@ -16,6 +16,13 @@ pub struct EngineState {
     pub sessions: SessionRuntime,
     /// Mobile sync runtime — engine is the WS authority.
     pub sync: SyncRuntime,
+    /// Product-layer prompt prefix supplied by the embedding app (e.g. the
+    /// Houston desktop app) via env. Prepended to caller-less sessions.
+    /// Empty string if unset.
+    pub app_system_prompt: String,
+    /// Product-layer onboarding suffix supplied by the embedding app.
+    /// Appended on first-run sessions.
+    pub app_onboarding_prompt: String,
 }
 
 impl EngineState {
@@ -26,7 +33,20 @@ impl EngineState {
             db,
             sessions: SessionRuntime::default(),
             sync: SyncRuntime::new(),
+            app_system_prompt: String::new(),
+            app_onboarding_prompt: String::new(),
         }
+    }
+
+    /// Chainable setter for the app's product prompt.
+    pub fn with_app_prompts(
+        mut self,
+        app_system_prompt: String,
+        app_onboarding_prompt: String,
+    ) -> Self {
+        self.app_system_prompt = app_system_prompt;
+        self.app_onboarding_prompt = app_onboarding_prompt;
+        self
     }
 }
 

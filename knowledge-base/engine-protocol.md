@@ -299,6 +299,17 @@ The echoed `session_key` in the start response is safe; early
 events for that key may have been dropped — refetch with
 `/v1/agents/:path/sessions/:key/history` if you need them.
 
+### System prompts are caller-supplied
+
+`POST /v1/agents/:path/sessions` accepts an optional `systemPrompt`
+field. When omitted, the engine falls back to whatever the embedding
+app passed in via `HOUSTON_APP_SYSTEM_PROMPT` at subprocess spawn. The
+engine has no hardcoded product copy — it only assembles generic
+per-agent context from disk (working directory, mode overrides,
+skills index, integrations). Final prompt =
+`<product_prompt>\n\n---\n\n<agent_context>`. Onboarding sessions use
+`HOUSTON_APP_ONBOARDING_PROMPT` as an additional suffix.
+
 ### Feed-item streaming needs a reducer
 
 `assistant_text_streaming` deltas should REPLACE the in-progress

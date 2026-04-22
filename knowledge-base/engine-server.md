@@ -22,6 +22,8 @@ All via environment variables.
 | `HOUSTON_ENGINE_TOKEN` | auto | Bearer token clients must send. 48-char alphanumeric if unset. |
 | `HOUSTON_HOME` | `~/.houston` | DB, logs, `engine.json`, workspaces. |
 | `HOUSTON_DOCS` | `$HOUSTON_HOME/workspaces` | Workspaces filesystem root. |
+| `HOUSTON_APP_SYSTEM_PROMPT` | `""` | Product-layer system prompt. Prepended to every session when the caller doesn't supply its own. Set by the embedding app (e.g. Houston desktop) at subprocess spawn. Engine treats it as an opaque string — no hardcoded product copy in engine source. |
+| `HOUSTON_APP_ONBOARDING_PROMPT` | `""` | Product-layer onboarding suffix. Appended after the system prompt on first-run sessions (`POST /v1/agents/:path/sessions/onboarding`). |
 | `HOUSTON_NO_PARENT_WATCHDOG` | unset | Set to `1` to disable the stdin-EOF → exit watchdog (see "Parent watchdog" below). Required when running under systemd/docker where no supervisor holds the stdin pipe. |
 | `RUST_LOG` | `info,houston=debug` | `tracing` filter. |
 

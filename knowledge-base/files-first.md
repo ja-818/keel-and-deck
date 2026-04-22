@@ -26,8 +26,7 @@ If app-specific → `.houston/`.
       # Legacy `.houston/memory/learnings.md` auto-migrated on startup
       # (bullet list → JSON). See `houston_agent_files::migrate_agent_data`.
     prompts/
-      system.md                 editable base system prompt
-      self-improvement.md       editable learning directives
+      modes/<mode>.md           editable per-mode prompt overlay (user-owned)
     sessions/
       {session_key}.sid         one file per conversation, holds Claude session id for --resume
   .agents/
@@ -50,7 +49,7 @@ schema + a generic read/write pair covers everything.
 Authoritative. Live in `ui/agent-schemas/src/*.schema.json`. Embedded in Rust via `include_str!` in `houston-agent-files::schemas`. Seeded into each agent's `.houston/<type>/<type>.schema.json` on first launch. Prompts instruct model to read schema before writing data file.
 
 ## Migration
-`houston_agent_files::migrate_agent_data()` runs on every `seed_agent()`. Idempotent. Leaves legacy flat-layout files in place as rollback.
+`houston_agent_files::migrate_agent_data()` runs on every `seed_agent()`. Idempotent. Leaves legacy flat-layout data files in place as rollback. Legacy product-prompt seeds (`.houston/prompts/system.md`, `.houston/prompts/self-improvement.md`) are deleted — the Houston product prompt now lives in the app binary (`app/src-tauri/src/houston_prompt.rs`), not on disk.
 
 ## Atomic writes
 All writes: temp file + rename. Path-traversal safe via `houston-agent-files::safe_relative`.

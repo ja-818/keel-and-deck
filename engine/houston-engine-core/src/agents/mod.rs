@@ -18,7 +18,6 @@ pub mod files;
 pub mod prompt;
 pub mod routine_runs;
 pub mod routines;
-pub mod self_improvement;
 pub mod store;
 pub mod types;
 

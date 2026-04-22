@@ -24,7 +24,7 @@ Houston = desktop app + standalone engine + open library of agents.
 - **User data** — `~/.houston/`: DB, logs, `engine.json`, and `workspaces/<Workspace>/<Agent>/`. Each agent has `.houston/` data files + `CLAUDE.md` + `.agents/skills/`.
 - **Wire contract** — every domain call is a `fetch` or WS frame in `@houston-ai/engine-client`. There are NO `invoke("list_workspaces", …)` style Tauri commands for domain; those were all deleted.
 - **Reactivity** — engine emits `HoustonEvent`s; desktop subscribes to the WS `*` firehose; TanStack Query invalidation in `app/src/hooks/use-agent-invalidation.ts` maps events → query keys. File watcher catches direct agent writes.
-- **Voice** — agents' target user is NON-technical. Default system prompt forbids mentioning files/JSON/configs/CLIs when talking to the user.
+- **Voice** — agents' target user is NON-technical. The product system prompt forbids mentioning files/JSON/configs/CLIs when talking to the user. Lives in `app/src-tauri/src/houston_prompt.rs` (Houston app), NOT in the engine. Engine is prompt-agnostic; app hands it over at spawn via `HOUSTON_APP_SYSTEM_PROMPT`.
 
 Before touching anything: run PHASE 1 (load `knowledge-base/architecture.md` + any KBs relevant to scope).
 

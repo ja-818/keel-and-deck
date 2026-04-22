@@ -15,6 +15,8 @@ async fn spawn() -> (SocketAddr, String) {
         token: token.clone(),
         home_dir: home.path().to_path_buf(),
         docs_dir: docs.path().to_path_buf(),
+        app_system_prompt: String::new(),
+        app_onboarding_prompt: String::new(),
     };
     let listener = TcpListener::bind(cfg.bind).await.unwrap();
     let addr = listener.local_addr().unwrap();

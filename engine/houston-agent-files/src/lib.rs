@@ -195,6 +195,33 @@ pub fn migrate_agent_data(agent_root: &Path) -> Result<()> {
         tracing::info!(agent_root = %agent_root.display(), count = entries.len(), "migrated learnings.md → learnings.json");
     }
 
+    // Retire product-layer prompt files that earlier versions seeded under
+    // `.houston/prompts/`. These were never user-editable through any UI —
+    // the Houston product prompt lives in the app process now. Deleting is
+    // safe: no real user edits to preserve. User's mode overrides in
+    // `modes/` are untouched.
+    for legacy in [
+        ".houston/prompts/system.md",
+        ".houston/prompts/self-improvement.md",
+    ] {
+        let path = agent_root.join(legacy);
+        if path.exists() {
+            match fs::remove_file(&path) {
+                Ok(()) => tracing::info!(
+                    agent_root = %agent_root.display(),
+                    file = legacy,
+                    "removed legacy product prompt file"
+                ),
+                Err(e) => tracing::warn!(
+                    agent_root = %agent_root.display(),
+                    file = legacy,
+                    error = %e,
+                    "failed to remove legacy product prompt file"
+                ),
+            }
+        }
+    }
+
     // Seed schemas at the end so every migrated agent has them available.
     seed_schemas(agent_root)?;
     Ok(())
@@ -263,6 +290,30 @@ mod tests {
         let new = dir.path().join(".houston/activity/activity.json");
         assert!(new.exists());
         assert_eq!(fs::read_to_string(&new).unwrap(), "[{\"id\":\"a\"}]");
+    }
+
+    #[test]
+    fn migrate_removes_legacy_product_prompts() {
+        let dir = TempDir::new().unwrap();
+        let prompts = dir.path().join(".houston/prompts");
+        fs::create_dir_all(prompts.join("modes")).unwrap();
+        fs::write(prompts.join("system.md"), "stale product prompt").unwrap();
+        fs::write(prompts.join("self-improvement.md"), "stale guidance").unwrap();
+        fs::write(prompts.join("modes/execution.md"), "user's mode — keep").unwrap();
+
+        migrate_agent_data(dir.path()).unwrap();
+
+        assert!(!prompts.join("system.md").exists());
+        assert!(!prompts.join("self-improvement.md").exists());
+        // User's mode override must survive.
+        assert!(prompts.join("modes/execution.md").exists());
+        assert_eq!(
+            fs::read_to_string(prompts.join("modes/execution.md")).unwrap(),
+            "user's mode — keep"
+        );
+
+        // Running again must be idempotent (no-op, no error).
+        migrate_agent_data(dir.path()).unwrap();
     }
 
     #[test]

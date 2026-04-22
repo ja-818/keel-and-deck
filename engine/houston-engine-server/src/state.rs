@@ -44,7 +44,10 @@ impl ServerState {
     fn with_db(config: ServerConfig, db: Database) -> Self {
         let events = BroadcastEventSink::new(1024);
         let paths = EnginePaths::new(config.docs_dir.clone(), config.home_dir.clone());
-        let engine = EngineState::new(paths, Arc::new(events.clone()), db);
+        let engine = EngineState::new(paths, Arc::new(events.clone()), db).with_app_prompts(
+            config.app_system_prompt.clone(),
+            config.app_onboarding_prompt.clone(),
+        );
         Self {
             config,
             events,

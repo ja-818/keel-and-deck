@@ -501,9 +501,10 @@ pub fn default_agents_dir() -> PathBuf {
     if let Ok(p) = std::env::var("HOUSTON_AGENTS_DIR") {
         return PathBuf::from(p);
     }
+    let subdir = if cfg!(debug_assertions) { ".dev-houston" } else { ".houston" };
     dirs::home_dir()
-        .map(|h| h.join(".houston").join("agents"))
-        .unwrap_or_else(|| PathBuf::from(".houston/agents"))
+        .map(|h| h.join(subdir).join("agents"))
+        .unwrap_or_else(|| PathBuf::from(format!("{subdir}/agents")))
 }
 
 fn urlencoded(s: &str) -> String {

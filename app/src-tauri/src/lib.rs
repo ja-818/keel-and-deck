@@ -1,5 +1,6 @@
 mod commands;
 mod engine_supervisor;
+mod houston_prompt;
 mod logging;
 
 use engine_supervisor::{
@@ -9,9 +10,31 @@ use engine_supervisor::{
 use houston_tauri::houston_db::Database;
 use houston_tauri::state::AppState;
 use houston_ui_events::HoustonEvent;
-use std::sync::Arc;
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::{Emitter, Manager};
+
+/// Tauri-managed state holding the latest engine handshake so the frontend
+/// can pull it on demand via `get_engine_handshake` — wins the race when
+/// the one-shot `houston-engine-ready` event fires before the webview's
+/// `listen()` registers.
+#[derive(Default)]
+struct EngineHandshakeState(Mutex<Option<EngineHandshake>>);
+
+#[tauri::command]
+fn get_engine_handshake(
+    state: tauri::State<'_, EngineHandshakeState>,
+) -> Result<serde_json::Value, String> {
+    let guard = state.0.lock().map_err(|e| e.to_string())?;
+    let h = guard
+        .as_ref()
+        .ok_or_else(|| "engine not ready".to_string())?;
+    Ok(serde_json::json!({
+        "baseUrl": h.base_url(),
+        "token": h.token,
+    }))
+}
 
 /// Supervisor callback that toasts the UI on each engine restart.
 struct TauriSupervisorCallbacks {
@@ -40,7 +63,9 @@ impl SupervisorCallbacks for TauriSupervisorCallbacks {
 }
 
 pub fn run() {
-    // Initialize logging before anything else
+    // Initialize logging before anything else. `houston_dir()` flips to
+    // `~/.dev-houston/` in debug builds so `pnpm tauri dev` stays isolated
+    // from an installed release of Houston.
     let houston = houston_tauri::houston_db::db::houston_dir();
     logging::init(&houston);
 
@@ -109,7 +134,38 @@ pub fn run() {
             let cb: Arc<TauriSupervisorCallbacks> = Arc::new(TauriSupervisorCallbacks {
                 handle: app.handle().clone(),
             });
-            let slot = spawn_supervisor(binary, Duration::from_secs(10), cb)
+            // Product-layer prompts live in `houston_prompt.rs` and are
+            // exported to the engine via env vars. The engine treats these
+            // as opaque strings — it has no hardcoded Houston copy.
+            //
+            // Also pin HOUSTON_HOME + HOUSTON_DOCS so the engine uses the
+            // same data roots as the app (matters if someone ever runs a
+            // release engine binary against a debug app or vice-versa).
+            // Dev: workspaces live INSIDE `~/.dev-houston/workspaces/`.
+            // Release: preserve legacy `~/Documents/Houston/` for existing users.
+            let docs_dir = if cfg!(debug_assertions) {
+                houston.join("workspaces")
+            } else {
+                houston
+                    .parent()
+                    .map(|h| h.join("Documents").join("Houston"))
+                    .unwrap_or_else(|| PathBuf::from("Documents").join("Houston"))
+            };
+            let engine_env: Vec<(String, String)> = vec![
+                (
+                    "HOUSTON_APP_SYSTEM_PROMPT".into(),
+                    houston_prompt::system_prompt(),
+                ),
+                (
+                    "HOUSTON_APP_ONBOARDING_PROMPT".into(),
+                    houston_prompt::onboarding_prompt(),
+                ),
+                ("HOUSTON_HOME".into(), houston.display().to_string()),
+                ("HOUSTON_DOCS".into(), docs_dir.display().to_string()),
+            ];
+            // 30s banner timeout: first-run Gatekeeper scan on a notarized
+            // sidecar can take 15–20s on slow machines.
+            let slot = spawn_supervisor(binary, Duration::from_secs(30), engine_env, cb)
                 .expect("failed to spawn houston-engine");
             let handshake = {
                 let guard = slot.lock().expect("engine slot poisoned");
@@ -121,6 +177,14 @@ pub fn run() {
             };
             wait_until_healthy(&handshake, Duration::from_secs(5))
                 .expect("engine did not pass /v1/health in time");
+
+            // Stash the handshake so the frontend can pull it via
+            // `get_engine_handshake` — wins the race when the one-shot
+            // `houston-engine-ready` event fires before the webview's
+            // `listen()` registers (common in dev + cold Vite).
+            let handshake_state = EngineHandshakeState::default();
+            *handshake_state.0.lock().unwrap() = Some(handshake.clone());
+            app.manage(handshake_state);
 
             // Inject bootstrap so `app/src/lib/engine.ts::resolveConfig`
             // picks it up before any HoustonClient call fires.
@@ -178,6 +242,8 @@ pub fn run() {
             // Logging (writes to local log files).
             logging::write_frontend_log,
             logging::read_recent_logs,
+            // Engine handshake pull (race-free fallback for `EngineGate`).
+            get_engine_handshake,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

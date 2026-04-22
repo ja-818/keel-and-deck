@@ -119,12 +119,26 @@ impl Database {
     }
 }
 
-/// Returns the Houston data root: `~/.houston/`.
-/// All Houston data (db, logs, workspaces, cache) lives here.
+/// Returns the Houston data root.
+///
+/// - Release builds: `~/.houston/` — what real users see.
+/// - Debug builds (`pnpm tauri dev`, `cargo run`): `~/.dev-houston/` — keeps
+///   development state isolated so you can install a real release of Houston
+///   alongside without clobbering each other.
+///
+/// Override via `HOUSTON_HOME` env var (wins regardless of build profile).
 /// Delete this directory for a completely clean slate.
 pub fn houston_dir() -> PathBuf {
+    if let Ok(override_path) = std::env::var("HOUSTON_HOME") {
+        return PathBuf::from(override_path);
+    }
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
-    PathBuf::from(home).join(".houston")
+    let subdir = if cfg!(debug_assertions) {
+        ".dev-houston"
+    } else {
+        ".houston"
+    };
+    PathBuf::from(home).join(subdir)
 }
 
 #[cfg(test)]
