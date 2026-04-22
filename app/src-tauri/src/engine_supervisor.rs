@@ -184,19 +184,44 @@ impl Drop for EngineSubprocess {
 /// Resolve the `houston-engine` binary path.
 ///
 /// Resolution order:
-/// 1. `HOUSTON_ENGINE_BIN` env var (dev override).
-/// 2. In debug builds: cargo workspace target first (freshest during
-///    `pnpm tauri dev` — the staged sidecar can be stale if you rebuild
-///    just the engine crate).
-/// 3. Tauri bundle sidecar: `<resources>/binaries/houston-engine`
-///    (authoritative in release builds, where the binary is bundled by
-///    `externalBin`).
-/// 4. In release builds: cargo workspace target (last-resort fallback).
+/// 1. `HOUSTON_ENGINE_BIN` env var (dev override / SSH deploy).
+/// 2. Debug builds: cargo workspace target (freshest during `pnpm tauri
+///    dev` — the staged sidecar can be stale if you rebuild just the
+///    engine crate).
+/// 3. Sibling of the current executable — this is where Tauri's
+///    `externalBin` places sidecars in shipped app bundles:
+///      - macOS: `Houston.app/Contents/MacOS/houston-engine`
+///      - Windows: next to `houston-app.exe`
+///      - Linux AppImage: inside the mounted AppImage root
+///    Authoritative for release builds. (Tauri's `resource_dir()` points
+///    at `Contents/Resources/` on macOS which is the WRONG place for
+///    externalBin — sidecars are not resources.)
+/// 4. `<resource_dir>/binaries/houston-engine` — legacy / belt-and-braces
+///    fallback for platforms that stage externalBin into the resources
+///    tree.
+/// 5. Release builds: cargo workspace target (last-resort, exists only
+///    when running `cargo run --release` outside a bundled `.app`).
+///
+/// Returning `Err` here causes the Tauri `setup()` closure to abort the
+/// app on launch — so this function is a hot path during the "download
+/// the new DMG, open it, nothing happens" user experience. Every path we
+/// check is worth the extra stat call.
 pub fn resolve_engine_binary(resource_dir: Option<&PathBuf>) -> Result<PathBuf, String> {
+    let mut tried: Vec<PathBuf> = Vec::new();
+    let try_candidate = |p: PathBuf, tried: &mut Vec<PathBuf>| -> Option<PathBuf> {
+        if p.exists() {
+            Some(p)
+        } else {
+            tried.push(p);
+            None
+        }
+    };
+
+    // 1. Explicit env override.
     if let Ok(p) = std::env::var("HOUSTON_ENGINE_BIN") {
         let pb = PathBuf::from(p);
-        if pb.exists() {
-            return Ok(pb);
+        if let Some(hit) = try_candidate(pb, &mut tried) {
+            return Ok(hit);
         }
     }
 
@@ -206,45 +231,68 @@ pub fn resolve_engine_binary(resource_dir: Option<&PathBuf>) -> Result<PathBuf, 
     let target_debug = workspace_root.join("target").join("debug").join(bin_name());
     let target_release = workspace_root.join("target").join("release").join(bin_name());
 
+    // 2. Debug: prefer cargo target (freshest under `tauri dev`).
     #[cfg(debug_assertions)]
     {
-        // Dev: prefer the freshest cargo target.
-        if target_debug.exists() {
-            return Ok(target_debug);
+        if let Some(hit) = try_candidate(target_debug.clone(), &mut tried) {
+            return Ok(hit);
         }
-        if target_release.exists() {
-            return Ok(target_release);
+        if let Some(hit) = try_candidate(target_release.clone(), &mut tried) {
+            return Ok(hit);
         }
     }
 
-    if let Some(resources) = resource_dir {
-        let candidates = [
-            resources.join("binaries").join(bin_name_no_triple()),
-            resources
-                .join("binaries")
-                .join(format!("{}-{}", bin_name_no_triple(), host_triple())),
-        ];
-        for c in candidates {
-            if c.exists() {
-                return Ok(c);
+    // 3. Sibling of the current executable — the bundled-sidecar location
+    //    Tauri actually uses on every shipping platform.
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(exe_dir) = exe.parent() {
+            if let Some(hit) = try_candidate(exe_dir.join(bin_name_no_triple()), &mut tried) {
+                return Ok(hit);
+            }
+            if let Some(hit) = try_candidate(
+                exe_dir.join(format!("{}-{}", bin_name_no_triple(), host_triple())),
+                &mut tried,
+            ) {
+                return Ok(hit);
             }
         }
     }
 
+    // 4. Resources dir — legacy fallback.
+    if let Some(resources) = resource_dir {
+        if let Some(hit) =
+            try_candidate(resources.join("binaries").join(bin_name_no_triple()), &mut tried)
+        {
+            return Ok(hit);
+        }
+        if let Some(hit) = try_candidate(
+            resources
+                .join("binaries")
+                .join(format!("{}-{}", bin_name_no_triple(), host_triple())),
+            &mut tried,
+        ) {
+            return Ok(hit);
+        }
+    }
+
+    // 5. Release: cargo target as last resort.
     #[cfg(not(debug_assertions))]
     {
-        // Release: only fall back to cargo target if no sidecar bundled.
-        if target_release.exists() {
-            return Ok(target_release);
+        if let Some(hit) = try_candidate(target_release.clone(), &mut tried) {
+            return Ok(hit);
         }
-        if target_debug.exists() {
-            return Ok(target_debug);
+        if let Some(hit) = try_candidate(target_debug.clone(), &mut tried) {
+            return Ok(hit);
         }
     }
 
     Err(format!(
-        "houston-engine binary not found (resource_dir={:?})",
-        resource_dir
+        "houston-engine binary not found. Tried:\n  - {}",
+        tried
+            .iter()
+            .map(|p| p.display().to_string())
+            .collect::<Vec<_>>()
+            .join("\n  - ")
     ))
 }
 
