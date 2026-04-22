@@ -9,7 +9,10 @@ import { useUIStore } from "../../stores/ui";
 import { analytics } from "../../lib/analytics";
 import { AgentMiniAvatar } from "./experience-card";
 import { UpdateChecker } from "./update-checker";
-import { MobileSyncButton } from "./mobile-sync";
+// Mobile companion app not shipping yet — hide the sidebar entry point
+// so we don't surface a feature that isn't ready. Re-enable once the
+// pairing flow ships end-to-end.
+// import { MobileSyncButton } from "./mobile-sync";
 import { useSyncResponder } from "../../hooks/use-sync-responder";
 import { CreateWorkspaceDialog } from "../../App";
 
@@ -136,12 +139,7 @@ export function Sidebar({ children }: { children: ReactNode }) {
         onAdd={() => setDialogOpen(true)}
         onRename={handleRename}
         onDelete={handleDelete}
-        footer={
-          <>
-            <MobileSyncButton />
-            <UpdateChecker />
-          </>
-        }
+        footer={<UpdateChecker />}
       >
         <div className="flex-1 min-w-0 h-full overflow-hidden flex flex-col">
           {children}
