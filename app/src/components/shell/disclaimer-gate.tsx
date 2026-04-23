@@ -33,7 +33,7 @@ export function DisclaimerGate({ children }: { children: ReactNode }) {
     return (
       <div
         aria-hidden
-        className="flex h-screen w-screen items-center justify-center bg-[#0d0d0d]"
+        className="flex h-screen w-screen items-center justify-center bg-background"
       />
     );
   }
@@ -102,16 +102,16 @@ function DisclaimerOverlay({
       role="dialog"
       aria-modal="true"
       aria-labelledby="disclaimer-gate-title"
-      className="fixed inset-0 z-[999999] flex items-center justify-center bg-[#0d0d0d] p-6 font-sans text-gray-100"
+      className="fixed inset-0 z-[999999] flex items-center justify-center bg-background p-6 font-sans text-foreground"
     >
-      <div className="flex max-h-[min(720px,90vh)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#141414] shadow-2xl">
-        <header className="flex flex-col gap-1 border-b border-white/5 px-8 py-6">
-          <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
+      <div className="flex max-h-[min(720px,90vh)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-black/10 bg-background shadow-[0_4px_4px_rgba(0,0,0,0.04),0_4px_80px_8px_rgba(0,0,0,0.04),0_0_1px_rgba(0,0,0,0.62)]">
+        <header className="flex flex-col gap-1 border-b border-black/5 px-8 py-6">
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
             {t("kicker")}
           </p>
           <h1
             id="disclaimer-gate-title"
-            className="text-2xl font-semibold text-white"
+            className="text-2xl font-semibold text-foreground"
           >
             {t("title")}
           </h1>
@@ -120,26 +120,26 @@ function DisclaimerOverlay({
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto px-8 py-6 text-[15px] leading-relaxed text-gray-300"
+          className="flex-1 overflow-y-auto px-8 py-6 text-[15px] leading-relaxed text-foreground"
           data-testid="disclaimer-scroll"
         >
-          <p className="mb-5 text-gray-300">{t("intro")}</p>
+          <p className="mb-5 text-foreground">{t("intro")}</p>
           {sections.map((section, i) => (
             <section key={i} className="mb-5 last:mb-0">
-              <h2 className="mb-1.5 text-sm font-semibold text-white">
+              <h2 className="mb-1.5 text-sm font-semibold text-foreground">
                 {section.heading}
               </h2>
-              <p className="text-gray-300">{section.body}</p>
+              <p className="text-muted-foreground">{section.body}</p>
             </section>
           ))}
-          <p className="mt-6 text-xs text-gray-500">{t("closing")}</p>
+          <p className="mt-6 text-xs text-muted-foreground">{t("closing")}</p>
         </div>
 
-        <footer className="flex flex-col gap-3 border-t border-white/5 px-8 py-5">
+        <footer className="flex flex-col gap-3 border-t border-black/5 px-8 py-5">
           <p
             className={cn(
               "text-xs",
-              hasScrolledToEnd ? "text-gray-500" : "text-amber-300/80",
+              hasScrolledToEnd ? "text-muted-foreground" : "text-[#e0ac00]",
             )}
             aria-live="polite"
           >
@@ -148,7 +148,7 @@ function DisclaimerOverlay({
               : t("scroll_hint.pending")}
           </p>
           {error ? (
-            <p className="text-xs text-red-300" role="alert">
+            <p className="text-xs text-[#e02e2a]" role="alert">
               {error}
             </p>
           ) : null}
@@ -158,7 +158,7 @@ function DisclaimerOverlay({
               variant="outline"
               onClick={handleDecline}
               disabled={busy !== null}
-              className="border-black/15 bg-transparent text-gray-200 hover:bg-white/5"
+              className="rounded-full border-black/15 bg-white text-foreground hover:bg-gray-50"
             >
               {busy === "decline" ? t("buttons.decline_busy") : t("buttons.decline")}
             </Button>
@@ -166,7 +166,7 @@ function DisclaimerOverlay({
               type="button"
               onClick={handleAccept}
               disabled={!hasScrolledToEnd || busy !== null}
-              className="bg-gray-950 text-white hover:bg-black"
+              className="rounded-full bg-gray-950 text-white hover:bg-gray-800"
             >
               {busy === "accept" ? t("buttons.accept_busy") : t("buttons.accept")}
             </Button>

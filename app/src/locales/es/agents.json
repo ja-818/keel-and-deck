@@ -30,6 +30,21 @@
     "skills": "Habilidades",
     "learnings": "Aprendizajes"
   },
+  "tabLabels": {
+    "activity": "Actividad",
+    "routines": "Rutinas",
+    "files": "Archivos",
+    "job-description": "Descripción del rol",
+    "integrations": "Integraciones",
+    "chat": "Chat",
+    "board": "Tablero",
+    "skills": "Habilidades",
+    "prompts": "Instrucciones",
+    "events": "Eventos",
+    "learnings": "Aprendizajes",
+    "configure": "Configurar",
+    "settings": "Configuración"
+  },
   "configure": {
     "projectContext": {
       "title": "Contexto del proyecto",

@@ -2,6 +2,7 @@ import "./styles/globals.css";
 import { ToastContainer } from "@houston-ai/core";
 import type { Toast } from "@houston-ai/core";
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 import { HoustonLogo } from "./components/shell/experience-card";
 
@@ -78,6 +79,7 @@ export default function App() {
     return () => document.removeEventListener("contextmenu", handler);
   }, []);
 
+  const { t } = useTranslation(["agents", "shell", "common"]);
   const wsLoading = useWorkspaceStore((s) => s.loading);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const createWorkspace = useWorkspaceStore((s) => s.create);
@@ -119,7 +121,7 @@ export default function App() {
   if (agentLoading || wsLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-background text-foreground">
-        <p className="text-muted-foreground text-sm">Starting...</p>
+        <p className="text-muted-foreground text-sm">{t("shell:engineGate.starting")}</p>
       </div>
     );
   }
@@ -158,19 +160,23 @@ export default function App() {
               {viewMode === "dashboard" ? (
                 <Dashboard />
               ) : viewMode === "connections" ? (
-                <IntegrationsView title="Integrations" />
+                <IntegrationsView title={t("shell:sidebar.integrations")} />
               ) : viewMode === "settings" ? (
                 <SettingsView />
               ) : currentAgent && agentDef && tabs.length > 0 ? (
                 <>
                   <TabBar
                     title={currentAgent.name}
-                    tabs={tabs.map((t) => ({
-                      id: t.id,
-                      label: t.label,
-                      badge: t.badge === "activity" ? needsYouCount : undefined,
-                      disabled: t.disabled,
-                      chip: t.chip,
+                    tabs={tabs.map((tab) => ({
+                      id: tab.id,
+                      // Translate known tab IDs via agents.tabLabels.*;
+                      // fall back to the config label for custom tabs from
+                      // community / GitHub-imported agents that may use
+                      // their own IDs.
+                      label: t(`agents:tabLabels.${tab.id}`, { defaultValue: tab.label }),
+                      badge: tab.badge === "activity" ? needsYouCount : undefined,
+                      disabled: tab.disabled,
+                      chip: tab.chip,
                     }))}
                     activeTab={viewMode}
                     onTabChange={(tab) => {

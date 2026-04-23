@@ -58,12 +58,20 @@ function PanelAvatar({ color, isRunning }: { color?: string; isRunning: boolean 
 }
 
 export default function BoardTab({ agent, agentDef }: TabProps) {
-  const { t } = useTranslation("board");
+  const { t } = useTranslation(["board", "dashboard"]);
   const cardLabels = {
-    approve: t("cardActions.approve"),
-    deleteTitle: (name: string) => t("deleteCard.titleWithName", { name }),
-    deleteDescription: t("deleteCard.description"),
+    approve: t("board:cardActions.approve"),
+    deleteTitle: (name: string) => t("board:deleteCard.titleWithName", { name }),
+    deleteDescription: t("board:deleteCard.description"),
   };
+  // Mirror Mission Control's columns so the tab and dashboard stay in
+  // sync. Without an explicit `columns` prop AIBoard falls back to its
+  // hardcoded English defaults.
+  const boardColumns = [
+    { id: "running", label: t("dashboard:columns.running"), statuses: ["running"] },
+    { id: "needs_you", label: t("dashboard:columns.needsYou"), statuses: ["needs_you"] },
+    { id: "done", label: t("dashboard:columns.done"), statuses: ["done", "cancelled"] },
+  ];
   const panelContainer = useDetailPanelContainer();
   const path = agent.folderPath;
   const agentModes = agentDef.config.agents;
@@ -425,6 +433,7 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
     <div className="flex flex-col h-full">
     <AIBoard
       items={items}
+      columns={boardColumns}
       selectedId={selectedId}
       onSelect={setSelectedId}
       panelContainer={panelContainer}
