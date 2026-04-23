@@ -1,4 +1,9 @@
 {
+  "welcome": {
+    "title": "Bienvenido a Houston",
+    "tagline": "Haz lo imposible.",
+    "getStarted": "Empezar"
+  },
   "name": {
     "title": "Nombra tu espacio de trabajo",
     "description": "Los espacios de trabajo mantienen tus agentes organizados: uno personal, uno de trabajo, etc.",

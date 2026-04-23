@@ -269,16 +269,17 @@ function OnboardingFlow({
   toasts: Toast[];
   onDismissToast: (id: string) => void;
 }) {
+  const { t } = useTranslation("setup");
   const [started, setStarted] = useState(false);
 
   if (!started) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-background text-foreground">
         <HoustonLogo size={40} className="mb-2" />
-        <h1 className="text-xl font-semibold mb-1">Welcome to Houston</h1>
-        <p className="text-sm text-muted-foreground mb-6">Ship the impossible.</p>
+        <h1 className="text-xl font-semibold mb-1">{t("welcome.title")}</h1>
+        <p className="text-sm text-muted-foreground mb-6">{t("welcome.tagline")}</p>
         <Button className="rounded-full" onClick={() => setStarted(true)}>
-          Get started
+          {t("welcome.getStarted")}
         </Button>
         <ToastContainer toasts={toasts} onDismiss={onDismissToast} />
       </div>

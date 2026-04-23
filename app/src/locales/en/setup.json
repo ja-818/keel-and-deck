@@ -1,4 +1,9 @@
 {
+  "welcome": {
+    "title": "Welcome to Houston",
+    "tagline": "Ship the impossible.",
+    "getStarted": "Get started"
+  },
   "name": {
     "title": "Name your workspace",
     "description": "Workspaces keep your agents organized, one for personal, one for work, etc.",
