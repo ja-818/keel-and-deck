@@ -122,6 +122,9 @@ function EngineGate({ children }: { children: ReactNode }) {
   }, [ready]);
 
   if (!ready) {
+    // Use the i18n singleton directly — this renders OUTSIDE
+    // <I18nextProvider>, so useTranslation would have no context.
+    // The singleton is already initialized synchronously in i18n.ts.
     return (
       <div
         style={{
@@ -134,7 +137,7 @@ function EngineGate({ children }: { children: ReactNode }) {
           fontSize: 14,
         }}
       >
-        Starting Houston engine…
+        {i18n.t("shell:engineGate.starting")}
       </div>
     );
   }

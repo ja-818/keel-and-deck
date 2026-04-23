@@ -52,9 +52,7 @@ export function ConnectedAppsSection({
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-medium text-foreground">{t("connected.title")}</h2>
         <span className="text-xs text-muted-foreground">
-          {connectedApps.length === 1
-            ? t("connected.countOne", { count: connectedApps.length })
-            : t("connected.countOther", { count: connectedApps.length })}
+          {t("connected.count", { count: connectedApps.length })}
         </span>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

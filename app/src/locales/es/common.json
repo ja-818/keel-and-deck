@@ -35,13 +35,5 @@
     "description": "Elige el idioma que Houston usa en su interfaz.",
     "label": "Idioma de la interfaz",
     "toastChanged": "Idioma cambiado"
-  },
-  "app": {
-    "starting": "Iniciando...",
-    "welcomeTitle": "Bienvenido a Houston",
-    "welcomeTagline": "Haz lo imposible.",
-    "noAgentsTitle": "Aún no tienes agentes",
-    "noAgentsDescription": "Arma tu equipo de IA y haz lo imposible.",
-    "newAgent": "Nuevo agente"
   }
 }

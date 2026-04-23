@@ -22,15 +22,15 @@
   },
   "connected": {
     "title": "Conectadas",
-    "countOne": "{{count}} app",
-    "countOther": "{{count}} apps",
+    "count_one": "{{count}} app",
+    "count_other": "{{count}} apps",
     "manageOn": "Gestionar {{name}} en Composio",
     "dotAria": "Conectado"
   },
   "browse": {
     "title": "Explorar todas las apps",
-    "countOne": "{{count}} app",
-    "countOther": "{{count}} apps",
+    "count_one": "{{count}} app",
+    "count_other": "{{count}} apps",
     "searchPlaceholder": "Buscar apps...",
     "allCategories": "Todas las categorías",
     "noResults": "No hay apps que coincidan.",

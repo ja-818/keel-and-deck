@@ -95,9 +95,7 @@ export function BrowseAppsSection({ connectedToolkits }: BrowseAppsSectionProps)
           {t("browse.title")}
         </h2>
         <span className="text-xs text-muted-foreground">
-          {available.length === 1
-            ? t("browse.countOne", { count: available.length })
-            : t("browse.countOther", { count: available.length })}
+          {t("browse.count", { count: available.length })}
         </span>
       </div>
 

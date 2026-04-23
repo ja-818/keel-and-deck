@@ -81,7 +81,7 @@ export function SettingsView() {
     const trimmed = wsName.trim();
     if (trimmed && trimmed !== currentWorkspace.name) {
       await renameWorkspace(currentWorkspace.id, trimmed);
-      addToast({ title: "Workspace renamed" });
+      addToast({ title: t("settings:toasts.workspaceRenamed") });
     }
   };
 
@@ -98,7 +98,7 @@ export function SettingsView() {
   const handleProviderSelect = async (provider: string, model: string) => {
     await updateProvider(currentWorkspace.id, provider, model);
     const provName = provider === "openai" ? "OpenAI" : "Anthropic";
-    addToast({ title: `Switched to ${provName} (${model})` });
+    addToast({ title: t("settings:toasts.providerSwitched", { provider: provName, model }) });
   };
 
   const handleThemeToggle = async (value: Theme) => {
@@ -168,6 +168,7 @@ export function SettingsView() {
                 const trimmed = tzDraft.trim();
                 if (!trimmed || trimmed === tz.timezone) return;
                 await tz.confirm(trimmed);
+                addToast({ title: t("settings:toasts.timezoneSet", { zone: trimmed }) });
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter") (e.target as HTMLInputElement).blur();
@@ -181,6 +182,7 @@ export function SettingsView() {
                   const d = detectTimezone();
                   setTzDraft(d);
                   await tz.confirm(d);
+                  addToast({ title: t("settings:toasts.timezoneSet", { zone: d }) });
                 }}
                 className="underline underline-offset-2 hover:text-foreground transition-colors"
               >

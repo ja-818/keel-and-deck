@@ -22,15 +22,15 @@
   },
   "connected": {
     "title": "Conectados",
-    "countOne": "{{count}} app",
-    "countOther": "{{count}} apps",
+    "count_one": "{{count}} app",
+    "count_other": "{{count}} apps",
     "manageOn": "Gerenciar {{name}} no Composio",
     "dotAria": "Conectado"
   },
   "browse": {
     "title": "Ver todos os apps",
-    "countOne": "{{count}} app",
-    "countOther": "{{count}} apps",
+    "count_one": "{{count}} app",
+    "count_other": "{{count}} apps",
     "searchPlaceholder": "Buscar apps...",
     "allCategories": "Todas as categorias",
     "noResults": "Nenhum app corresponde à busca.",

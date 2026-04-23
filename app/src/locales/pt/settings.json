@@ -28,5 +28,10 @@
     "confirmTitle": "Excluir \"{{name}}\"?",
     "confirmDescription": "Isso exclui este espaço de trabalho e todos os seus agentes de forma permanente. Não dá para desfazer.",
     "confirmLabel": "Excluir"
+  },
+  "toasts": {
+    "workspaceRenamed": "Espaço de trabalho renomeado",
+    "providerSwitched": "Mudou para {{provider}} ({{model}})",
+    "timezoneSet": "Fuso horário definido como {{zone}}"
   }
 }

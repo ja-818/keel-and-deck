@@ -80,6 +80,9 @@
     "tabStore": "Houston Store",
     "tabGithub": "GitHub"
   },
+  "engineGate": {
+    "starting": "Starting Houston engine…"
+  },
   "mobileSync": {
     "buttonLabel": "Mobile companion",
     "dialogTitle": "Connect mobile app",

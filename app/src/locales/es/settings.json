@@ -28,5 +28,10 @@
     "confirmTitle": "¿Eliminar \"{{name}}\"?",
     "confirmDescription": "Esto eliminará de forma permanente este espacio de trabajo y todos sus agentes. No se puede deshacer.",
     "confirmLabel": "Eliminar"
+  },
+  "toasts": {
+    "workspaceRenamed": "Espacio de trabajo renombrado",
+    "providerSwitched": "Cambiaste a {{provider}} ({{model}})",
+    "timezoneSet": "Zona horaria establecida en {{zone}}"
   }
 }
