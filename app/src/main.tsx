@@ -13,9 +13,9 @@ import "./styles/globals.css";
 import { useUIStore } from "./stores/ui";
 import { initFrontendLogging, logger } from "./lib/logger";
 import { whenEngineReady, isEngineReady } from "./lib/engine";
-import i18n, { applyEngineLocale, LOCALE_PREF_KEY } from "./lib/i18n";
-import { tauriPreferences } from "./lib/tauri";
+import i18n from "./lib/i18n";
 import { DisclaimerGate } from "./components/shell/disclaimer-gate";
+import { LanguageGate } from "./components/shell/language-gate";
 
 // Initialize file-based logging — patches console.error/warn to write to
 // ~/.houston/logs/frontend.log (or ~/.dev-houston/logs/frontend.log in dev).
@@ -101,25 +101,9 @@ function EngineGate({ children }: { children: ReactNode }) {
     };
   }, [ready]);
 
-  // Once the engine is ready, read the persisted UI locale and apply it.
-  // i18n was initialized with a cached/navigator guess — this is the
-  // authoritative override from the canonical preferences store.
-  useEffect(() => {
-    if (!ready) return;
-    let cancelled = false;
-    tauriPreferences
-      .get(LOCALE_PREF_KEY)
-      .then((value) => {
-        if (cancelled) return;
-        void applyEngineLocale(value);
-      })
-      .catch(() => {
-        /* non-fatal — keep detector-picked locale */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [ready]);
+  // Locale resolution moved to <LanguageGate>, which both reads the
+  // persisted pref and handles the first-run picker. That gate sits
+  // inside <I18nextProvider> and owns the full locale story.
 
   if (!ready) {
     // Use the i18n singleton directly — this renders OUTSIDE
@@ -153,9 +137,11 @@ createRoot(document.getElementById("root")!).render(
     <ErrorBoundary>
       <EngineGate>
         <I18nextProvider i18n={i18n}>
-          <DisclaimerGate>
-            <App />
-          </DisclaimerGate>
+          <LanguageGate>
+            <DisclaimerGate>
+              <App />
+            </DisclaimerGate>
+          </LanguageGate>
         </I18nextProvider>
       </EngineGate>
     </ErrorBoundary>
