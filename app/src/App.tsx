@@ -1,7 +1,7 @@
 import "./styles/globals.css";
 import { ToastContainer } from "@houston-ai/core";
 import type { Toast } from "@houston-ai/core";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Plus } from "lucide-react";
 import { HoustonLogo } from "./components/shell/experience-card";
 
@@ -34,6 +34,10 @@ import { CreateAgentDialog } from "./components/shell/create-workspace-dialog";
 import { AgentUpdateBanner } from "./components/shell/agent-update-banner";
 import { analytics } from "./lib/analytics";
 import { loadTheme } from "./lib/theme";
+import { isAuthConfigured } from "./lib/supabase";
+import { installDeepLinkListener } from "./lib/auth";
+import { useSession } from "./hooks/use-session";
+import { SignInScreen } from "./components/auth/sign-in-screen";
 import { AgentRenderer } from "./components/shell/experience-renderer";
 import { Dashboard } from "./components/dashboard";
 import { IntegrationsView } from "./components/tabs/integrations-view";
@@ -60,6 +64,36 @@ export default function App() {
     });
     loadTheme();
   }, []);
+
+  // Supabase auth (PR 2): listen for Google OAuth deep-link callbacks.
+  // No-op when auth isn't configured (SUPABASE_URL empty in local dev).
+  useEffect(() => {
+    if (!isAuthConfigured()) return;
+    return installDeepLinkListener();
+  }, []);
+
+  const { data: session, isLoading: sessionLoading } = useSession();
+
+  // Identify / alias the user in PostHog on sign-in; reset on sign-out.
+  // Runs AFTER analytics.init() has claimed the install_id as distinct_id,
+  // so `alias(userId)` correctly merges prior anonymous history.
+  const prevUserIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const userId = session?.user?.id ?? null;
+    if (userId && userId !== prevUserIdRef.current) {
+      analytics.alias(userId, {
+        email: session?.user?.email ?? "",
+        name:
+          (session?.user?.user_metadata?.full_name as string | undefined) ??
+          (session?.user?.user_metadata?.name as string | undefined) ??
+          "",
+      });
+      prevUserIdRef.current = userId;
+    } else if (!userId && prevUserIdRef.current) {
+      analytics.reset();
+      prevUserIdRef.current = null;
+    }
+  }, [session]);
 
   // Intercept all link clicks and open in system browser
   useEffect(() => {
@@ -122,6 +156,21 @@ export default function App() {
     variant: (t.title.startsWith("Error") ? "error" : "info") as Toast["variant"],
     action: t.action,
   }));
+
+  // Auth gate: Supabase configured + session not yet resolved → splash.
+  // Already resolved to null → sign-in screen. `null` session on a
+  // transient Supabase blip (access token still valid in Keychain)
+  // is unlikely because getSession() reads locally, not remotely.
+  if (isAuthConfigured() && sessionLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background text-foreground">
+        <p className="text-muted-foreground text-sm">Starting...</p>
+      </div>
+    );
+  }
+  if (isAuthConfigured() && !session) {
+    return <SignInScreen />;
+  }
 
   if (agentLoading || wsLoading) {
     return (

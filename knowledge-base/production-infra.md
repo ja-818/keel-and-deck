@@ -48,6 +48,13 @@ Props: `Record<string, string | number | boolean>`. Fire-and-forget. Never throw
 ### BigQuery export (optional)
 PostHog → BigQuery plugin → target GCP project (burns credits). SQL-queryable event history forever, immune to PostHog retention limits. Useful for investor-update analytics.
 
+## Auth (`@supabase/supabase-js` + Google SSO)
+
+- **Session storage:** macOS Keychain / Windows Credential Manager via the `keyring` crate (`app/src-tauri/src/auth.rs`). Frontend Supabase client uses a custom storage adapter that round-trips to Rust — tokens never hit localStorage.
+- **Flow:** One-click Google sign-in → system browser → OAuth redirect to `houston://auth-callback` → `tauri-plugin-deep-link` forwards to frontend → Supabase PKCE exchange → session persisted in Keychain. Full diagram + code pointers: `knowledge-base/auth.md`.
+- **Gating:** `isAuthConfigured()` checks whether `SUPABASE_URL` + `SUPABASE_ANON_KEY` are baked in. Unconfigured builds skip the sign-in screen entirely.
+- **PostHog merge:** On sign-in, `analytics.alias(userId)` merges anonymous install_id history to the identified user; on sign-out, `analytics.reset()` returns to anonymous.
+
 ## Crash reporting (`sentry` + `tauri-plugin-sentry`)
 
 - **Backend:** Initialized in `lib.rs` BEFORE other plugins. Conditional on `option_env!("SENTRY_DSN")`.
@@ -69,6 +76,8 @@ Shell (local builds) AND GitHub Secrets (CI):
 | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Password for above | Set during gen |
 | `POSTHOG_KEY` | PostHog project API key (client-side, public-safe) | PostHog → Project settings → Project API key |
 | `POSTHOG_HOST` | PostHog ingest host | `https://us.i.posthog.com` (or EU equivalent) |
+| `SUPABASE_URL` | Supabase project URL | Supabase → Project settings → API → Project URL |
+| `SUPABASE_ANON_KEY` | Supabase anon key (public-safe, RLS-gated) | Supabase → Project settings → API → Project API keys → `anon` `public` |
 | `SENTRY_DSN` | Crash reporting DSN | sentry.io project settings |
 
 CI also needs as Secrets:

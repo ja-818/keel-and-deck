@@ -44,6 +44,7 @@ Need specific knowledge? Load on demand:
 - Custom frontend on `houston-engine` (integration reference) → `examples/smartbooks/README.md`
 - Desktop ↔ Mobile WS contract → `knowledge-base/sync-protocol.md`
 - Updater, analytics, Sentry, env vars, CI → `knowledge-base/production-infra.md`
+- Supabase auth, Google SSO, Keychain → `knowledge-base/auth.md`
 
 Design work? Skills: `/critique` before, `/polish` after. Else `/clarify` (copy), `/distill` (overloaded screen), `/animate` (micro-interactions), `/audit` (a11y).
 

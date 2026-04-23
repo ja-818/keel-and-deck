@@ -1,3 +1,4 @@
+mod auth;
 mod commands;
 mod engine_supervisor;
 mod houston_prompt;
@@ -96,7 +97,22 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_deep_link::init())
         .setup(|app| {
+            // Deep-link handler for Google-OAuth callbacks
+            // (`houston://auth-callback?code=...`). Forwards the URL to the
+            // frontend; Supabase's PKCE exchange runs in JS so the verifier
+            // stays in Keychain-backed storage end-to-end.
+            {
+                use tauri_plugin_deep_link::DeepLinkExt;
+                let handle = app.handle().clone();
+                app.deep_link().on_open_url(move |event| {
+                    for url in event.urls() {
+                        auth::emit_deep_link(&handle, url.as_str());
+                    }
+                });
+            }
+
             // Resolve the user's shell PATH early so provider checks work
             // in release builds (macOS .app bundles get a minimal PATH).
             houston_tauri::houston_terminal_manager::claude_path::init();
@@ -157,7 +173,7 @@ pub fn run() {
             // and release (`~/.houston/`) — everything Houston writes is
             // rooted at a single discoverable location.
             let docs_dir = houston.join("workspaces");
-            let engine_env: Vec<(String, String)> = vec![
+            let mut engine_env: Vec<(String, String)> = vec![
                 (
                     "HOUSTON_APP_SYSTEM_PROMPT".into(),
                     houston_prompt::system_prompt(),
@@ -169,6 +185,14 @@ pub fn run() {
                 ("HOUSTON_HOME".into(), houston.display().to_string()),
                 ("HOUSTON_DOCS".into(), docs_dir.display().to_string()),
             ];
+            // If a Supabase session is already persisted in Keychain (user
+            // signed in on a previous launch), stamp the subprocess with the
+            // user_id so future cloud-side operations can attribute work to
+            // a user. Engine is prompt-agnostic about identity — treats this
+            // as an opaque string.
+            if let Some(user_id) = auth::persisted_user_id() {
+                engine_env.push(("HOUSTON_APP_USER_ID".into(), user_id));
+            }
             // 30s banner timeout: first-run Gatekeeper scan on a notarized
             // sidecar can take 15–20s on slow machines.
             let slot = spawn_supervisor(binary, Duration::from_secs(30), engine_env, cb)
@@ -250,6 +274,10 @@ pub fn run() {
             logging::read_recent_logs,
             // Engine handshake pull (race-free fallback for `EngineGate`).
             get_engine_handshake,
+            // Keychain-backed storage for Supabase auth sessions.
+            auth::auth_get_item,
+            auth::auth_set_item,
+            auth::auth_remove_item,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

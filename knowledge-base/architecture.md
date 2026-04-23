@@ -100,7 +100,7 @@ the typed `.houston/<type>/<type>.json` layout.
 | Engine reusable by non-Tauri frontends | ✅ binary ships as Tauri sidecar + standalone; desktop app consumes it over HTTP/WS, no in-process coupling |
 | Reference custom-frontend integration | ✅ `examples/smartbooks/` — Vite + React, own brand, ~400 LOC TSX, proven end-to-end |
 | Always On | ✅ Dockerfile + compose + systemd unit + README all shipped |
-| Teams / Cloud | ❌ TBD placeholders |
+| Teams / Cloud | 🟡 Identity foundation shipped (Supabase Google SSO + Keychain sessions — see `knowledge-base/auth.md`); Cloud API surface TBD |
 | Store populated | ❌ placeholder |
 | Binary file read route (xlsx, pdf download through HTTP) | ❌ workaround: use `/v1/shell` with `open`/`xdg-open` to hand binary files to host OS |
 

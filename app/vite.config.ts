@@ -13,6 +13,8 @@ export default defineConfig({
     __POSTHOG_HOST__: JSON.stringify(
       process.env.POSTHOG_HOST ?? "https://us.i.posthog.com",
     ),
+    __SUPABASE_URL__: JSON.stringify(process.env.SUPABASE_URL ?? ""),
+    __SUPABASE_ANON_KEY__: JSON.stringify(process.env.SUPABASE_ANON_KEY ?? ""),
   },
   clearScreen: false,
   // Exclude workspace packages from Vite's dep pre-bundling so live edits

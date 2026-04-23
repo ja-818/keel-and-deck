@@ -9,6 +9,7 @@ import { useUIStore } from "../../stores/ui";
 import { analytics } from "../../lib/analytics";
 import { AgentMiniAvatar } from "./experience-card";
 import { UpdateChecker } from "./update-checker";
+import { UserMenu } from "./user-menu";
 // Mobile companion app not shipping yet — hide the sidebar entry point
 // so we don't surface a feature that isn't ready. Re-enable once the
 // pairing flow ships end-to-end.
@@ -139,7 +140,12 @@ export function Sidebar({ children }: { children: ReactNode }) {
         onAdd={() => setDialogOpen(true)}
         onRename={handleRename}
         onDelete={handleDelete}
-        footer={<UpdateChecker />}
+        footer={
+          <div className="flex flex-col gap-1">
+            <UserMenu />
+            <UpdateChecker />
+          </div>
+        }
       >
         <div className="flex-1 min-w-0 h-full overflow-hidden flex flex-col">
           {children}
