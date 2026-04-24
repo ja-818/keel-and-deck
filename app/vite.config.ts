@@ -1,20 +1,25 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { version } from "./package.json";
 
 const host = process.env.TAURI_DEV_HOST;
 
-export default defineConfig({
+// Pick from either the shell or a local `.env.local` (gitignored). CI sets
+// the vars in the shell via GitHub Secrets; locally you drop them in
+// `app/.env.local` so `pnpm tauri dev` picks them up without exports.
+export default defineConfig(({ mode }) => {
+  const env = { ...loadEnv(mode, process.cwd(), ""), ...process.env };
+  return {
   plugins: [react(), tailwindcss()],
   define: {
     __APP_VERSION__: JSON.stringify(version),
-    __POSTHOG_KEY__: JSON.stringify(process.env.POSTHOG_KEY ?? ""),
+    __POSTHOG_KEY__: JSON.stringify(env.POSTHOG_KEY ?? ""),
     __POSTHOG_HOST__: JSON.stringify(
-      process.env.POSTHOG_HOST ?? "https://us.i.posthog.com",
+      env.POSTHOG_HOST ?? "https://us.i.posthog.com",
     ),
-    __SUPABASE_URL__: JSON.stringify(process.env.SUPABASE_URL ?? ""),
-    __SUPABASE_ANON_KEY__: JSON.stringify(process.env.SUPABASE_ANON_KEY ?? ""),
+    __SUPABASE_URL__: JSON.stringify(env.SUPABASE_URL ?? ""),
+    __SUPABASE_ANON_KEY__: JSON.stringify(env.SUPABASE_ANON_KEY ?? ""),
   },
   clearScreen: false,
   // Exclude workspace packages from Vite's dep pre-bundling so live edits
@@ -39,4 +44,5 @@ export default defineConfig({
     hmr: host ? { protocol: "ws", host, port: 1421 } : undefined,
     watch: { ignored: ["**/src-tauri/**"] },
   },
+  };
 });
