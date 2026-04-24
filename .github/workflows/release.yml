@@ -93,7 +93,7 @@ jobs:
       # Shipping an Intel-only or arm64-only engine would break half of our
       # Mac users — so a missing triple fails hard here rather than producing
       # a silently-broken DMG.
-      - name: Build houston-engine sidecar (aarch64 + x86_64)
+      - name: Build houston-engine sidecar (aarch64 + x86_64) + lipo universal
         run: |
           set -euo pipefail
           for TRIPLE in aarch64-apple-darwin x86_64-apple-darwin; do
@@ -102,9 +102,27 @@ jobs:
             test -x "target/$TRIPLE/release/houston-engine" \
               || { echo "::error::engine binary missing for $TRIPLE"; exit 1; }
           done
+
+          # Tauri's `--target universal-apple-darwin` bundler looks for a
+          # SINGLE fat binary at `binaries/houston-engine-universal-apple-darwin`.
+          # `build.rs` stages per-triple binaries during the per-arch cargo
+          # invocations (aarch64 + x86_64), but there's no cargo target for
+          # "universal-apple-darwin" — so nothing stages the fat one.
+          # We lipo the two per-arch outputs manually here, before tauri-action
+          # runs, so the bundler finds it.
+          echo "=== Lipo universal sidecar ==="
+          mkdir -p app/src-tauri/binaries
+          lipo -create \
+            target/aarch64-apple-darwin/release/houston-engine \
+            target/x86_64-apple-darwin/release/houston-engine \
+            -output app/src-tauri/binaries/houston-engine-universal-apple-darwin
+          chmod +x app/src-tauri/binaries/houston-engine-universal-apple-darwin
+          lipo -info app/src-tauri/binaries/houston-engine-universal-apple-darwin
+
           ls -la \
             target/aarch64-apple-darwin/release/houston-engine \
-            target/x86_64-apple-darwin/release/houston-engine
+            target/x86_64-apple-darwin/release/houston-engine \
+            app/src-tauri/binaries/houston-engine-universal-apple-darwin
 
       # Build only — no release creation (no tagName).
       # tauri-action handles certificate import, code signing, .app notarization + stapling.
