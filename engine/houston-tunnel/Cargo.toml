@@ -1,6 +1,6 @@
 [package]
 name = "houston-tunnel"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
 description = "Outbound reverse tunnel client — engine dials Houston relay, multiplexes mobile HTTP+WS"
 license = "MIT"
@@ -21,7 +21,7 @@ tracing = { workspace = true }
 uuid = { workspace = true }
 
 [dependencies.thiserror]
-version = "1"
+version = "0.4.1"
 
 [dev-dependencies]
 tokio = { workspace = true }
