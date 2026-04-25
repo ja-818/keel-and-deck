@@ -10,7 +10,7 @@ import {
   SelectValue,
   Spinner,
 } from "@houston-ai/core";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon, User } from "lucide-react";
 import { ProviderPicker } from "../shell/provider-picker";
 import { useWorkspaceStore } from "../../stores/workspaces";
 import { useAgentStore } from "../../stores/agents";
@@ -21,6 +21,9 @@ import {
   useTimezonePreference,
   detectTimezone,
 } from "../../hooks/use-timezone-preference";
+import { useSession } from "../../hooks/use-session";
+import { signOut } from "../../lib/auth";
+import { isAuthConfigured } from "../../lib/supabase";
 import {
   changeLocale,
   isSupported,
@@ -117,6 +120,8 @@ export function SettingsView() {
     <div className="flex-1 overflow-y-auto">
       <div className="mx-auto max-w-lg px-6 py-8 flex flex-col gap-8">
         <h1 className="text-xl font-semibold">{t("settings:title")}</h1>
+
+        <AccountSection />
 
         {/* Workspace */}
         <section>
@@ -277,5 +282,50 @@ export function SettingsView() {
         onConfirm={handleDelete}
       />
     </div>
+  );
+}
+
+function AccountSection() {
+  const { data: session } = useSession();
+  if (!isAuthConfigured() || !session?.user) return null;
+
+  const user = session.user;
+  const meta = (user.user_metadata ?? {}) as {
+    name?: string;
+    full_name?: string;
+    avatar_url?: string;
+  };
+  const displayName = meta.full_name ?? meta.name ?? user.email ?? "Signed in";
+  const avatar = meta.avatar_url ?? null;
+
+  return (
+    <section>
+      <h2 className="text-sm font-medium mb-3">Account</h2>
+      <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
+        {avatar ? (
+          <img
+            src={avatar}
+            alt=""
+            className="h-10 w-10 rounded-full"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+            <User className="h-5 w-5 text-muted-foreground" />
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium truncate">{displayName}</div>
+          {user.email && (
+            <div className="text-xs text-muted-foreground truncate">
+              {user.email}
+            </div>
+          )}
+        </div>
+        <Button variant="outline" onClick={() => signOut()}>
+          Sign out
+        </Button>
+      </div>
+    </section>
   );
 }

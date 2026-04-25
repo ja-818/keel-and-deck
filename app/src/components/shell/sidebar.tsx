@@ -10,6 +10,7 @@ import { useUIStore } from "../../stores/ui";
 import { analytics } from "../../lib/analytics";
 import { AgentMiniAvatar } from "./experience-card";
 import { UpdateChecker } from "./update-checker";
+import { UserMenu } from "./user-menu";
 import { PairDeviceDialog } from "./pair-device-dialog";
 import { CreateWorkspaceDialog } from "../../App";
 
@@ -150,7 +151,12 @@ export function Sidebar({ children }: { children: ReactNode }) {
         onAdd={() => setDialogOpen(true)}
         onRename={handleRename}
         onDelete={handleDelete}
-        footer={<UpdateChecker />}
+        footer={
+          <div className="flex flex-col">
+            <UserMenu />
+            <UpdateChecker />
+          </div>
+        }
       >
         <div className="flex-1 min-w-0 h-full overflow-hidden flex flex-col">
           {children}

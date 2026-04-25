@@ -7,6 +7,7 @@ export default function (eleventyConfig) {
   eleventyConfig.addPassthroughCopy("src/icons");
   eleventyConfig.addPassthroughCopy("src/learn/style.css");
   eleventyConfig.addPassthroughCopy("src/slack");
+  eleventyConfig.addPassthroughCopy("src/auth");
   eleventyConfig.addPassthroughCopy("src/_headers");
 
   return {
