@@ -154,8 +154,8 @@ export default function App() {
 
   const mappedToasts: Toast[] = toasts.map((t) => ({
     id: t.id,
-    message: t.description ? `${t.title}: ${t.description}` : t.title,
-    variant: (t.title.startsWith("Error") ? "error" : "info") as Toast["variant"],
+    message: t.description ? `${t.title} ${t.description}` : t.title,
+    variant: t.variant ?? "info",
     action: t.action,
   }));
 

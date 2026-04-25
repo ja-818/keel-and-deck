@@ -53,24 +53,8 @@ async function surfaceToast(
   const message =
     err instanceof Error ? err.message : typeof err === "string" ? err : String(err);
   logger.error(`[engine:${label}] ${message}`, context ? JSON.stringify(context) : undefined);
-  const { useUIStore } = await import("../stores/ui");
-  const { reportBug } = await import("./bug-report");
-  const timestamp = new Date().toISOString();
-  useUIStore.getState().addToast({
-    title: `Error: ${label.replace(/_/g, " ")}`,
-    description: message,
-    action: {
-      label: "Report bug",
-      onClick: () => {
-        reportBug({
-          command: label,
-          error: message,
-          timestamp,
-          appVersion: __APP_VERSION__,
-        }).catch((e) => console.error("Failed to report bug:", e));
-      },
-    },
-  });
+  const { showErrorToast } = await import("./error-toast");
+  showErrorToast(label, message);
 }
 
 // ─── Workspaces ────────────────────────────────────────────────────────
