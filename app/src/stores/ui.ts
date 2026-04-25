@@ -4,6 +4,7 @@ export interface ToastItem {
   id: string;
   title: string;
   description?: string;
+  variant?: "error" | "success" | "info";
   action?: { label: string; onClick: () => void };
 }
 

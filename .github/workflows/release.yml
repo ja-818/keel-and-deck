@@ -23,6 +23,7 @@
 #   POSTHOG_HOST                       — PostHog ingest host (e.g. https://us.i.posthog.com)
 #   SUPABASE_URL                       — Supabase project URL
 #   SUPABASE_ANON_KEY                  — Supabase anon key (client-side, RLS-gated)
+#   SLACK_BUG_WEBHOOK_URL              — Slack incoming-webhook for in-app "Report bug" button
 #   SENTRY_DSN                         — Sentry crash reporting DSN
 
 name: Release
@@ -155,6 +156,7 @@ jobs:
           POSTHOG_HOST: ${{ secrets.POSTHOG_HOST }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SLACK_BUG_WEBHOOK_URL: ${{ secrets.SLACK_BUG_WEBHOOK_URL }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
       - name: Locate build artifacts

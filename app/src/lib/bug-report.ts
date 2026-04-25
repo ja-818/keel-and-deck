@@ -1,17 +1,19 @@
 import { osReadRecentLogs } from "./os-bridge";
 
-const SLACK_WEBHOOK_URL = "https://hooks.slack.com/services/PLACEHOLDER";
+declare const __SLACK_BUG_WEBHOOK__: string;
+const WEBHOOK_URL =
+  typeof __SLACK_BUG_WEBHOOK__ !== "undefined" ? __SLACK_BUG_WEBHOOK__ : "";
 
 interface BugReportContext {
   command: string;
   error: string;
   spaceName?: string;
   workspaceName?: string;
+  userEmail?: string | null;
   timestamp: string;
   appVersion: string;
 }
 
-/** Fetch the last N lines from backend + frontend log files. */
 async function getRecentLogs(lines = 50): Promise<{ backend: string; frontend: string }> {
   try {
     return await osReadRecentLogs(lines);
@@ -21,6 +23,12 @@ async function getRecentLogs(lines = 50): Promise<{ backend: string; frontend: s
 }
 
 export async function reportBug(context: BugReportContext): Promise<void> {
+  if (!WEBHOOK_URL) {
+    throw new Error(
+      "Bug reporting not configured (missing SLACK_BUG_WEBHOOK_URL at build time)",
+    );
+  }
+
   const logs = await getRecentLogs();
 
   const fields = [
@@ -29,6 +37,9 @@ export async function reportBug(context: BugReportContext): Promise<void> {
     { title: "App Version", value: context.appVersion, short: true },
   ];
 
+  if (context.userEmail) {
+    fields.push({ title: "User", value: context.userEmail, short: true });
+  }
   if (context.spaceName) {
     fields.push({ title: "Space", value: context.spaceName, short: true });
   }
@@ -36,7 +47,6 @@ export async function reportBug(context: BugReportContext): Promise<void> {
     fields.push({ title: "Workspace", value: context.workspaceName, short: true });
   }
 
-  // Truncate logs to fit Slack's 3000 char limit per field
   const truncate = (s: string, max: number) =>
     s.length > max ? `...\n${s.slice(-max)}` : s;
 
@@ -63,7 +73,7 @@ export async function reportBug(context: BugReportContext): Promise<void> {
     ],
   };
 
-  const response = await fetch(SLACK_WEBHOOK_URL, {
+  const response = await fetch(WEBHOOK_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
