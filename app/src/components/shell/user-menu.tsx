@@ -31,10 +31,10 @@ export function UserMenu() {
   };
 
   return (
-    <div className="relative">
+    <div className="relative mx-2 mb-2">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-accent transition-colors"
+        className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-accent transition-colors"
       >
         {avatar ? (
           <img

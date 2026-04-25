@@ -141,7 +141,7 @@ export function Sidebar({ children }: { children: ReactNode }) {
         onRename={handleRename}
         onDelete={handleDelete}
         footer={
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col">
             <UserMenu />
             <UpdateChecker />
           </div>
