@@ -4,7 +4,12 @@ import { tauriSystem } from "./tauri";
 import { analytics } from "./analytics";
 import { logger } from "./logger";
 
-const REDIRECT_URI = "houston://auth-callback";
+// HTTPS bridge instead of a raw deep link so the user lands on a polished
+// "Sign-in complete, you can close this tab" page after Google. The bridge
+// at gethouston.ai/auth/callback then forwards the PKCE code into the
+// `houston://auth-callback?code=...` deep link so macOS / Windows hand
+// it to the running app. See website/src/auth/callback/index.html.
+const REDIRECT_URI = "https://gethouston.ai/auth/callback/";
 
 /**
  * Kick off an OAuth flow for the given provider. Supabase generates a

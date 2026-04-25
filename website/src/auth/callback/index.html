@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Houston — Signing you in</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <style>
+    :root { color-scheme: light; }
+    body {
+      font-family: ui-sans-serif, -apple-system, system-ui, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      background: #fafafa;
+      color: #0d0d0d;
+    }
+    .card {
+      text-align: center;
+      padding: 60px 40px;
+      max-width: 420px;
+    }
+    .logo {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 24px;
+      display: block;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 600;
+      margin: 0 0 12px;
+      letter-spacing: -0.01em;
+    }
+    p {
+      font-size: 14px;
+      color: #555;
+      margin: 0 0 24px;
+      line-height: 1.5;
+    }
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+    }
+    a.btn {
+      display: inline-block;
+      padding: 10px 20px;
+      border-radius: 999px;
+      background: #0d0d0d;
+      color: #fff;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    a.btn:hover { opacity: 0.9; }
+    .small {
+      font-size: 12px;
+      color: #999;
+    }
+    .error {
+      color: #b91c1c;
+      font-size: 13px;
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <img src="/houston-black.svg" alt="Houston" class="logo">
+    <h1 id="title">Signing you in...</h1>
+    <p id="message">Houston should open automatically. You can close this tab once you're back in the app.</p>
+    <div class="actions">
+      <a id="manual" class="btn" href="#" hidden>Open Houston</a>
+      <span class="small">Didn't open? Click the button above.</span>
+    </div>
+    <p id="error-row" class="error" hidden></p>
+  </main>
+
+  <script>
+    (function () {
+      // Forward EVERYTHING after the host (query string + fragment) to the
+      // deep link so PKCE codes, OAuth state, and any provider-specific
+      // params reach Houston intact.
+      var search = window.location.search || "";
+      var hash = window.location.hash || "";
+      var deepLink = "houston://auth-callback" + search + hash;
+
+      // Surface OAuth errors that landed here instead of redirecting.
+      var params = new URLSearchParams(search);
+      var error = params.get("error_description") || params.get("error");
+      if (error) {
+        document.getElementById("title").textContent = "Sign-in failed";
+        document.getElementById("message").textContent =
+          "Houston didn't complete the sign-in. You can close this tab and try again from the app.";
+        var row = document.getElementById("error-row");
+        row.textContent = error;
+        row.hidden = false;
+        return;
+      }
+
+      // Show a manual fallback button right away in case the auto-redirect
+      // is blocked (some browsers throttle automatic custom-scheme jumps).
+      var manual = document.getElementById("manual");
+      manual.href = deepLink;
+      manual.hidden = false;
+
+      // Try to launch immediately. macOS / Windows hand the URL to the
+      // running Houston, which exchanges the PKCE code for a session.
+      // Use replace() so there's nothing extra in browser history.
+      try {
+        window.location.replace(deepLink);
+      } catch (e) {
+        // ignore — user can still click the button
+      }
+    })();
+  </script>
+</body>
+</html>
