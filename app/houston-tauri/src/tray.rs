@@ -14,9 +14,9 @@
 //! .on_window_event(houston_tauri::tray::hide_on_close)
 //! ```
 
-use tauri::Manager;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::Manager;
 
 /// Set up a system tray icon with show/quit menu.
 ///
@@ -24,10 +24,7 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 /// - Right-click menu: "Open {app_name}" and "Quit"
 ///
 /// Requires the `tray-icon` feature on the `tauri` dependency.
-pub fn setup_tray(
-    app: &tauri::App,
-    app_name: &str,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub fn setup_tray(app: &tauri::App, app_name: &str) -> Result<(), Box<dyn std::error::Error>> {
     let open_label = format!("Open {app_name}");
     let open_item = MenuItemBuilder::with_id("open", &open_label).build(app)?;
     let quit_item = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
