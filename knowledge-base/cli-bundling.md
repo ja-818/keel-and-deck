@@ -63,6 +63,39 @@ the tauri build, then verifies layout + signing invariants for every
 Mach-O inside `Resources/bin/` (Developer ID, hardened runtime, both
 arch slices).
 
+### Pre-signing bundled binaries (required)
+
+`tauri-action`'s `codesign --force --deep` signs the .app's main binary,
+frameworks, helpers, and Mach-Os at the **top level** of `Resources/`,
+but it does **not** recurse into nested directories under `Resources/`.
+
+Concretely: `Resources/bin/codex` (top level) gets signed by tauri's
+deep codesign; `Resources/bin/composio-aarch64/composio` (one level
+deeper) does **not**, and Apple notary then rejects the bundle with:
+
+- "The signature of the binary is invalid"
+- "The signature does not include a secure timestamp"
+- "The executable does not have the hardened runtime enabled"
+
+Fix: pre-sign every bundled Mach-O in `app/src-tauri/resources/bin/`
+**before** tauri-action runs. The release workflow imports a temporary
+keychain with the Developer ID cert and runs:
+
+```bash
+codesign --force --options runtime --timestamp \
+  --sign "$APPLE_SIGNING_IDENTITY" "$f"
+```
+
+on `codex`, `composio-aarch64/composio`, `composio-x86_64/composio`.
+Tauri's later deep sign leaves these alone (it doesn't visit nested
+Resources subdirs), so the pre-applied signature carries through to
+notarization.
+
+Any new bundled binary added to `Resources/bin/` must be added to the
+"Pre-sign bundled CLI binaries" step in `release.yml`. The post-build
+"Verify bundled CLI invariants" step will fail the release if a
+Mach-O ends up unsigned, ad-hoc-signed, or missing hardened runtime.
+
 ## Runtime resolution
 
 `engine/houston-cli-bundle/` is the resolver crate. Public functions:
