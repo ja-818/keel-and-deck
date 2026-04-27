@@ -17,19 +17,23 @@
 //! lives in the adapter today; it will move into `engine-core` in a later
 //! phase once `agent_store` is ported.
 
+pub mod file_changes;
 pub mod history;
 pub mod provider;
 pub mod summarize;
+mod workdir_locks;
 
 use crate::agents::prompt as agent_prompt;
 use crate::paths::EnginePaths;
+use crate::{CoreError, CoreResult};
 use houston_agents_conversations::session_id_tracker::SessionIdTracker;
 use houston_agents_conversations::session_pids::SessionPidMap;
 use houston_agents_conversations::session_runner::{self, PersistOptions};
 use houston_db::Database;
 use houston_terminal_manager::{FeedItem, Provider};
 use houston_ui_events::{DynEventSink, HoustonEvent};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use workdir_locks::{WorkdirLocks, WorkdirSessionGuard};
 
 pub use provider::{resolve_provider, ResolvedProvider};
 
@@ -38,6 +42,21 @@ pub use provider::{resolve_provider, ResolvedProvider};
 pub struct SessionRuntime {
     pub session_ids: SessionIdTracker,
     pub pid_map: SessionPidMap,
+    workdir_locks: WorkdirLocks,
+}
+
+impl SessionRuntime {
+    pub(crate) async fn try_acquire_workdir(
+        &self,
+        working_dir: &Path,
+    ) -> CoreResult<WorkdirSessionGuard> {
+        self.workdir_locks
+            .try_acquire(working_dir)
+            .await
+            .ok_or_else(|| {
+                CoreError::Conflict("another mission is already running in this folder".to_string())
+            })
+    }
 }
 
 /// Parameters for [`start`]. Mirrors the shape of the old Tauri `send_message`
@@ -87,6 +106,7 @@ pub async fn start(
     if !agent_dir.exists() {
         std::fs::create_dir_all(&agent_dir)?;
     }
+    let workdir_guard = rt.try_acquire_workdir(&working_dir).await?;
     agent_prompt::seed_agent(&agent_dir).map_err(crate::CoreError::Internal)?;
 
     // Final system prompt is always `<product_prompt>\n\n---\n\n<agent_context>`.
@@ -110,6 +130,16 @@ pub async fn start(
     };
 
     let source = source.unwrap_or_else(|| "desktop".to_string());
+    let before_files = match file_changes::snapshot(&working_dir) {
+        Ok(snapshot) => Some(snapshot),
+        Err(e) => {
+            tracing::warn!(
+                "[sessions] failed to snapshot files before run: {e} (working_dir={})",
+                working_dir.display()
+            );
+            None
+        }
+    };
     let agent_key = format!("{}:{}", working_dir.to_string_lossy(), session_key);
     let sid_handle = rt
         .session_ids
@@ -151,6 +181,8 @@ pub async fn start(
         }
     }
 
+    let db_for_file_changes = db.clone();
+    let source_for_file_changes = source.clone();
     let persist = Some(PersistOptions {
         db,
         source,
@@ -159,6 +191,7 @@ pub async fn start(
     });
 
     let events_for_end = events.clone();
+    let working_dir_for_end = working_dir.clone();
     let handle = session_runner::spawn_and_monitor(
         events,
         agent_path.clone(),
@@ -185,7 +218,59 @@ pub async fn start(
     let session_key_for_end = session_key.clone();
     let agent_path_for_end = agent_path;
     tokio::spawn(async move {
-        let next_status = match handle.await {
+        let _workdir_guard = workdir_guard;
+        let session_result = handle.await;
+        if let (Ok(result), Some(before)) = (&session_result, before_files.as_ref()) {
+            if result.error.is_none() {
+                match file_changes::snapshot(&working_dir_for_end) {
+                    Ok(after) => {
+                        let changes = file_changes::diff(before, &after);
+                        if !changes.is_empty() {
+                            let item = FeedItem::FileChanges(changes.clone());
+                            events_for_end.emit(HoustonEvent::FeedItem {
+                                agent_path: agent_path_for_end.clone(),
+                                session_key: session_key_for_end.clone(),
+                                item,
+                            });
+                            events_for_end.emit(HoustonEvent::FilesChanged {
+                                agent_path: agent_path_for_end.clone(),
+                            });
+                            if let Some(sid) = result.claude_session_id.as_ref() {
+                                let db = db_for_file_changes.clone();
+                                let sid = sid.clone();
+                                let source = source_for_file_changes.clone();
+                                let data = serde_json::json!({
+                                    "created": changes.created,
+                                    "modified": changes.modified,
+                                })
+                                .to_string();
+                                tokio::spawn(async move {
+                                    if let Err(e) = db
+                                        .add_chat_feed_item_by_session(
+                                            &sid,
+                                            "file_changes",
+                                            &data,
+                                            &source,
+                                        )
+                                        .await
+                                    {
+                                        tracing::warn!(
+                                            "[sessions] failed to persist file changes: {e}"
+                                        );
+                                    }
+                                });
+                            }
+                        }
+                    }
+                    Err(e) => tracing::warn!(
+                        "[sessions] failed to snapshot files after run: {e} (working_dir={})",
+                        working_dir_for_end.display()
+                    ),
+                }
+            }
+        }
+
+        let next_status = match session_result {
             Ok(result) if result.error.is_none() => "needs_you",
             Ok(_) => "error",
             Err(e) => {
