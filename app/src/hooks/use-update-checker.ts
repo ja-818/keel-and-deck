@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
-import { analytics } from "../lib/analytics";
 
 type UpdateStatus =
   | { state: "idle" }
@@ -32,7 +31,6 @@ export function useUpdateChecker() {
             const pct = totalLength > 0 ? Math.round((downloaded / totalLength) * 100) : 0;
             setStatus({ state: "downloading", progress: pct });
           } else if (event.event === "Finished") {
-            analytics.track("app_update_downloaded", { version: update.version });
             setStatus({ state: "ready" });
           }
         });
@@ -40,7 +38,6 @@ export function useUpdateChecker() {
         setStatus({ state: "ready" });
       };
 
-      analytics.track("app_update_available", { version: update.version });
       setStatus({
         state: "available",
         version: update.version,

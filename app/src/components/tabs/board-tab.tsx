@@ -332,7 +332,7 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
       setLoading((prev) => ({ ...prev, [sessionKey]: true }));
       // createMission bypassed useCreateActivity so invalidate manually.
       queryClient.invalidateQueries({ queryKey: queryKeys.activity(path) });
-      analytics.track("mission_created", { agent_id: agent.id, agent_mode: agentMode ?? "default" });
+      analytics.track("mission_created", { agent_mode: agentMode ?? "default" });
       return conversationId;
     },
     [path, agent.id, agent.name, agent.color, pushFeedItem, pendingAgentMode, agentModes, chatProvider, chatModel, queryClient],

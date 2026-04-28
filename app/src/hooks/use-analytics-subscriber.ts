@@ -1,24 +1,18 @@
 import { useEffect, useRef } from "react";
 import type { HoustonEvent } from "@houston-ai/core";
 import { subscribeHoustonEvents } from "../lib/events";
-import { analytics } from "../lib/analytics";
-import { useWorkspaceStore } from "../stores/workspaces";
-import { tauriPreferences } from "../lib/tauri";
-
-const ONBOARDING_KEY_PREFIX = "onboarding_completed:";
+import { analytics, classifyAnalyticsError } from "../lib/analytics";
 
 /**
  * Subscribes to the HoustonEvent firehose and fires analytics for events
- * that originate from the backend (streaming replies, session completion,
+ * that originate from the backend (assistant replies, session failures,
  * backend errors) — i.e. anything that has no obvious call site in the
  * React code.
  *
  * Mount once in App.tsx. Never mounted in ui/ (library boundary rule).
  */
 export function useAnalyticsSubscriber() {
-  // Guard against firing `onboarding_completed` more than once per workspace
-  // within a single session before the tauriPreferences round-trip returns.
-  const onboardingFiredRef = useRef<Set<string>>(new Set());
+  const repliesRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const unlisten = subscribeHoustonEvents((p: HoustonEvent) => {
@@ -29,49 +23,22 @@ export function useAnalyticsSubscriber() {
           // during streaming and would inflate counts. "assistant_text" is
           // emitted once per reply when the stream finalizes.
           if (p.data.item.feed_type === "assistant_text") {
-            analytics.track("chat_message_received", {
-              agent_path: p.data.agent_path,
-              session_key: p.data.session_key,
-            });
+            const key = `${p.data.agent_path}:${p.data.session_key}`;
+            if (repliesRef.current.has(key)) break;
+            repliesRef.current.add(key);
+            analytics.track("chat_message_received");
           }
           break;
         }
 
         case "SessionStatus": {
-          const { status, agent_path, session_key, error } = p.data;
-          if (status !== "completed" && status !== "error") break;
-
-          analytics.track("session_ended", {
-            agent_path,
-            session_key,
-            status,
-          });
-
-          if (status === "completed") {
-            const workspace = useWorkspaceStore.getState().current;
-            if (workspace && !onboardingFiredRef.current.has(workspace.id)) {
-              const prefKey = ONBOARDING_KEY_PREFIX + workspace.id;
-              tauriPreferences
-                .get(prefKey)
-                .then((existing) => {
-                  if (existing) return;
-                  onboardingFiredRef.current.add(workspace.id);
-                  analytics.track("onboarding_completed", {
-                    workspace_id: workspace.id,
-                  });
-                  tauriPreferences
-                    .set(prefKey, new Date().toISOString())
-                    .catch(() => {});
-                })
-                .catch(() => {});
-            }
-          }
-
+          const { status, error } = p.data;
           if (status === "error" && error) {
-            analytics.track("error_shown", {
+            const error_kind = classifyAnalyticsError(error);
+            analytics.track("session_failed", { error_kind });
+            analytics.track("app_error_shown", {
               source: "session",
-              agent_path,
-              error: error.slice(0, 200),
+              error_kind,
             });
           }
           break;
@@ -79,9 +46,9 @@ export function useAnalyticsSubscriber() {
 
         case "Toast": {
           if (p.data.variant === "error") {
-            analytics.track("error_shown", {
+            analytics.track("app_error_shown", {
               source: "toast",
-              message: (p.data.message ?? "").slice(0, 200),
+              error_kind: classifyAnalyticsError(p.data.message ?? ""),
             });
           }
           break;
