@@ -164,10 +164,7 @@ export default function ChatTab({ agent }: TabProps) {
         ? `${text}${text ? "\n\n" : ""}Attached: ${files.map((f) => f.name).join(", ")}`
         : text;
       pushFeedItem(agentPath, sessionKey, { feed_type: "user_message", data: visible });
-      if (!feedItems?.length) {
-        analytics.track("session_started", { agent_id: agent.id, agent_name: agent.name });
-      }
-      analytics.track("chat_message_sent", { agent_id: agent.id });
+      analytics.track("chat_message_sent");
       // Clear composer immediately so the user sees the send.
       setComposerText("");
       setComposerFiles([]);

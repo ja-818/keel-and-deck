@@ -55,13 +55,12 @@ export default function App() {
   useConnections();
   useComposioApps();
 
-  // Track app launch + load theme. Identify the persistent install_id
-  // with PostHog before the first event fires, and derive `user_returned`
-  // from whether the install_id already existed on disk.
+  // Track active installs once per day. This is the canonical DAU/WAU/MAU
+  // signal; launch counts are intentionally not captured.
   useEffect(() => {
     analytics.init().then(({ isNew }) => {
-      analytics.track("app_launched");
-      if (!isNew) analytics.track("user_returned");
+      analytics.trackActive();
+      if (isNew) analytics.track("install_created");
     });
     loadTheme();
   }, []);
@@ -77,18 +76,13 @@ export default function App() {
 
   // Identify / alias the user in PostHog on sign-in; reset on sign-out.
   // Runs AFTER analytics.init() has claimed the install_id as distinct_id,
-  // so `alias(userId)` correctly merges prior anonymous history.
+  // so `alias(userId, profile)` correctly merges prior anonymous history.
   const prevUserIdRef = useRef<string | null>(null);
   useEffect(() => {
     const userId = session?.user?.id ?? null;
+    const userEmail = session?.user?.email ?? null;
     if (userId && userId !== prevUserIdRef.current) {
-      analytics.alias(userId, {
-        email: session?.user?.email ?? "",
-        name:
-          (session?.user?.user_metadata?.full_name as string | undefined) ??
-          (session?.user?.user_metadata?.name as string | undefined) ??
-          "",
-      });
+      analytics.alias(userId, { email: userEmail });
       prevUserIdRef.current = userId;
     } else if (!userId && prevUserIdRef.current) {
       analytics.reset();
@@ -236,7 +230,6 @@ export default function App() {
                     }))}
                     activeTab={viewMode}
                     onTabChange={(tab) => {
-                      analytics.track("tab_switched", { tab });
                       setViewMode(tab);
                     }}
                     actions={
@@ -390,7 +383,7 @@ export function CreateWorkspaceDialog({
         setCurrentWorkspace(imported);
         await loadAgents(imported.id);
       }
-      analytics.track("workspace_imported");
+      analytics.track("workspace_created", { source: "github_import" });
       handleClose();
     } catch (e) {
       setImportError(e instanceof Error ? e.message : String(e));

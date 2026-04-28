@@ -1,4 +1,5 @@
 import { useUIStore } from "../stores/ui";
+import { analytics, classifyAnalyticsError } from "./analytics";
 import { reportBug } from "./bug-report";
 import { getCurrentUserEmail } from "./current-user";
 
@@ -10,6 +11,10 @@ import { getCurrentUserEmail } from "./current-user";
 export function showErrorToast(command: string, message: string): void {
   const timestamp = new Date().toISOString();
   const addToast = useUIStore.getState().addToast;
+  analytics.track("app_error_shown", {
+    source: command,
+    error_kind: classifyAnalyticsError(message),
+  });
 
   addToast({
     title: "Houston, we have a problem!",

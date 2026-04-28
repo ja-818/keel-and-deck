@@ -17,6 +17,7 @@ import i18n from "./lib/i18n";
 import { DisclaimerGate } from "./components/shell/disclaimer-gate";
 import { LanguageGate } from "./components/shell/language-gate";
 import { showErrorToast } from "./lib/error-toast";
+import { analytics, classifyAnalyticsError } from "./lib/analytics";
 
 // Initialize file-based logging — patches console.error/warn to write to
 // ~/.houston/logs/frontend.log (or ~/.dev-houston/logs/frontend.log in dev).
@@ -27,12 +28,20 @@ initFrontendLogging();
 window.onerror = (_event, _source, _line, _col, error) => {
   const message = error?.message ?? String(_event);
   console.error("[global:error]", message, error);
+  analytics.captureException(error ?? new Error(message), {
+    source: "uncaught_error",
+    error_kind: classifyAnalyticsError(message),
+  });
   showErrorToast("uncaught_error", message);
 };
 
 window.onunhandledrejection = (event: PromiseRejectionEvent) => {
   const message = event.reason?.message ?? String(event.reason);
   console.error("[global:unhandledrejection]", message, event.reason);
+  analytics.captureException(event.reason, {
+    source: "unhandled_rejection",
+    error_kind: classifyAnalyticsError(message),
+  });
   showErrorToast("unhandled_rejection", message);
 };
 
@@ -41,6 +50,10 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
   static getDerivedStateFromError(error: Error) { return { error }; }
   componentDidCatch(error: Error) {
     logger.error(`[react-crash] ${error.message}`, error.stack);
+    analytics.captureException(error, {
+      source: "react_crash",
+      error_kind: classifyAnalyticsError(error.message),
+    });
     showErrorToast("react_crash", error.message);
   }
   render() {

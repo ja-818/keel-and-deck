@@ -7,7 +7,6 @@ import { useWorkspaceStore } from "../../stores/workspaces";
 import { useAgentStore } from "../../stores/agents";
 import { useAgentCatalogStore } from "../../stores/agent-catalog";
 import { useUIStore } from "../../stores/ui";
-import { analytics } from "../../lib/analytics";
 import { AgentMiniAvatar } from "./experience-card";
 import { UpdateChecker } from "./update-checker";
 import { UserMenu } from "./user-menu";
@@ -67,7 +66,6 @@ export function Sidebar({ children }: { children: ReactNode }) {
     setCurrentAgent(agent);
     const def = getById(agent.configId);
     const tab = def?.config.defaultTab ?? "chat";
-    analytics.track("tab_switched", { tab });
     setViewMode(tab);
   };
 

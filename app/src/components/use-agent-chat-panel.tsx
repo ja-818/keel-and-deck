@@ -286,7 +286,6 @@ export function useAgentChatPanel({
         });
         queryClient.invalidateQueries({ queryKey: queryKeys.activity(path) });
         analytics.track("mission_created", {
-          agent_id: agent.id,
           agent_mode: agentMode ?? "default",
         });
         onSelectSessionRef.current?.(conversationId);

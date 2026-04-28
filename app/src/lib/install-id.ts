@@ -7,7 +7,7 @@ let cached: { id: string; isNew: boolean } | null = null;
 /**
  * Stable anonymous identifier. Persisted in tauriPreferences so it
  * survives app restarts. `isNew` is true the first time we mint it
- * during this install's lifetime — used to derive `user_returned`.
+ * during this install's lifetime.
  */
 export async function getInstallId(): Promise<{ id: string; isNew: boolean }> {
   if (cached) return cached;

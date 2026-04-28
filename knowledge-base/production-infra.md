@@ -13,37 +13,46 @@ Four prod systems. All **dormant by default** — activate only when env vars se
 
 ## Analytics (`posthog-js`)
 
-- **Pure JS** — runs in webview, no Rust plugin. Avoids Tokio runtime conflicts. Works in future Capacitor mobile too.
-- **Init:** `app/src/lib/analytics.ts` — reads `POSTHOG_KEY` + `POSTHOG_HOST` via Vite `define` (baked at build time). Empty key → silent no-op. PostHog `init()` runs at module load; `analytics.init()` is called from `App.tsx` to resolve the install_id and `identify()` the PostHog distinct_id before the first event.
-- **Install identity:** `app/src/lib/install-id.ts` — mints a UUID on first launch, persists via `tauriPreferences` (`install_id` key). Used as the anonymous PostHog `distinct_id` until a user signs in (then `analytics.alias/identify` merges the history to the Supabase user). Gives per-user retention and activation funnels without requiring auth.
+- **Purpose:** investor-grade usage + product decisions only. Avoid broad behavioral surveillance.
+- **Pure JS:** runs in webview, no Rust plugin. Avoids Tokio runtime conflicts. Works in future Capacitor mobile too.
+- **Init:** `app/src/lib/analytics.ts` — reads `POSTHOG_KEY` + `POSTHOG_HOST` via Vite `define` (baked at build time). Empty key → silent no-op. PostHog `init()` runs at module load for JS exception capture; product events fire after `analytics.init()` identifies the persistent install_id.
+- **PostHog config:** autocapture, pageview/pageleave, session replay, heatmaps, dead clicks, rage clicks, and feature-flag `/flags` calls are disabled in code. Enable any of these only with a specific question.
+- **Install identity:** `app/src/lib/install-id.ts` — mints a UUID on first launch, persists via `tauriPreferences` (`install_id` key). Used as anonymous PostHog `distinct_id` until sign-in, then `analytics.alias/identify` merges history to the Supabase user.
+- **User identity:** `distinct_id` is the stable Supabase user id. `email` and `email_domain` are PostHog person properties only, used for lookup, company-domain filtering, and B2B usage checks.
 - **Debug/Release:** `import.meta.env.DEV` → `is_debug` super property. Filter it out in dashboards to exclude dev activity.
-- **Super properties** (set on every event): `app_version`, `os`, `install_id`, `is_debug`.
-- **Group analytics:** `analytics.group("workspace", workspaceId, { name, provider })` fires on `workspace_opened` — unlocks per-workspace retention in PostHog.
+- **Super properties:** `app_version`, `os`, `install_id`, `is_debug`.
+- **Privacy:** no workspace names, agent names, raw prompts, raw message text, file paths, session keys, or raw error text in PostHog event props. Email is allowed only as a person property after auth, never as an event property.
 
 ### Event surface
-- **Lifecycle:** `app_launched`, `user_returned` (derived: `app_launched` + existing install_id), `session_started`, `session_ended`, `onboarding_completed`
-- **Agent / workspace:** `agent_created`, `agent_selected`, `workspace_created`, `workspace_opened`, `workspace_imported`, `provider_configured`
-- **Chat:** `chat_message_sent`, `chat_message_received` (activation event)
-- **UX:** `tab_switched`, `mission_created`, `error_shown`
-- **Updater:** `app_update_available`, `app_update_downloaded`
+- **Growth:** `app_active` (once per install per UTC day), `install_created`
+- **Activation:** `workspace_created`, `provider_configured`, `agent_created`, `chat_message_sent`, `chat_message_received`
+- **Engagement:** `mission_created`
+- **Reliability:** `session_failed`, `app_error_shown`, PostHog `$exception` from JS global handlers + React error boundary
 
 **Activation milestone:** `chat_message_received` — user sent a message and got a reply. Configure as the activation event in PostHog; all retention/funnel insights key off it.
 
 ### Adding event
 ```typescript
 import { analytics } from "@/lib/analytics";
-analytics.track("event_name", { key: "value", flag: true });
+analytics.track("event_name");
 ```
-Props: `Record<string, string | number | boolean>`. Fire-and-forget. Never throws/blocks. Not configured → silent no-op.
+Event names + props are allowlisted in `AnalyticsEventName` / `AnalyticsProperty`. Add only if tied to a dashboard question. Fire-and-forget. Never throws/blocks. Not configured → silent no-op.
 
 **Analytics in `app/` only** — never in `ui/`. Library boundary rule applies.
 
-### PostHog dashboards (configure in UI, not code)
-1. **Overview**: DAU / WAU / MAU (filter out `is_debug = true`)
-2. **Retention**: Weekly-cohort grid on `chat_message_received`
-3. **Activation funnel**: `app_launched` → `agent_created` → `chat_message_sent` → `chat_message_received`
-4. **Engagement depth**: events per user per day, sessions per user per week
-5. **Feature adoption**: `mission_created`, `provider_configured`, `workspace_imported` breakdowns
+### PostHog dashboards
+Create one dashboard: **Houston Growth + Reliability**. Every tile filters `is_debug != true`.
+
+1. **DAU:** unique users, event `app_active`, interval day
+2. **WAU:** unique users, event `app_active`, interval week
+3. **MAU:** unique users, event `app_active`, interval month
+4. **Activation funnel:** `install_created` → `workspace_created` → `provider_configured` → `agent_created` → `chat_message_sent` → `chat_message_received`
+5. **Activated retention:** weekly retention where start + return event = `chat_message_received`
+6. **Engaged users:** unique users with `mission_created` or `chat_message_received`
+7. **Reliability:** count of `session_failed` + `$exception`, broken down by `error_kind`
+8. **Company domains:** active users broken down by person property `email_domain`
+
+Do NOT use raw autocapture event lists for product decisions. If a question needs click-level data, prefer one temporary, named event and delete it after the decision.
 
 ### BigQuery export (optional)
 PostHog → BigQuery plugin → target GCP project (burns credits). SQL-queryable event history forever, immune to PostHog retention limits. Useful for investor-update analytics.
@@ -53,7 +62,7 @@ PostHog → BigQuery plugin → target GCP project (burns credits). SQL-queryabl
 - **Session storage:** macOS Keychain / Windows Credential Manager via the `keyring` crate (`app/src-tauri/src/auth.rs`). Frontend Supabase client uses a custom storage adapter that round-trips to Rust — tokens never hit localStorage.
 - **Flow:** One-click Google sign-in → system browser → OAuth redirect to `houston://auth-callback` → `tauri-plugin-deep-link` forwards to frontend → Supabase PKCE exchange → session persisted in Keychain. Full diagram + code pointers: `knowledge-base/auth.md`.
 - **Gating:** `isAuthConfigured()` checks whether `SUPABASE_URL` + `SUPABASE_ANON_KEY` are baked in. Unconfigured builds skip the sign-in screen entirely.
-- **PostHog merge:** On sign-in, `analytics.alias(userId)` merges anonymous install_id history to the identified user; on sign-out, `analytics.reset()` returns to anonymous.
+- **PostHog merge:** On sign-in, `analytics.alias(userId, { email })` merges anonymous install_id history to the identified user and sets `email` / `email_domain` person properties; on sign-out, `analytics.reset()` returns to anonymous.
 
 ## Crash reporting (`sentry` + `tauri-plugin-sentry`)
 
