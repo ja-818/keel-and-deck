@@ -32,9 +32,11 @@
     "blankDescription": "Open a new chat and type your own prompt.",
     "featuredTab": "Featured",
     "otherTab": "Other",
-    "featuredEmpty": "No featured actions yet.",
+    "empty": "No actions yet.",
     "pickAgentFirst": "Pick an agent to see its actions.",
     "skillsLoading": "Loading actions...",
-    "skillsEmpty": "No actions in this category yet."
+    "skillsEmpty": "No actions in this category yet.",
+    "scrollTabsLeft": "Scroll action tabs left",
+    "scrollTabsRight": "Scroll action tabs right"
   }
 }

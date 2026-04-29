@@ -32,9 +32,11 @@
     "blankDescription": "Abra um chat novo e escreva sua própria instrução.",
     "featuredTab": "Em destaque",
     "otherTab": "Outras",
-    "featuredEmpty": "Ainda sem ações em destaque.",
+    "empty": "Ainda sem ações.",
     "pickAgentFirst": "Escolha um agente para ver suas ações.",
     "skillsLoading": "Carregando ações...",
-    "skillsEmpty": "Ainda sem ações nesta categoria."
+    "skillsEmpty": "Ainda sem ações nesta categoria.",
+    "scrollTabsLeft": "Rolar abas de ações para a esquerda",
+    "scrollTabsRight": "Rolar abas de ações para a direita"
   }
 }
