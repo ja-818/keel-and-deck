@@ -3,7 +3,7 @@
 //! Each Houston "session" is one running Claude/Codex CLI subprocess with a
 //! stable `session_key` so follow-up turns can `--resume`. This module owns:
 //!
-//! - [`SessionRuntime`] — per-engine state (Claude session-ID tracker,
+//! - [`SessionRuntime`] — per-engine state (provider session-ID tracker,
 //!   session-key → PID map). Held on `EngineState`, cloned per request.
 //! - [`start`] — spawn + monitor a session via
 //!   `houston-agents-conversations`, streaming updates to the engine's event
@@ -140,10 +140,15 @@ pub async fn start(
             None
         }
     };
-    let agent_key = format!("{}:{}", working_dir.to_string_lossy(), session_key);
+    let agent_key = format!(
+        "{}:{}:{}",
+        working_dir.to_string_lossy(),
+        provider,
+        session_key
+    );
     let sid_handle = rt
         .session_ids
-        .get_for_session(&agent_key, &working_dir, &session_key)
+        .get_for_session(&agent_key, &working_dir, &session_key, provider)
         .await;
     let resume_id = sid_handle.get().await;
 

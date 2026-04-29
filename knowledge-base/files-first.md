@@ -28,7 +28,13 @@ If app-specific → `.houston/`.
     prompts/
       modes/<mode>.md           editable per-mode prompt overlay (user-owned)
     sessions/
-      {session_key}.sid         one file per conversation, holds Claude session id for --resume
+      anthropic/{session_key}.sid       current Claude resume id
+      anthropic/{session_key}.history   all Claude resume ids used by this conversation
+      anthropic/{session_key}.invalid   Claude resume ids rejected by the CLI
+      openai/{session_key}.sid          current Codex resume id
+      openai/{session_key}.history      all Codex resume ids used by this conversation
+      openai/{session_key}.invalid      Codex resume ids rejected by the CLI
+      {session_key}.sid                 legacy flat resume id, read as fallback only
   .agents/
     skills/<name>/SKILL.md      Claude Code skill convention
   .claude/
@@ -59,6 +65,14 @@ not visible in the already-started prompt until the next session.
 ## Migration
 `houston_agent_files::migrate_agent_data()` runs on every `seed_agent()`. Idempotent. Leaves legacy flat-layout data files in place as rollback. Legacy product-prompt seeds (`.houston/prompts/system.md`, `.houston/prompts/self-improvement.md`) are deleted — the Houston product prompt now lives in the app binary (`app/src-tauri/src/houston_prompt/`), not on disk.
 
+Session resume IDs are provider-scoped for new writes so Claude and Codex
+never overwrite each other's current resume ID. Existing
+`.houston/sessions/{session_key}.sid` files stay in place and are read as
+a fallback until a provider writes its own scoped `.sid`. Chat history
+loads the legacy ID plus every provider current/history ID for the same
+session key. Provider-scoped `.invalid` files stop a rejected legacy ID
+from being retried by the provider that rejected it.
+
 ## Atomic writes
 All writes: temp file + rename. Path-traversal safe via `houston-agent-files::safe_relative`.
 
@@ -72,7 +86,7 @@ Same files surface in the UI as **"Actions"** (per-user vocabulary). Frontmatter
 
 ## SQLite (minimal)
 Only two tables:
-- `chat_feed` — keyed by `claude_session_id`. UI conversation replay on restart.
+- `chat_feed` - keyed by provider CLI session id (`claude_session_id` column name is legacy). UI conversation replay on restart.
 - `preferences` — app-level (last_workspace_id etc). Not scoped.
 
 Everything else lives in files.

@@ -1,6 +1,7 @@
 use super::session_io;
 use super::types::{FeedItem, Provider, SessionStatus};
 use crate::auth_error::is_auth_error;
+use crate::codex_command;
 use std::process::Stdio;
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
@@ -159,33 +160,6 @@ async fn spawn_codex(
         resume_session_id
     );
 
-    let mut cmd = Command::new("codex");
-    cmd.env("PATH", super::claude_path::shell_path());
-
-    let is_resume = resume_session_id.is_some();
-
-    if let Some(ref session_id) = resume_session_id {
-        cmd.arg("exec").arg("resume").arg(session_id);
-    } else {
-        cmd.arg("exec");
-    }
-
-    cmd.arg("--json")
-        .arg("--dangerously-bypass-approvals-and-sandbox")
-        .arg("--skip-git-repo-check");
-
-    // Inject system prompt via developer_instructions config override.
-    // Codex has no --system-prompt flag; this is the supported injection point.
-    if let Some(ref sp) = system_prompt {
-        let json_val = serde_json::to_string(sp).unwrap_or_else(|_| format!("\"{sp}\""));
-        cmd.arg("-c")
-            .arg(format!("developer_instructions={json_val}"));
-    }
-
-    if let Some(ref m) = model {
-        cmd.arg("--model").arg(m);
-    }
-
     if let Some(ref dir) = working_dir {
         if !dir.is_dir() {
             let _ = tx.send(SessionUpdate::Status(SessionStatus::Error(format!(
@@ -194,15 +168,49 @@ async fn spawn_codex(
             ))));
             return;
         }
-        // --cd is only valid for `codex exec`, not `codex exec resume`
-        if is_resume {
-            cmd.current_dir(dir);
-        } else {
-            cmd.arg("--cd").arg(dir);
-        }
     }
 
-    run_cli_process(tx, &mut cmd, &prompt, Provider::OpenAI).await;
+    let mut cmd = build_codex_command(
+        resume_session_id.as_deref(),
+        working_dir.as_deref(),
+        model.as_deref(),
+        system_prompt.as_deref(),
+    );
+
+    let outcome = run_cli_process(tx, &mut cmd, &prompt, Provider::OpenAI).await;
+    if outcome == CliRunOutcome::CodexResumeMissing && resume_session_id.is_some() {
+        tracing::warn!(
+            "[houston:session] codex resume rollout missing; retrying with fresh thread"
+        );
+        let _ = tx.send(SessionUpdate::ResumeInvalid);
+        let mut fresh_cmd = build_codex_command(
+            None,
+            working_dir.as_deref(),
+            model.as_deref(),
+            system_prompt.as_deref(),
+        );
+        run_cli_process(tx, &mut fresh_cmd, &prompt, Provider::OpenAI).await;
+    }
+}
+
+fn build_codex_command(
+    resume_session_id: Option<&str>,
+    working_dir: Option<&std::path::Path>,
+    model: Option<&str>,
+    system_prompt: Option<&str>,
+) -> Command {
+    let mut cmd = Command::new("codex");
+    cmd.env("PATH", super::claude_path::shell_path());
+    cmd.args(codex_command::build_args(
+        resume_session_id,
+        working_dir,
+        model,
+        system_prompt,
+    ));
+    if let Some(dir) = working_dir {
+        cmd.current_dir(dir);
+    }
+    cmd
 }
 
 /// Shared subprocess lifecycle: spawn, write prompt to stdin, read stdout/stderr, wait.
@@ -211,7 +219,7 @@ async fn run_cli_process(
     cmd: &mut Command,
     prompt: &str,
     provider: Provider,
-) {
+) -> CliRunOutcome {
     let cli_name = match provider {
         Provider::Anthropic => "claude",
         Provider::OpenAI => "codex",
@@ -227,7 +235,7 @@ async fn run_cli_process(
             let _ = tx.send(SessionUpdate::Status(SessionStatus::Error(format!(
                 "Failed to spawn {cli_name}: {e}"
             ))));
-            return;
+            return CliRunOutcome::Failed;
         }
     };
 
@@ -236,7 +244,7 @@ async fn run_cli_process(
             let _ = tx.send(SessionUpdate::Status(SessionStatus::Error(format!(
                 "Failed to write prompt to stdin: {e}"
             ))));
-            return;
+            return CliRunOutcome::Failed;
         }
         drop(stdin);
     }
@@ -274,7 +282,7 @@ async fn run_cli_process(
                 tracing::info!("[houston:session] {msg}");
                 let _ = tx.send(SessionUpdate::Status(SessionStatus::Error(msg)));
                 let _ = child.kill().await;
-                return;
+                return CliRunOutcome::Failed;
             }
         }
     }
@@ -286,7 +294,18 @@ async fn run_cli_process(
             let is_sigterm = status.code() == Some(143);
             if status.success() || is_sigterm {
                 let _ = tx.send(SessionUpdate::Status(SessionStatus::Completed));
+                CliRunOutcome::Completed
             } else {
+                if provider == Provider::OpenAI
+                    && stderr_lines
+                        .iter()
+                        .any(|line| codex_command::is_missing_rollout_error(line))
+                {
+                    tracing::warn!(
+                        "[houston:session] codex resume failed because rollout was missing"
+                    );
+                    return CliRunOutcome::CodexResumeMissing;
+                }
                 // Check if stderr indicates an auth failure (e.g. Codex 401 retries).
                 let has_auth_error = stderr_lines.iter().any(|l| is_auth_error(l));
 
@@ -295,6 +314,7 @@ async fn run_cli_process(
                     let _ = tx.send(SessionUpdate::Status(SessionStatus::Error(
                         "Authentication expired — sign in again to continue".to_string(),
                     )));
+                    CliRunOutcome::Failed
                 } else {
                     let stderr_summary = if stderr_lines.is_empty() {
                         "no stderr output captured".to_string()
@@ -308,6 +328,7 @@ async fn run_cli_process(
                     let _ = tx.send(SessionUpdate::Status(SessionStatus::Error(format!(
                         "{cli_name} exited with {status}"
                     ))));
+                    CliRunOutcome::Failed
                 }
             }
         }
@@ -315,8 +336,16 @@ async fn run_cli_process(
             let _ = tx.send(SessionUpdate::Status(SessionStatus::Error(format!(
                 "Failed to wait for {cli_name}: {e}"
             ))));
+            CliRunOutcome::Failed
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CliRunOutcome {
+    Completed,
+    Failed,
+    CodexResumeMissing,
 }
 
 /// Updates sent from the session manager to consumers (monitors, pumps).
@@ -326,4 +355,5 @@ pub enum SessionUpdate {
     SessionId(String),
     Feed(FeedItem),
     ProcessPid(u32),
+    ResumeInvalid,
 }
