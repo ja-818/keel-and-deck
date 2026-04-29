@@ -10,8 +10,6 @@ import {
   Button,
 } from "@houston-ai/core";
 import { Plus } from "lucide-react";
-import { HoustonHelmet } from "./shell/experience-card";
-import { resolveAgentColor } from "../lib/agent-colors";
 import { useAgentStore } from "../stores/agents";
 import { useAgentCatalogStore } from "../stores/agent-catalog";
 import { useUIStore } from "../stores/ui";
@@ -23,7 +21,9 @@ import { useAgentChatPanel } from "./use-agent-chat-panel";
 import { useQueuedMessageLabels } from "./use-queued-message-labels";
 import type { Agent } from "../lib/types";
 import { useDetailPanelContainer } from "./shell/detail-panel-context";
-import { AgentMiniAvatar, HoustonThinkingIndicator } from "./shell/experience-card";
+import { HoustonThinkingIndicator } from "./shell/experience-card";
+import { AgentCardAvatar } from "./shell/agent-card-avatar";
+import { AgentPanelAvatar } from "./shell/agent-panel-avatar";
 import { MissionControlToolbar } from "./mission-control-toolbar";
 import { MissionBoardEmptyState } from "./mission-board-empty-state";
 import { useMissionSearch } from "./use-mission-search";
@@ -109,7 +109,7 @@ export function Dashboard() {
       : mc.items;
     return base.map((item) => ({
       ...item,
-      icon: <AgentMiniAvatar color={colorByPath[item.metadata?.agentPath as string]} />,
+      icon: <AgentCardAvatar color={colorByPath[item.metadata?.agentPath as string]} />,
     }));
   }, [mc.items, filterPath, colorByPath]);
   const visibleAgents = useMemo(
@@ -173,9 +173,6 @@ export function Dashboard() {
     }
     return pendingAgent;
   }, [selectedItem, pendingAgent, agents]);
-  // Panel avatar color tracks the active agent so a new-mission card
-  // for picked agent A uses A's color, not the selectedItem fallback.
-  const selectedColor = resolveAgentColor(activeAgent?.color);
   const activeAgentDef = activeAgent ? getAgentDef(activeAgent.configId) ?? null : null;
   const selectedSessionKey = selectedItem
     ? (selectedItem.metadata?.sessionKey as string | undefined) ?? `activity-${selectedItem.id}`
@@ -310,18 +307,10 @@ export function Dashboard() {
           onStopSession={handleStopSession}
           panelAgentName={activeAgent?.name ?? selectedItem?.subtitle}
           panelAvatar={
-            selectedItem?.status === "running" ? (
-              <span className="size-10 rounded-full flex items-center justify-center shrink-0 card-running-glow">
-                <HoustonHelmet color={selectedColor} size={24} />
-              </span>
-            ) : (
-              <span
-                className="size-10 rounded-full flex items-center justify-center shrink-0 bg-background border-2"
-                style={{ borderColor: selectedColor ?? "#cdcdcd" }}
-              >
-                <HoustonHelmet color={selectedColor} size={24} />
-              </span>
-            )
+            <AgentPanelAvatar
+              color={activeAgent?.color}
+              running={selectedItem?.status === "running"}
+            />
           }
           thinkingIndicator={<HoustonThinkingIndicator />}
           cardLabels={cardLabels}

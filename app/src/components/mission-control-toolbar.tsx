@@ -8,7 +8,7 @@ import {
 } from "@houston-ai/core";
 import { ChevronDown } from "lucide-react";
 import { HoustonLogo } from "./shell/experience-card";
-import { AgentMiniAvatar } from "./shell/experience-card";
+import { AgentCardAvatar } from "./shell/agent-card-avatar";
 import type { Agent } from "../lib/types";
 import { MissionSearchInput } from "./mission-search-input";
 
@@ -70,7 +70,7 @@ export function MissionControlToolbar({
                     onClick={() => onFilterPathChange(agent.folderPath)}
                     className="gap-2"
                   >
-                    <AgentMiniAvatar color={agent.color} />
+                    <AgentCardAvatar color={agent.color} />
                     {agent.name}
                   </DropdownMenuItem>
                 ))}

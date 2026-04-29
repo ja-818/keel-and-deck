@@ -1,11 +1,18 @@
 import { useState, useEffect, useCallback } from "react";
 import type { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { DialogTitle, Button, Input, cn } from "@houston-ai/core";
+import {
+  AGENT_COLORS,
+  Button,
+  DialogTitle,
+  HoustonAvatar,
+  Input,
+  cn,
+  colorHex,
+  resolveAgentColor,
+} from "@houston-ai/core";
 import { ArrowLeft, Check, FolderOpen, ChevronDown } from "lucide-react";
 import type { AgentDefinition } from "../../lib/types";
-import { HoustonHelmet } from "./experience-card";
-import { AGENT_COLORS, colorHex, resolveAgentColor } from "../../lib/agent-colors";
 import { tauriProvider, type ProviderStatus } from "../../lib/tauri";
 import { PROVIDERS, getProvider, getModel } from "../../lib/providers";
 
@@ -66,12 +73,7 @@ export function NamingStep({
 
       {/* Avatar preview */}
       <div className="flex flex-col items-center gap-4 mb-8">
-        <div
-          className="h-20 w-20 shrink-0 rounded-full flex items-center justify-center transition-colors duration-200 bg-background border-2"
-          style={{ borderColor: resolvedColor }}
-        >
-          <HoustonHelmet color={resolvedColor} size={48} />
-        </div>
+        <HoustonAvatar color={resolvedColor} diameter={80} />
 
         <div className="text-center">
           <p className="text-lg font-semibold">

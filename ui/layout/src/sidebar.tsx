@@ -8,6 +8,8 @@ export interface SidebarItem {
   id: string;
   name: string;
   icon?: ReactNode;
+  /** Optional right-aligned slot for row badges or status indicators. */
+  trailing?: ReactNode;
 }
 
 export interface SidebarNavItemEntry {
