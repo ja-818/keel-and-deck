@@ -8,6 +8,15 @@
     "title": "Provedor de IA",
     "description": "O Houston usa <emph>sua própria</emph> assinatura. Nunca vemos suas credenciais."
   },
+  "phoneAccess": {
+    "title": "Acesso pelo celular",
+    "description": "Seu QR continua o mesmo para o celular reconectar quando este Mac estiver ligado e o Houston estiver aberto.",
+    "resetButton": "Desconectar todos os celulares",
+    "confirmTitle": "Desconectar todos os celulares?",
+    "confirmDescription": "Isso redefine o QR e sai de todos os celulares conectados a este Mac. Escaneie o novo QR para conectar de novo.",
+    "confirmLabel": "Desconectar",
+    "resetToast": "Acesso pelo celular redefinido"
+  },
   "timezone": {
     "title": "Fuso horário",
     "description": "Usado quando suas rotinas disparam, 9h significa 9h neste fuso.",

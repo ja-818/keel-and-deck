@@ -1,5 +1,5 @@
-// Redeem a pairing code with the Houston relay. The code is of the form
-// `<tunnelId>-<6digits>` and comes from the desktop QR or manual entry.
+// Redeem a phone-access code with the Houston relay. The code is of the form
+// `<tunnelId>-<accessSecret>` and comes from the desktop QR.
 //
 // Success: relay returns `{ok, engineToken, deviceLabel}`. We persist
 // `{baseUrl, engineToken, deviceLabel, tunnelId}` to Preferences and
@@ -34,7 +34,6 @@ export type PairErrorCode =
   | "desktop_offline"
   | "pair_timeout"
   | "code_unknown"
-  | "code_consumed"
   | "code_malformed"
   | "internal"
   | "network";
@@ -43,7 +42,6 @@ const KNOWN_CODES: ReadonlySet<PairErrorCode> = new Set<PairErrorCode>([
   "desktop_offline",
   "pair_timeout",
   "code_unknown",
-  "code_consumed",
   "code_malformed",
   "internal",
   "network",
@@ -75,20 +73,20 @@ export class PairError extends Error {
   }
 }
 
-export function parseCode(raw: string): { tunnelId: string; userCode: string } | null {
+export function parseCode(raw: string): { tunnelId: string; accessSecret: string } | null {
   const trimmed = raw.trim();
   // Accept: "abc123-842759" OR a full URL "https://tunnel.../pair/abc123-842759"
   const code = trimmed.includes("/pair/")
     ? trimmed.split("/pair/")[1]?.split(/[?#]/)[0] ?? ""
     : trimmed;
-  // tunnelId is base64url (hyphens allowed); userCode is a 6-digit numeric
-  // suffix. Split on the LAST dash.
+  // tunnelId is base64url (hyphens allowed); accessSecret is the suffix.
+  // Split on the LAST dash.
   const dash = code.lastIndexOf("-");
   if (dash < 0) return null;
   const tunnelId = code.slice(0, dash);
-  const userCode = code.slice(dash + 1);
-  if (!tunnelId || !userCode) return null;
-  return { tunnelId, userCode };
+  const accessSecret = code.slice(dash + 1);
+  if (!tunnelId || !accessSecret) return null;
+  return { tunnelId, accessSecret };
 }
 
 interface RelayErrorBody {
@@ -161,8 +159,8 @@ async function attemptRedeem(
  *
  * Retries `network`, `desktop_offline`, and `pair_timeout` with
  * exponential backoff (1s, 2s, 4s). Fatal codes (`code_unknown`,
- * `code_consumed`, `code_malformed`) bail immediately so the user can
- * get a fresh code instead of waiting through pointless retries. */
+ * `code_malformed`) bail immediately so the user can rescan the current QR
+ * instead of waiting through pointless retries. */
 export async function redeemPairingCode(
   rawCode: string,
   deviceLabel: string,
@@ -171,7 +169,7 @@ export async function redeemPairingCode(
   if (!parsed) throw new PairError("Invalid pairing code.", 400, "code_malformed");
 
   const { baseUrl } = relayConfig();
-  const url = `${baseUrl.replace(/\/+$/, "")}/pair/${parsed.tunnelId}-${parsed.userCode}`;
+  const url = `${baseUrl.replace(/\/+$/, "")}/pair/${parsed.tunnelId}-${parsed.accessSecret}`;
 
   const MAX_ATTEMPTS = 3;
   const BACKOFF_MS = [1_000, 2_000, 4_000];

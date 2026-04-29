@@ -6,10 +6,9 @@
  *   • The QR code (that's it)
  *   • A subtle "your Mac must stay open" note with a pointer to Always On
  *
- * What we hide: the literal 6-digit code, the full URL, the paired-
- * devices list, the "new code" button. Codes silently refresh in the
- * background every ~10 minutes so the QR is always scannable no matter
- * how long the dialog has been open.
+ * What we hide: the literal access secret and the full URL. The QR is stable
+ * until the user resets phone access in Settings, so rescanning from another
+ * phone or a reopened browser tab works without generating throwaway codes.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -43,10 +42,6 @@ interface TunnelInfo {
  * "Connecting…" → "Connected" feels live; slow enough to not spam the
  * engine. */
 const STATUS_POLL_MS = 2_000;
-/** Mint a fresh pairing code silently every 10 minutes so a long-lived
- *  dialog never shows an expired QR. Codes live 15 min server-side. */
-const REFRESH_INTERVAL_MS = 10 * 60 * 1000;
-
 export function PairDeviceDialog({ isOpen, onClose }: Props) {
   const { t } = useTranslation("shell");
   const [info, setInfo] = useState<TunnelInfo | null>(null);
@@ -79,10 +74,8 @@ export function PairDeviceDialog({ isOpen, onClose }: Props) {
   }, [t]);
 
   // While the dialog is open: poll tunnel status every STATUS_POLL_MS so
-  // the UI reflects connection drops live, and refresh the code every
-  // 10 min so a long-open dialog never shows an expired QR. Wait until
-  // the tunnel is CONNECTED before minting the first code — a QR shown
-  // against a disconnected tunnel would just burn itself when scanned.
+  // the UI reflects connection drops live. Wait until the tunnel is connected
+  // before showing the QR so a scan can complete immediately.
   useEffect(() => {
     if (!isOpen) {
       mountedRef.current = false;
@@ -96,18 +89,12 @@ export function PairDeviceDialog({ isOpen, onClose }: Props) {
     const statusId = setInterval(() => {
       if (mountedRef.current) void loadStatus();
     }, STATUS_POLL_MS);
-    const codeId = setInterval(() => {
-      if (mountedRef.current) void mintCode();
-    }, REFRESH_INTERVAL_MS);
     return () => {
       clearInterval(statusId);
-      clearInterval(codeId);
     };
   }, [isOpen, loadStatus, mintCode]);
 
-  // Mint the FIRST code as soon as the tunnel comes up. Re-mint when the
-  // tunnel drops + reconnects so any stale QR a user left on screen
-  // doesn't try to pair against a dead DO slot.
+  // Load the stable QR payload as soon as the tunnel comes up.
   useEffect(() => {
     if (!isOpen) return;
     if (info?.connected) {

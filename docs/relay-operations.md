@@ -52,21 +52,23 @@ Each paired desktop maps to one `TunnelRoom` DO, keyed by `tunnelId`. The DO hol
 
 Watch `/e/:tunnelId/status` for a quick health view: `{connected, inflight, mobileSockets, lastDesktopActivity}`.
 
-## Pair-code abuse mitigation
+## Phone-access abuse mitigation
 
-- Codes are 6 digits, 15-minute TTL server-side, idempotent redemption within the TTL (retries get the same token).
-- Each tunnel can mint a new code at user request; there's no explicit rate limit yet (acceptable for a single-desktop-per-tunnel product).
-- If a user reports someone stole their code, they can revoke via Settings → Paired Devices → Disconnect. The hashed engine_token row is marked `revoked_at = now()` and any future request from that device 401s.
+- The QR contains a high-entropy access secret, not a 6-digit code. It is reusable so a phone can reconnect after laptop sleep, shutdown, app restart, or a closed browser tab.
+- Each scan exchanges the QR secret for a separate device-scoped bearer. The QR secret is not sent on normal API requests.
+- Settings exposes one recovery control: Disconnect all phones. It rotates the QR secret and marks every live `engine_tokens` row `revoked_at = now()`.
 
 ## Park-scenario canary (weekly manual)
 
-1. Mac awake at home, engine running, tunnel shows `connected: true` in Settings → Paired Devices.
+1. Mac awake at home, engine running, tunnel shows `connected: true` in Connect phone.
 2. Phone on cellular (different network) — scan QR, pair succeeds.
 3. Start a mission from phone → reaches desktop, streams response.
 4. Send a message from phone; activity appears on desktop "Running" within ~1s.
 5. Agent finishes; desktop activity flips to "Needs You"; phone chat header stops showing "typing…".
 6. Close phone tab + reopen → no re-pair needed, sessions intact.
 7. Sleep the Mac (lid close). Phone sees requests fail with 503. Wake Mac; tunnel reconnects within ~30s; phone refetches automatically on reconnect.
+8. Restart the Mac and reopen Houston. Phone works with the existing localStorage token once the tunnel reconnects.
+9. Settings → Disconnect all phones. Existing phone requests 401; scanning the new QR pairs again.
 
 Failure in any step blocks release.
 

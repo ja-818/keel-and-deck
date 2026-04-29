@@ -6,7 +6,7 @@
 
 pub mod auth;
 pub mod config;
-pub mod pair_store;
+pub mod mobile_access;
 pub mod routes;
 pub mod state;
 pub mod ws;

@@ -5,9 +5,8 @@
 // unpair), show a big "Scan the QR from your Mac" panel with no text
 // input. We do NOT want users thinking they have to type anything.
 //
-// On failure we show a clear recovery path: "Go to your Mac → tap
-// **New code** → scan again." The old code is already consumed / expired,
-// so the only sane action is to mint a new one.
+// On failure we show a clear recovery path: open Houston on the Mac and scan
+// the current QR again. The QR is reusable until phone access is reset.
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -33,7 +32,7 @@ export function PairScreen() {
     if (!incoming) return;
     attempted.current = true;
 
-    // Clean the query so reloading doesn't retry a consumed code.
+    // Clean the query so reloading doesn't repeat the exchange.
     const next = new URLSearchParams(params);
     next.delete("code");
     setParams(next, { replace: true });
@@ -115,12 +114,10 @@ function friendlyError(e: unknown): string {
     return "Something went wrong. Please try again.";
   }
   switch (e.code) {
-    case "code_consumed":
-      return "That code was already used. Go to your Mac, tap \u201CNew code\u201D, and scan again.";
     case "code_unknown":
-      return "That code expired. Go to your Mac, tap \u201CNew code\u201D, and scan again.";
+      return "That QR was reset. Open Houston on your Mac and scan the current QR.";
     case "code_malformed":
-      return "The pairing link looks wrong. Go to your Mac, tap \u201CNew code\u201D, and scan again.";
+      return "The pairing link looks wrong. Open Houston on your Mac and scan the QR again.";
     case "desktop_offline":
       return "Your Mac is currently offline. Make sure Houston is open, then tap Try again.";
     case "pair_timeout":

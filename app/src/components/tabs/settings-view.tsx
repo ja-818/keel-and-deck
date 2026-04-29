@@ -31,6 +31,7 @@ import {
   SUPPORTED_LOCALES,
   type SupportedLocale,
 } from "../../lib/i18n";
+import { PhoneAccessSection } from "./phone-access-section";
 
 const LOCALE_LABELS: Record<SupportedLocale, string> = {
   en: "English",
@@ -122,6 +123,8 @@ export function SettingsView() {
         <h1 className="text-xl font-semibold">{t("settings:title")}</h1>
 
         <AccountSection />
+
+        <PhoneAccessSection />
 
         {/* Workspace */}
         <section>

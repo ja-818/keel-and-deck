@@ -60,7 +60,6 @@ import type {
   SummarizeResult,
   TunnelStatus,
   PairingCode,
-  PairedDevice,
   PushRegisterRequest,
   UpdateProvider,
   VersionResponse,
@@ -450,11 +449,8 @@ export class HoustonClient {
   mintPairingCode(): Promise<PairingCode> {
     return this.request("POST", "/tunnel/pairing");
   }
-  listPairedDevices(): Promise<PairedDevice[]> {
-    return this.request("GET", "/tunnel/devices");
-  }
-  revokePairedDevice(hash: string): Promise<void> {
-    return this.request("POST", `/tunnel/devices/${encodeURIComponent(hash)}/revoke`);
+  resetPhoneAccess(): Promise<PairingCode> {
+    return this.request("POST", "/tunnel/reset-access");
   }
 
   // ---------- push (mobile notification registration) ----------

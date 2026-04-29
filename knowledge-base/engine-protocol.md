@@ -225,11 +225,10 @@ string[] }`; clients should render this as session-owned project artifacts.
 | Method | Path | Description |
 |---|---|---|
 | GET  | `/v1/tunnel/status` | Tunnel connection state |
-| POST | `/v1/tunnel/pairing` | Mint a 6-digit pairing code (15-min TTL, idempotent) |
-| GET  | `/v1/tunnel/devices` | Paired devices |
-| POST | `/v1/tunnel/devices/:hash/revoke` | Revoke a paired device |
+| POST | `/v1/tunnel/pairing` | Return stable phone-access QR payload (`<tunnelId>-<accessSecret>`) |
+| POST | `/v1/tunnel/reset-access` | Rotate phone-access QR secret and revoke all device tokens |
 
-See [`docs/mobile-architecture.md`](../docs/mobile-architecture.md) for the full flow — desktop engine opens an outbound WS to the Houston relay, which proxies mobile HTTP+WS AND serves the PWA bundle from the same origin.
+See [`docs/mobile-architecture.md`](../docs/mobile-architecture.md) for the full flow — desktop engine opens an outbound WS to the Houston relay, which proxies mobile HTTP+WS AND serves the PWA bundle from the same origin. Phone pairing is durable: laptop sleep/shutdown keeps the same tunnel identity and phone tokens; only Settings → Disconnect all phones rotates the QR secret.
 
 **Watcher**
 | Method | Path | Description |

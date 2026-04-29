@@ -93,7 +93,7 @@ export interface WsCloseFrame {
   reason?: string;
 }
 
-/** Mobile → desktop: pairing code exchange. Desktop mints a device token. */
+/** Mobile → desktop: phone access exchange. Desktop mints a device token. */
 export interface PairRequestFrame {
   kind: "pair_request";
   reqId: string;
@@ -120,8 +120,7 @@ export interface PairResponseFrame {
 export type PairErrorCode =
   | "desktop_offline" // DO has no desktop WS right now
   | "pair_timeout" // desktop didn't respond within pair window
-  | "code_unknown" // engine PairStore doesn't have this code
-  | "code_consumed" // already redeemed for a DIFFERENT device
+  | "code_unknown" // engine does not recognize this access secret
   | "code_malformed" // relay couldn't parse the code
   | "internal" // engine-side unexpected failure
   | "network"; // client-side fetch throw (never sent by server)

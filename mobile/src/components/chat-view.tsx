@@ -5,12 +5,9 @@
 // header off screen. Header sticks to the top, composer to the
 // bottom, messages scroll between them.
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
 import { ChatPanel, decodeActionMessage, type FeedItem } from "@houston-ai/chat";
-import { HoustonAvatar } from "@houston-ai/core";
-import type { Agent, ConversationEntry } from "@houston-ai/engine-client";
 import {
   useChatHistory,
   useCreateMission,
@@ -22,6 +19,7 @@ import {
 } from "../hooks/use-conversations";
 import { useAgents } from "../hooks/use-agents";
 import { useVisualViewport } from "../hooks/use-keyboard-height";
+import { ChatHeader } from "./chat-header";
 import { UserActionMessage } from "./user-action-message";
 
 export function ChatView() {
@@ -54,13 +52,17 @@ export function ChatView() {
   const { data: history } = useChatHistory(agentPath, querySessionKey, {
     isActive: isRunning,
   });
+  const [sendError, setSendError] = useState<string | null>(null);
 
   const handleSend = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
       if (!trimmed) return;
+      setSendError(null);
       if (!isDraft) {
-        sendMutation.mutate(trimmed);
+        sendMutation.mutate(trimmed, {
+          onError: (e) => setSendError(sendErrorMessage(e)),
+        });
         return;
       }
       if (!agentPath || createMission.isPending) return;
@@ -72,6 +74,7 @@ export function ChatView() {
         );
       } catch (e) {
         console.error("[chat-view] draft send failed", e);
+        setSendError(sendErrorMessage(e));
       }
     },
     [isDraft, sendMutation, createMission, agentPath, nav],
@@ -110,6 +113,13 @@ export function ChatView() {
           onSend={handleSend}
           isLoading={sendMutation.isPending || createMission.isPending}
           placeholder="Message…"
+          composerHeader={
+            sendError ? (
+              <div className="mx-3 mb-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                {sendError}
+              </div>
+            ) : undefined
+          }
           renderUserMessage={(msg) => {
             const invocation = decodeActionMessage(msg.content);
             if (!invocation) return undefined;
@@ -121,69 +131,10 @@ export function ChatView() {
   );
 }
 
-interface ChatHeaderProps {
-  convo: ConversationEntry | undefined;
-  agent: Agent | undefined;
-  agentPath: string;
-  isDraft: boolean;
-  isRunning: boolean;
-  onBack: () => void;
-}
-
-function ChatHeader({
-  convo,
-  agent,
-  agentPath,
-  isDraft,
-  isRunning,
-  onBack,
-}: ChatHeaderProps) {
-  // Draft chat uses the agent's name as the title — no mission exists
-  // yet to derive one from. After first send the URL replaces to the
-  // real session and the convo lookup takes over.
-  const title = isDraft
-    ? agent?.name ?? "New mission"
-    : convo?.title ?? agent?.name ?? "Session";
-  const subtitle = isDraft
-    ? "Type a message to start"
-    : agent?.name ?? agentPath;
-
-  return (
-    <header
-      className="shrink-0 flex items-center gap-3 border-b border-border/80 bg-background/95 backdrop-blur px-3 py-2"
-      style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 8px)" }}
-    >
-      <button
-        onClick={onBack}
-        className="touchable h-9 w-9 flex items-center justify-center rounded-full hover:bg-accent -ml-1"
-        aria-label="Back"
-      >
-        <ArrowLeft className="h-5 w-5" />
-      </button>
-
-      <HoustonAvatar
-        color={agent?.color}
-        diameter={36}
-        running={isRunning}
-      />
-
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold leading-tight">{title}</p>
-        {isRunning ? (
-          <p className="truncate text-[11px] text-muted-foreground leading-tight italic flex items-center gap-1">
-            typing
-            <span className="inline-flex items-end h-2 gap-[2px] ml-0.5">
-              <span className="typing-dot inline-block size-[3px] rounded-full bg-current" />
-              <span className="typing-dot inline-block size-[3px] rounded-full bg-current" />
-              <span className="typing-dot inline-block size-[3px] rounded-full bg-current" />
-            </span>
-          </p>
-        ) : (
-          <p className="truncate text-[11px] text-muted-foreground leading-tight">
-            {subtitle}
-          </p>
-        )}
-      </div>
-    </header>
-  );
+function sendErrorMessage(e: unknown): string {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (/conflict/i.test(msg)) {
+    return "Another mission is already running for this agent. Try again when it finishes.";
+  }
+  return "Could not start that mission. Check your Mac and try again.";
 }
