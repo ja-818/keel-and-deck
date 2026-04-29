@@ -13,21 +13,11 @@ import {
   useListSkillsFromRepo,
   useInstallSkillFromRepo,
 } from "../../hooks/queries";
+import { useSkillSurfaceLabels } from "./use-skill-surface-labels";
 
 export default function SkillsTab({ agent }: TabProps) {
-  const { t } = useTranslation(["skills", "common"]);
-  const skillDetailLabels = {
-    notFound: t("skills:detail.notFound"),
-    backAria: t("skills:detail.backAria"),
-    saveChanges: t("skills:detail.saveChanges"),
-    savingChanges: t("skills:detail.savingChanges"),
-    moreActions: t("skills:detail.moreActions"),
-    delete: t("skills:detail.delete"),
-    deleteTitle: (name: string) => t("skills:detail.deleteTitle", { name }),
-    deleteDescription: t("skills:detail.deleteDescription"),
-    deleteConfirmLabel: t("common:actions.delete"),
-    instructionsPlaceholder: t("skills:detail.instructionsPlaceholder"),
-  };
+  const { t } = useTranslation("skills");
+  const { skillDetailLabels, skillsGridLabels } = useSkillSurfaceLabels();
   const path = agent.folderPath;
   const { data: summaries, isLoading: skillsLoading } = useSkills(path);
   const [selectedSkillName, setSelectedSkillName] = useState<string | null>(null);
@@ -75,16 +65,7 @@ export default function SkillsTab({ agent }: TabProps) {
             onInstallCommunity={handleInstallCommunity}
             onListFromRepo={handleListFromRepo}
             onInstallFromRepo={handleInstallFromRepo}
-            labels={{
-              loading: t("grid.loading"),
-              emptyTitle: t("grid.emptyTitle"),
-              emptyDescription: t("grid.emptyDescription"),
-              addSkill: t("grid.addSkill"),
-              descriptionShort: t("grid.descriptionShort"),
-              deleteTitle: (name) => t("detail.deleteTitle", { name }),
-              deleteDescription: t("detail.deleteDescription"),
-              deleteConfirmLabel: t("detail.delete"),
-            }}
+            labels={skillsGridLabels}
           />
         )}
       </div>

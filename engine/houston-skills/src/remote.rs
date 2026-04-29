@@ -10,6 +10,7 @@ use crate::{CreateSkillInput, SkillError};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use std::time::Duration;
 
 // ── Public types ──────────────────────────────────────────────────
 
@@ -61,28 +62,53 @@ struct GitTreeEntry {
 // ── Public API ────────────────────────────────────────────────────
 
 /// Search the skills.sh community directory.
-///
-/// Retries once after a 1-second delay on HTTP 429 (rate limit).
 pub async fn search_skills(query: &str) -> Result<Vec<CommunitySkill>, SkillError> {
     let client = build_client()?;
+    search_skills_at(
+        &client,
+        "https://skills.sh/api/search",
+        query,
+        Duration::from_secs(1),
+    )
+    .await
+}
 
+/// Search endpoint implementation.
+///
+/// Retries once after a delay on HTTP 429 (rate limit).
+async fn search_skills_at(
+    client: &Client,
+    endpoint: &str,
+    query: &str,
+    retry_delay: Duration,
+) -> Result<Vec<CommunitySkill>, SkillError> {
+    let query = query.trim();
+    if query.chars().count() < 2 {
+        return Ok(Vec::new());
+    }
     let mut attempts = 0;
     loop {
         let resp = client
-            .get("https://skills.sh/api/search")
+            .get(endpoint)
             .query(&[("q", query)])
             .send()
             .await
-            .map_err(|e| SkillError::Io(format!("Search failed: {e}")))?;
+            .map_err(|e| SkillError::Unavailable(format!("skills.sh search failed: {e}")))?;
 
         if resp.status().as_u16() == 429 && attempts == 0 {
             attempts += 1;
-            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            tokio::time::sleep(retry_delay).await;
             continue;
         }
 
+        if resp.status().as_u16() == 429 {
+            return Err(SkillError::RateLimited(
+                "skills.sh rate limit hit, wait a moment and try again".to_string(),
+            ));
+        }
+
         if !resp.status().is_success() {
-            return Err(SkillError::Io(format!(
+            return Err(SkillError::Unavailable(format!(
                 "Skills search failed ({})",
                 resp.status()
             )));
@@ -91,7 +117,7 @@ pub async fn search_skills(query: &str) -> Result<Vec<CommunitySkill>, SkillErro
         let result: SearchResponse = resp
             .json()
             .await
-            .map_err(|e| SkillError::Io(format!("Failed to parse results: {e}")))?;
+            .map_err(|e| SkillError::Unavailable(format!("Failed to parse results: {e}")))?;
 
         return Ok(result.skills);
     }
@@ -528,6 +554,8 @@ fn kebab_to_title(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
 
     #[test]
     fn normalize_github_urls() {
@@ -622,5 +650,43 @@ Some content without a heading.";
     fn extract_name_no_frontmatter() {
         let content = "# Just a heading\n\nNo frontmatter.";
         assert_eq!(extract_frontmatter_name(content), None);
+    }
+
+    #[tokio::test]
+    async fn search_ignores_queries_under_two_chars() {
+        let client = build_client().unwrap();
+        let skills = search_skills_at(
+            &client,
+            "http://127.0.0.1:1/search",
+            " a ",
+            Duration::ZERO,
+        )
+        .await
+        .unwrap();
+
+        assert!(skills.is_empty());
+    }
+
+    #[tokio::test]
+    async fn search_rate_limit_maps_to_rate_limited_error() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/search"))
+            .respond_with(ResponseTemplate::new(429))
+            .expect(2)
+            .mount(&server)
+            .await;
+
+        let client = build_client().unwrap();
+        let err = search_skills_at(
+            &client,
+            &format!("{}/search", server.uri()),
+            "writing",
+            Duration::ZERO,
+        )
+        .await
+        .unwrap_err();
+
+        assert!(matches!(err, SkillError::RateLimited(_)));
     }
 }
