@@ -1,8 +1,4 @@
-import { osReadRecentLogs } from "./os-bridge";
-
-declare const __SLACK_BUG_WEBHOOK__: string;
-const WEBHOOK_URL =
-  typeof __SLACK_BUG_WEBHOOK__ !== "undefined" ? __SLACK_BUG_WEBHOOK__ : "";
+import { osReadRecentLogs, osReportBug } from "./os-bridge";
 
 interface BugReportContext {
   command: string;
@@ -23,12 +19,6 @@ async function getRecentLogs(lines = 50): Promise<{ backend: string; frontend: s
 }
 
 export async function reportBug(context: BugReportContext): Promise<void> {
-  if (!WEBHOOK_URL) {
-    throw new Error(
-      "Bug reporting not configured (missing SLACK_BUG_WEBHOOK_URL at build time)",
-    );
-  }
-
   const logs = await getRecentLogs();
 
   const fields = [
@@ -73,13 +63,5 @@ export async function reportBug(context: BugReportContext): Promise<void> {
     ],
   };
 
-  const response = await fetch(WEBHOOK_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Slack webhook failed: ${response.status}`);
-  }
+  await osReportBug(payload);
 }

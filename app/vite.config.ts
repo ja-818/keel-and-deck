@@ -20,7 +20,6 @@ export default defineConfig(({ mode }) => {
     ),
     __SUPABASE_URL__: JSON.stringify(env.SUPABASE_URL ?? ""),
     __SUPABASE_ANON_KEY__: JSON.stringify(env.SUPABASE_ANON_KEY ?? ""),
-    __SLACK_BUG_WEBHOOK__: JSON.stringify(env.SLACK_BUG_WEBHOOK_URL ?? ""),
   },
   clearScreen: false,
   // Exclude workspace packages from Vite's dep pre-bundling so live edits

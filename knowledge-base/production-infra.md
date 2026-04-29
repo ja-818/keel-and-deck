@@ -71,6 +71,12 @@ PostHog → BigQuery plugin → target GCP project (burns credits). SQL-queryabl
 - **Rust panics:** Captured via sentry panic handler.
 - **Check:** User reports crash or weird behavior → Sentry dashboard BEFORE local logs.
 
+## In-app bug reports (Slack webhook)
+
+- **Frontend:** `app/src/lib/error-toast.ts` shows the "Report bug" action. `app/src/lib/bug-report.ts` builds the Slack payload and attaches recent frontend + backend logs.
+- **Native delivery:** `app/src-tauri/src/bug_report.rs` posts to Slack with `reqwest`. Do not post the webhook from the webview; Slack webhooks can fail under browser CORS, and the URL does not belong in the JS bundle.
+- **Config:** `SLACK_BUG_WEBHOOK_URL` is read from runtime env for dev and `option_env!()` for release builds. CI passes it in `.github/workflows/release.yml`.
+
 ## Required env vars
 
 Shell (local builds) AND GitHub Secrets (CI):
@@ -87,6 +93,7 @@ Shell (local builds) AND GitHub Secrets (CI):
 | `POSTHOG_HOST` | PostHog ingest host | `https://us.i.posthog.com` (or EU equivalent) |
 | `SUPABASE_URL` | Supabase project URL | Supabase → Project settings → API → Project URL |
 | `SUPABASE_ANON_KEY` | Supabase anon key (public-safe, RLS-gated) | Supabase → Project settings → API → Project API keys → `anon` `public` |
+| `SLACK_BUG_WEBHOOK_URL` | Incoming webhook for in-app bug reports | Slack App → Incoming Webhooks |
 | `SENTRY_DSN` | Crash reporting DSN | sentry.io project settings |
 
 CI also needs as Secrets:
