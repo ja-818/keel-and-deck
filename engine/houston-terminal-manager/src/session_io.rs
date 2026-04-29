@@ -1,8 +1,9 @@
+use super::codex_command;
 use super::codex_parser;
 use super::manager::SessionUpdate;
 use super::parser;
 use super::types::{FeedItem, Provider};
-use crate::auth_error::{AUTH_RETRY_MARKER, is_auth_retry_noise};
+use crate::auth_error::{is_auth_retry_noise, AUTH_RETRY_MARKER};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::sync::mpsc;
 
@@ -54,6 +55,11 @@ fn is_meaningful_stderr(line: &str) -> bool {
     // Auth retry noise (e.g. "Error: Reconnecting... 1/5 (unexpected status 401 Unauthorized...)")
     // These are internal retries — the session runner handles the auth failure at exit.
     if is_auth_retry_noise(trimmed) {
+        return false;
+    }
+    // If Codex lost the local rollout backing a stored resume id, the manager
+    // retries fresh. Do not show the transient stderr line to the user.
+    if codex_command::is_missing_rollout_error(trimmed) {
         return false;
     }
     true

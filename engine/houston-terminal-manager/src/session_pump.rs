@@ -51,6 +51,7 @@ pub async fn pump_session(
             SessionUpdate::ProcessPid(pid) => {
                 on_pid(pid);
             }
+            SessionUpdate::ResumeInvalid => {}
         }
     }
 

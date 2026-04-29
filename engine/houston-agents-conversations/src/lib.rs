@@ -4,10 +4,10 @@
 //! command layer. Responsibilities:
 //!
 //! - `session_runner` — spawn a CLI session, stream updates, emit UI events,
-//!   optionally persist feed items to the database, track the Claude session
-//!   ID for `--resume`.
-//! - `session_id_tracker` — per-conversation Claude session ID registry with
-//!   disk persistence (`.houston/sessions/{key}.sid`).
+//!   optionally persist feed items to the database, track the provider resume
+//!   ID.
+//! - `session_id_tracker` — per-conversation provider resume ID registry with
+//!   disk persistence (`.houston/sessions/{provider}/{key}.sid`).
 //! - `session_pids` — map of `session_key → pid` so stop requests can kill
 //!   the right subprocess.
 //! - `supervisor` — panic-isolating wrapper so one session crashing doesn't

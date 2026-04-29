@@ -23,7 +23,7 @@ pub struct SessionResult {
 pub struct PersistOptions {
     pub db: Database,
     pub source: String,
-    /// The user message that started this turn. Persisted once the Claude
+    /// The user message that started this turn. Persisted once the provider
     /// session ID is known. Runner consumes this on SessionUpdate::SessionId.
     pub user_message: Option<String>,
     /// Set automatically once the session reports its ID via
@@ -48,7 +48,7 @@ fn classify_auth_feed_message(provider: Provider, message: &str) -> AuthFeedActi
     }
 }
 
-/// Spawn a Claude session, emit events, optionally persist feed items, and return
+/// Spawn a provider session, emit events, optionally persist feed items, and return
 /// a JoinHandle that resolves to the final response.
 ///
 /// Automatically calls `claude_path::init()` (idempotent via `OnceLock`)
@@ -176,7 +176,7 @@ pub fn spawn_and_monitor(
                         session_key: key.clone(),
                         item: item.clone(),
                     });
-                    // Persist non-streaming items once the Claude session id is known.
+                    // Persist non-streaming items once the provider session id is known.
                     if let Some(ref opts) = persist {
                         if let (Some(sid), Some((ft, dj))) =
                             (opts.claude_session_id.as_ref(), serialize_for_persist(item))
@@ -185,11 +185,22 @@ pub fn spawn_and_monitor(
                             let src = opts.source.clone();
                             let sid = sid.clone();
                             tokio::spawn(async move {
-                                let _ =
-                                    db.add_chat_feed_item_by_session(&sid, &ft, &dj, &src).await;
+                                if let Err(e) =
+                                    db.add_chat_feed_item_by_session(&sid, &ft, &dj, &src).await
+                                {
+                                    tracing::warn!(
+                                        "[session_runner] failed to persist feed item: {e}"
+                                    );
+                                }
                             });
                         }
                     }
+                }
+                SessionUpdate::ResumeInvalid => {
+                    if let Some(ref h) = session_id_handle {
+                        h.clear_current_preserving_history().await;
+                    }
+                    continue;
                 }
                 SessionUpdate::SessionId(sid) => {
                     claude_session_id = Some(sid.clone());
@@ -218,14 +229,19 @@ pub fn spawn_and_monitor(
                             let sid_clone = sid.clone();
                             let data = serde_json::Value::String(user_msg).to_string();
                             tokio::spawn(async move {
-                                let _ = db
+                                if let Err(e) = db
                                     .add_chat_feed_item_by_session(
                                         &sid_clone,
                                         "user_message",
                                         &data,
                                         &src,
                                     )
-                                    .await;
+                                    .await
+                                {
+                                    tracing::warn!(
+                                        "[session_runner] failed to persist user message: {e}"
+                                    );
+                                }
                             });
                         }
                     }

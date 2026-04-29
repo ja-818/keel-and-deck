@@ -5,6 +5,7 @@
 
 pub mod auth_error;
 pub mod claude_path;
+mod codex_command;
 pub mod codex_parser;
 pub mod concurrency;
 pub mod manager;
