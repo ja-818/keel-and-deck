@@ -211,9 +211,9 @@ async fn check_claude_auth(cli_path: &std::path::Path) -> bool {
 async fn check_codex_status() -> ProviderStatus {
     let (install_source, cli_path) = resolve_codex();
     let cli_installed = !matches!(install_source, InstallSource::Missing);
-    let authenticated = if cli_installed {
+    let authenticated = if let Some(path) = cli_path.as_deref() {
         let home = std::env::var("HOME").unwrap_or_default();
-        if check_codex_auth(&home) {
+        if check_codex_auth(path, &home).await {
             ensure_codex_fallback_config(&home);
             true
         } else {
@@ -272,7 +272,63 @@ fn which_on_path(command: &str) -> Option<PathBuf> {
     None
 }
 
-fn check_codex_auth(home: &str) -> bool {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CodexAuthProbe {
+    Authenticated,
+    Unauthenticated,
+    Unknown,
+}
+
+async fn check_codex_auth(cli_path: &std::path::Path, home: &str) -> bool {
+    match probe_codex_login_status(cli_path).await {
+        CodexAuthProbe::Authenticated => true,
+        CodexAuthProbe::Unauthenticated => false,
+        CodexAuthProbe::Unknown => check_codex_auth_file(home),
+    }
+}
+
+async fn probe_codex_login_status(cli_path: &std::path::Path) -> CodexAuthProbe {
+    let shell_path = claude_path::shell_path();
+    let result = tokio::time::timeout(
+        Duration::from_secs(5),
+        tokio::process::Command::new(cli_path)
+            .args(["login", "status", "-c", "model_reasoning_effort=high"])
+            .env("PATH", &shell_path)
+            .kill_on_drop(true)
+            .output(),
+    )
+    .await;
+
+    let output = match result {
+        Ok(Ok(o)) => o,
+        _ => return CodexAuthProbe::Unknown,
+    };
+    classify_codex_login_status_output(
+        output.status.success(),
+        &String::from_utf8_lossy(&output.stdout),
+        &String::from_utf8_lossy(&output.stderr),
+    )
+}
+
+fn classify_codex_login_status_output(success: bool, stdout: &str, stderr: &str) -> CodexAuthProbe {
+    let text = format!("{stdout}\n{stderr}").to_lowercase();
+    if text.contains("not logged in")
+        || text.contains("not authenticated")
+        || text.contains("please login")
+        || text.contains("please log in")
+        || text.contains("signed out")
+        || text.contains("no auth credentials")
+        || text.contains("run codex login")
+    {
+        return CodexAuthProbe::Unauthenticated;
+    }
+    if success && (text.contains("logged in") || text.contains("authenticated")) {
+        return CodexAuthProbe::Authenticated;
+    }
+    CodexAuthProbe::Unknown
+}
+
+fn check_codex_auth_file(home: &str) -> bool {
     let auth_path = PathBuf::from(home).join(".codex").join("auth.json");
     let content = match std::fs::read_to_string(&auth_path) {
         Ok(c) => c,
@@ -354,5 +410,24 @@ mod tests {
         assert_eq!(command.cli_name, "claude");
         assert_eq!(command.path, path);
         assert_eq!(command.args, vec!["auth", "login", "--claudeai"]);
+    }
+
+    #[test]
+    fn codex_login_status_classifies_logged_in_output() {
+        let status = classify_codex_login_status_output(true, "Logged in using ChatGPT", "");
+        assert_eq!(status, CodexAuthProbe::Authenticated);
+    }
+
+    #[test]
+    fn codex_login_status_classifies_not_logged_in_output_first() {
+        let status = classify_codex_login_status_output(true, "Not logged in", "");
+        assert_eq!(status, CodexAuthProbe::Unauthenticated);
+    }
+
+    #[test]
+    fn codex_login_status_falls_back_on_config_errors() {
+        let stderr = "Error loading configuration: unknown variant `xhigh`";
+        let status = classify_codex_login_status_output(false, "", stderr);
+        assert_eq!(status, CodexAuthProbe::Unknown);
     }
 }
