@@ -32,9 +32,11 @@
     "blankDescription": "Abre un chat nuevo y escribe tu propia indicación.",
     "featuredTab": "Destacadas",
     "otherTab": "Otras",
-    "featuredEmpty": "Aún no hay acciones destacadas.",
+    "empty": "Aún no hay acciones.",
     "pickAgentFirst": "Elige un agente para ver sus acciones.",
     "skillsLoading": "Cargando acciones...",
-    "skillsEmpty": "Aún no hay acciones en esta categoría."
+    "skillsEmpty": "Aún no hay acciones en esta categoría.",
+    "scrollTabsLeft": "Desplazar pestañas de acciones a la izquierda",
+    "scrollTabsRight": "Desplazar pestañas de acciones a la derecha"
   }
 }
