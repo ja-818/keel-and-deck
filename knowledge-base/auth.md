@@ -110,3 +110,14 @@ expired OAuth/API-key messages) and `houston-agents-conversations` emits
 `ChatPanel.afterMessages`. The card opens `claude auth login --claudeai` or
 `codex login` through `/v1/providers/:name/login` and polls provider status
 until the CLI reports authenticated.
+
+Codex has one extra wrinkle: it can emit retry-shaped 401 messages while it
+refreshes or reconnects, then continue successfully. Treat the synthetic
+`__auth_retry__` marker as provisional. Suppress it, remember it, and emit
+`AuthRequired` only if the session exits with an auth-flavored error. Terminal
+401 / unauthenticated messages still emit `AuthRequired` immediately.
+
+OpenAI provider status should prefer `codex login status` over shallow
+`~/.codex/auth.json` parsing. Keep the auth-file check only as fallback for old
+Codex versions or unrelated config-load failures, because config drift should
+not look like sign-out.

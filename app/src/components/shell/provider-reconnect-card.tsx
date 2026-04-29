@@ -20,10 +20,11 @@ export function ProviderReconnectCard({
   const [loginLaunched, setLoginLaunched] = useState(false);
   const [loginError, setLoginError] = useState(false);
   const [resolvedSignal, setResolvedSignal] = useState<string | null>(null);
+  const [signalNeedsAuth, setSignalNeedsAuth] = useState(false);
 
-  const activeProviderId = authRequired ?? (
-    signalKey && signalKey !== resolvedSignal ? providerId : null
-  );
+  const shouldCheckSignal =
+    !authRequired && !!providerId && !!signalKey && signalKey !== resolvedSignal;
+  const activeProviderId = authRequired ?? (signalNeedsAuth ? providerId : null);
   const provider = activeProviderId ? getProvider(activeProviderId) : null;
 
   useEffect(() => {
@@ -32,10 +33,33 @@ export function ProviderReconnectCard({
   }, [activeProviderId, authRequired, providerId, signalKey]);
 
   useEffect(() => {
+    setSignalNeedsAuth(false);
+    if (!shouldCheckSignal || !providerId || !signalKey) return;
+    let cancelled = false;
+    tauriProvider.checkStatus(providerId)
+      .then((status) => {
+        if (cancelled) return;
+        if (status.cli_installed && status.authenticated) {
+          setResolvedSignal(signalKey);
+        } else {
+          setSignalNeedsAuth(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setSignalNeedsAuth(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [providerId, shouldCheckSignal, signalKey]);
+
+  useEffect(() => {
     if (!activeProviderId) return;
-    const interval = setInterval(async () => {
+    let cancelled = false;
+    const check = async () => {
       try {
         const status = await tauriProvider.checkStatus(activeProviderId);
+        if (cancelled) return;
         if (status.cli_installed && status.authenticated) {
           setAuthRequired(null);
           if (signalKey) setResolvedSignal(signalKey);
@@ -44,8 +68,13 @@ export function ProviderReconnectCard({
       } catch {
         // Keep the reconnect card visible; the next poll may succeed.
       }
-    }, 3000);
-    return () => clearInterval(interval);
+    };
+    void check();
+    const interval = setInterval(check, 3000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [activeProviderId, signalKey, setAuthRequired]);
 
   const handleSignIn = useCallback(async () => {

@@ -31,6 +31,23 @@ pub struct PersistOptions {
     pub claude_session_id: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AuthFeedAction {
+    None,
+    DeferUntilExit,
+    RequireNow,
+}
+
+fn classify_auth_feed_message(provider: Provider, message: &str) -> AuthFeedAction {
+    if is_auth_retry_marker(message) {
+        AuthFeedAction::DeferUntilExit
+    } else if is_auth_error(message) || is_opaque_claude_auth_error(provider, message) {
+        AuthFeedAction::RequireNow
+    } else {
+        AuthFeedAction::None
+    }
+}
+
 /// Spawn a Claude session, emit events, optionally persist feed items, and return
 /// a JoinHandle that resolves to the final response.
 ///
@@ -105,44 +122,53 @@ pub fn spawn_and_monitor(
                     //      retry loop prints "Reconnecting...".
                     //   3. `not authenticated` / stderr-dumped auth errors.
                     //
-                    // All three are auth noise, not user-visible content. We
-                    // suppress the raw message, emit AuthRequired once, and
-                    // emit "Checking connection..." exactly once.
+                    // All three are auth noise, not user-visible content.
+                    // Retry markers are provisional: Codex may refresh and
+                    // recover, so only remember them and wait for session
+                    // exit. Terminal auth messages emit AuthRequired once
+                    // and emit "Checking connection..." exactly once.
                     if let FeedItem::SystemMessage(msg) = item {
-                        let is_auth_noise = is_auth_retry_marker(msg)
-                            || is_auth_error(msg)
-                            || is_opaque_claude_auth_error(provider_kind, msg);
-                        if is_auth_noise {
-                            saw_auth_error = true;
-                            if !sent_auth_required {
-                                sent_auth_required = true;
+                        match classify_auth_feed_message(provider_kind, msg) {
+                            AuthFeedAction::None => {}
+                            AuthFeedAction::DeferUntilExit => {
+                                saw_auth_error = true;
                                 tracing::info!(
-                                    "[session_runner] emitting AuthRequired for provider={provider_str} from feed"
+                                    "[session_runner] auth retry marker detected — deferring AuthRequired until session exit"
                                 );
-                                sink.emit(HoustonEvent::AuthRequired {
-                                    provider: provider_str.clone(),
-                                    message: msg.clone(),
-                                });
+                                continue;
                             }
-                            if !sent_auth_checking {
-                                sent_auth_checking = true;
-                                tracing::info!(
-                                    "[session_runner] auth issue detected ({msg:?}) — emitting Checking connection..."
-                                );
-                                sink.emit(HoustonEvent::FeedItem {
-                                    agent_path: agent_path_for_events.clone(),
-                                    session_key: key.clone(),
-                                    item: FeedItem::SystemMessage(
-                                        "Checking connection...".to_string(),
-                                    ),
-                                });
-                            } else {
-                                tracing::debug!(
-                                    "[session_runner] additional auth noise suppressed: {msg:?}"
-                                );
+                            AuthFeedAction::RequireNow => {
+                                saw_auth_error = true;
+                                if !sent_auth_required {
+                                    sent_auth_required = true;
+                                    tracing::info!(
+                                        "[session_runner] emitting AuthRequired for provider={provider_str} from feed"
+                                    );
+                                    sink.emit(HoustonEvent::AuthRequired {
+                                        provider: provider_str.clone(),
+                                        message: msg.clone(),
+                                    });
+                                }
+                                if !sent_auth_checking {
+                                    sent_auth_checking = true;
+                                    tracing::info!(
+                                        "[session_runner] auth issue detected ({msg:?}) — emitting Checking connection..."
+                                    );
+                                    sink.emit(HoustonEvent::FeedItem {
+                                        agent_path: agent_path_for_events.clone(),
+                                        session_key: key.clone(),
+                                        item: FeedItem::SystemMessage(
+                                            "Checking connection...".to_string(),
+                                        ),
+                                    });
+                                } else {
+                                    tracing::debug!(
+                                        "[session_runner] additional auth noise suppressed: {msg:?}"
+                                    );
+                                }
+                                // Skip persisting and emitting the raw message.
+                                continue;
                             }
-                            // Skip persisting and emitting the raw message.
-                            continue;
                         }
                     }
                     sink.emit(HoustonEvent::FeedItem {
@@ -327,5 +353,24 @@ mod tests {
             Provider::OpenAI,
             "Error: Unknown error"
         ));
+    }
+
+    #[test]
+    fn codex_retry_marker_defers_auth_required_until_exit() {
+        assert_eq!(
+            classify_auth_feed_message(Provider::OpenAI, "__auth_retry__"),
+            AuthFeedAction::DeferUntilExit
+        );
+    }
+
+    #[test]
+    fn codex_terminal_auth_message_requires_auth_now() {
+        assert_eq!(
+            classify_auth_feed_message(
+                Provider::OpenAI,
+                "Error: unexpected status 401 Unauthorized: Missing bearer"
+            ),
+            AuthFeedAction::RequireNow
+        );
     }
 }
