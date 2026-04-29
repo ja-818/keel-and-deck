@@ -31,6 +31,9 @@ import { useDetailPanelContainer } from "../shell/detail-panel-context";
 import { HoustonHelmet, HoustonThinkingIndicator } from "../shell/experience-card";
 import { resolveAgentColor } from "../../lib/agent-colors";
 import { useQueuedMessageLabels } from "../use-queued-message-labels";
+import { MissionSearchInput } from "../mission-search-input";
+import { MissionBoardEmptyState } from "../mission-board-empty-state";
+import { useMissionSearch } from "../use-mission-search";
 
 // Stable empty reference so the feed store selector doesn't return a new
 // object every render when this agent has no feeds yet (which would otherwise
@@ -79,6 +82,7 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
   const path = agent.folderPath;
   const agentModes = agentDef.config.agents;
   const [pendingAgentMode, setPendingAgentMode] = useState<string | null>(null);
+  const [missionSearchQuery, setMissionSearchQuery] = useState("");
   const { data: rawItems } = useActivity(path);
   const deleteActivity = useDeleteActivity(path);
   const updateActivity = useUpdateActivity(path);
@@ -100,24 +104,27 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
   const emptyAutoOpenKeyRef = useRef<string | null>(null);
   const [newPanelOpenerReady, setNewPanelOpenerReady] = useState(false);
 
-  const items: KanbanItem[] = (rawItems ?? []).map((t) => {
-    const mode = agentModes?.find((m) => m.id === t.agent);
-    return {
-      id: t.id,
-      title: t.title,
-      description: t.description,
-      status: t.status,
-      updatedAt: t.updated_at ?? new Date().toISOString(),
-      group: agent.name,
-      tags: mode ? [mode.name] : (t.routine_id ? ["Routine"] : undefined),
-      metadata: {
-        ...(t.session_key ? { sessionKey: t.session_key } : {}),
-        ...(t.routine_id ? { routineId: t.routine_id } : {}),
-        ...(t.agent ? { agent: t.agent } : {}),
-        ...(t.worktree_path ? { worktreePath: t.worktree_path } : {}),
-      },
-    };
-  });
+  const items: KanbanItem[] = useMemo(
+    () => (rawItems ?? []).map((t) => {
+      const mode = agentModes?.find((m) => m.id === t.agent);
+      return {
+        id: t.id,
+        title: t.title,
+        description: t.description,
+        status: t.status,
+        updatedAt: t.updated_at ?? new Date().toISOString(),
+        group: agent.name,
+        tags: mode ? [mode.name] : (t.routine_id ? ["Routine"] : undefined),
+        metadata: {
+          ...(t.session_key ? { sessionKey: t.session_key } : {}),
+          ...(t.routine_id ? { routineId: t.routine_id } : {}),
+          ...(t.agent ? { agent: t.agent } : {}),
+          ...(t.worktree_path ? { worktreePath: t.worktree_path } : {}),
+        },
+      };
+    }),
+    [agent.name, agentModes, rawItems],
+  );
 
   // Read and consume pending selection from Mission Control
   const pendingId = useUIStore((s) => s.activityPanelId);
@@ -253,8 +260,30 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
     [setOnStartMission, setBoardActions, agentModes],
   );
 
+  const loadHistory = useCallback(
+    async (sessionKey: string) => {
+      const history = await tauriChat.loadHistory(path, sessionKey);
+      return history as FeedItem[];
+    },
+    [path],
+  );
+  const handleMissionSearchError = useCallback(() => {
+    addToast({
+      title: t("search.historyErrorTitle"),
+      description: t("search.historyErrorDescription"),
+      variant: "error",
+    });
+  }, [addToast, t]);
+  const missionSearch = useMissionSearch({
+    items,
+    query: missionSearchQuery,
+    loadHistory,
+    onHistoryLoadError: handleMissionSearchError,
+  });
+
   useEffect(() => {
     if (!rawItems) return;
+    if (missionSearch.hasQuery) return;
     if (rawItems.length > 0) {
       if (emptyAutoOpenKeyRef.current === path) emptyAutoOpenKeyRef.current = null;
       return;
@@ -267,6 +296,7 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
   }, [
     agentModes,
     missionPanelOpen,
+    missionSearch.hasQuery,
     newPanelOpenerReady,
     path,
     rawItems,
@@ -280,14 +310,6 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
       setBoardActions([]);
     };
   }, [setOnStartMission, setBoardActions]);
-
-  const loadHistory = useCallback(
-    async (sessionKey: string) => {
-      const history = await tauriChat.loadHistory(path, sessionKey);
-      return history as FeedItem[];
-    },
-    [path],
-  );
 
   const handleDelete = useCallback(
     async (item: KanbanItem) => {
@@ -516,68 +538,106 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
     [handleRunInTerminal, t],
   );
 
+  const emptyBoard = (
+    <MissionBoardEmptyState
+      isSearch={missionSearch.hasQuery}
+      isSearchingText={missionSearch.isSearchingText}
+      labels={{
+        emptyTitle: t("empty.title"),
+        emptyDescription: t("empty.description"),
+        newMission: t("empty.newMission"),
+        searchEmptyTitle: t("search.emptyTitle"),
+        searchEmptyDescription: t("search.emptyDescription"),
+        searchSearchingTitle: t("search.searchingTitle"),
+        searchSearchingDescription: t("search.searchingDescription"),
+        clearSearch: t("search.clearCta"),
+      }}
+      onNewMission={() => {
+        if (agentModes?.length) setPendingAgentMode(agentModes[0].id);
+        openerRef.current?.();
+      }}
+      onClearSearch={() => setMissionSearchQuery("")}
+    />
+  );
+
   return (
     <div className="flex flex-col h-full">
-      <AIBoard
-        items={items}
-        columns={boardColumns}
-        selectedId={selectedId}
-        onSelect={setSelectedId}
-        panelContainer={panelContainer}
-        feedItems={feedItems}
-        isLoading={effectiveLoading}
-        sessionKeyFor={sessionKeyFor}
-        onDelete={handleDelete}
-        onApprove={handleApprove}
-        onRename={(item, newTitle) => {
-          tauriActivity.update(path, item.id, { title: newTitle }).catch(console.error);
-        }}
-        onCreateConversation={handleCreateConversation}
-        onSendMessage={handleSendMessage}
-        queuedMessages={queuedMessages}
-        onRemoveQueuedMessage={(_, id) => messageQueue.removeQueuedMessage(id)}
-        queuedLabels={queuedLabels}
-        onLoadHistory={loadHistory}
-        onHistoryLoaded={handleHistoryLoaded}
-        onNewPanelOpenerReady={handleOpenerReady}
-        onPanelOpenChange={setMissionPanelOpen}
-        onStopSession={handleStopSession}
-        drafts={boardDrafts}
-        onDraftChange={handleDraftChange}
-        onNotice={handleNotice}
-        onOpenLink={handleOpenLink}
-        actions={agentModes ? cardActions : undefined}
-        panelActions={panelActions}
-        cardAvatar={<HoustonHelmet color={resolveAgentColor(agent.color)} size={14} />}
-        thinkingIndicator={<HoustonThinkingIndicator />}
-        panelAgentName={agent.name}
-        panelAvatar={
-          <PanelAvatar
-            color={agent.color}
-            isRunning={(rawItems ?? []).some((a) => a.id === selectedId && a.status === "running")}
-          />
-        }
-        cardLabels={cardLabels}
-        // Per-agent panel features (skill cards, selected Action, model
-        // selector, Actions button, tool/link renderers) all come
-        // from the shared `useAgentChatPanel` hook so Mission Control
-        // and the per-agent BoardTab share one implementation.
-        chatEmptyState={panel.chatEmptyState}
-        composerHeader={panel.composerHeader}
-        canSendEmpty={panel.canSendEmpty}
-        onComposerSubmit={handleComposerSubmit}
-        footer={panel.footer}
-        renderUserMessage={panel.renderUserMessage}
-        renderSystemMessage={panel.renderSystemMessage}
-        mapFeedItems={panel.mapFeedItems}
-        afterMessages={panel.afterMessages}
-        isSpecialTool={panel.isSpecialTool}
-        renderToolResult={panel.renderToolResult}
-        processLabels={panel.processLabels}
-        getThinkingMessage={panel.getThinkingMessage}
-        renderTurnSummary={panel.renderTurnSummary}
-        renderLink={panel.renderLink}
-      />
+      <div className="shrink-0 px-3 pt-3">
+        <MissionSearchInput
+          value={missionSearchQuery}
+          isSearchingText={missionSearch.isSearchingText}
+          labels={{
+            placeholder: t("search.placeholder"),
+            clear: t("search.clear"),
+            searchingText: t("search.searchingText"),
+          }}
+          className="relative max-w-sm"
+          onChange={setMissionSearchQuery}
+        />
+      </div>
+      <div className="flex-1 min-h-0">
+        <AIBoard
+          items={missionSearch.items}
+          columns={boardColumns}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          panelContainer={panelContainer}
+          feedItems={feedItems}
+          isLoading={effectiveLoading}
+          sessionKeyFor={sessionKeyFor}
+          onDelete={handleDelete}
+          onApprove={handleApprove}
+          onRename={(item, newTitle) => {
+            tauriActivity.update(path, item.id, { title: newTitle }).catch(console.error);
+          }}
+          onCreateConversation={handleCreateConversation}
+          onSendMessage={handleSendMessage}
+          queuedMessages={queuedMessages}
+          onRemoveQueuedMessage={(_, id) => messageQueue.removeQueuedMessage(id)}
+          queuedLabels={queuedLabels}
+          onLoadHistory={loadHistory}
+          onHistoryLoaded={handleHistoryLoaded}
+          onNewPanelOpenerReady={handleOpenerReady}
+          emptyState={emptyBoard}
+          onPanelOpenChange={setMissionPanelOpen}
+          onStopSession={handleStopSession}
+          drafts={boardDrafts}
+          onDraftChange={handleDraftChange}
+          onNotice={handleNotice}
+          onOpenLink={handleOpenLink}
+          actions={agentModes ? cardActions : undefined}
+          panelActions={panelActions}
+          cardAvatar={<HoustonHelmet color={resolveAgentColor(agent.color)} size={14} />}
+          thinkingIndicator={<HoustonThinkingIndicator />}
+          panelAgentName={agent.name}
+          panelAvatar={
+            <PanelAvatar
+              color={agent.color}
+              isRunning={(rawItems ?? []).some((a) => a.id === selectedId && a.status === "running")}
+            />
+          }
+          cardLabels={cardLabels}
+          // Per-agent panel features (skill cards, selected Action, model
+          // selector, Actions button, tool/link renderers) all come
+          // from the shared `useAgentChatPanel` hook so Mission Control
+          // and the per-agent BoardTab share one implementation.
+          chatEmptyState={panel.chatEmptyState}
+          composerHeader={panel.composerHeader}
+          canSendEmpty={panel.canSendEmpty}
+          onComposerSubmit={handleComposerSubmit}
+          footer={panel.footer}
+          renderUserMessage={panel.renderUserMessage}
+          renderSystemMessage={panel.renderSystemMessage}
+          mapFeedItems={panel.mapFeedItems}
+          afterMessages={panel.afterMessages}
+          isSpecialTool={panel.isSpecialTool}
+          renderToolResult={panel.renderToolResult}
+          processLabels={panel.processLabels}
+          getThinkingMessage={panel.getThinkingMessage}
+          renderTurnSummary={panel.renderTurnSummary}
+          renderLink={panel.renderLink}
+        />
+      </div>
       {panel.pickerDialog}
     </div>
   );

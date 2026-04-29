@@ -10,6 +10,36 @@
     "addSkill": "Añadir habilidad",
     "descriptionShort": "Procedimientos reutilizables que tu agente puede usar."
   },
+  "addDialog": {
+    "title": "Añadir habilidades",
+    "description": "Instala procedimientos reutilizables para tu agente.",
+    "storeTab": "Skills.sh",
+    "repoTab": "GitHub",
+    "store": {
+      "searchPlaceholder": "Buscar habilidades...",
+      "noResults": "No se encontraron habilidades para \"{{query}}\"",
+      "minQuery": "Escribe al menos 2 caracteres para buscar",
+      "searchUnavailable": "La búsqueda de habilidades está ocupada. Espera un momento e inténtalo de nuevo.",
+      "typeToSearch": "Escribe para buscar habilidades",
+      "installCount_one": "{{formatted}} instalación",
+      "installCount_other": "{{formatted}} instalaciones",
+      "installSkill": "Instalar {{name}}",
+      "installedSkill": "{{name}} instalada"
+    },
+    "repo": {
+      "sourcePlaceholder": "owner/repo",
+      "findSkills": "Buscar habilidades",
+      "installSelected": "Instalar {{count}}",
+      "skillsFound_one": "1 habilidad encontrada",
+      "skillsFound_other": "{{count}} habilidades encontradas",
+      "selectAll": "Seleccionar todo",
+      "deselectAll": "Deseleccionar todo",
+      "inputHint": "Ingresa un repositorio público de GitHub en formato owner/repo",
+      "installedSummary_one": "Se instaló 1 habilidad: {{names}}",
+      "installedSummary_other": "Se instalaron {{count}} habilidades: {{names}}",
+      "installAnotherRepo": "Instalar desde otro repositorio"
+    }
+  },
   "detail": {
     "notFound": "Habilidad no encontrada",
     "backAria": "Volver a habilidades",

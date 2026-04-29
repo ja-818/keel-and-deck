@@ -114,6 +114,8 @@ impl From<SkillError> for CoreError {
                 CoreError::BadRequest("patch target not found".into())
             }
             SkillError::Io(s) => CoreError::Internal(s),
+            SkillError::RateLimited(s) => CoreError::Unavailable(s),
+            SkillError::Unavailable(s) => CoreError::Unavailable(s),
         }
     }
 }
