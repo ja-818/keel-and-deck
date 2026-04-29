@@ -12,90 +12,22 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Activity } from "@houston-ai/engine-client";
 import { topics } from "@houston-ai/engine-client";
 import { getEngine, getWs, useEngineReady } from "../lib/engine";
+import {
+  dropPending,
+  pendingForSession,
+  pushPending,
+  reconcilePending,
+  snapshot,
+  subscribe,
+} from "./chat-optimistic";
+export { autoTitleFromText, useCreateMission } from "./use-create-mission";
 
 interface ChatEntry {
   feed_type: string;
   data: unknown;
 }
-
-// ---------------------------------------------------------------------
-// Optimistic-overlay store
-// ---------------------------------------------------------------------
-
-interface OptimisticMsg {
-  id: string;
-  sessionKey: string;
-  text: string;
-  sentAt: number;
-}
-
-const pending = new Map<string, OptimisticMsg[]>();
-const listeners = new Set<() => void>();
-let version = 0;
-
-function subscribe(fn: () => void): () => void {
-  listeners.add(fn);
-  return () => listeners.delete(fn);
-}
-
-function snapshot(): number {
-  return version;
-}
-
-function notify(): void {
-  version++;
-  listeners.forEach((l) => l());
-}
-
-function pushPending(sessionKey: string, text: string): string {
-  const id =
-    globalThis.crypto && "randomUUID" in globalThis.crypto
-      ? globalThis.crypto.randomUUID()
-      : `${Date.now()}-${Math.random()}`;
-  const arr = pending.get(sessionKey) ?? [];
-  arr.push({ id, sessionKey, text, sentAt: Date.now() });
-  pending.set(sessionKey, arr);
-  notify();
-  return id;
-}
-
-function dropPending(sessionKey: string, id: string): void {
-  const arr = pending.get(sessionKey);
-  if (!arr) return;
-  const next = arr.filter((m) => m.id !== id);
-  if (next.length === 0) pending.delete(sessionKey);
-  else pending.set(sessionKey, next);
-  notify();
-}
-
-function reconcilePending(sessionKey: string, serverItems: ChatEntry[]): void {
-  const arr = pending.get(sessionKey);
-  if (!arr?.length) return;
-  // Drop any optimistic entry whose text appears as a user_message in
-  // the server history (same text, still pending for too long also
-  // drops — 30 s cap).
-  const texts = new Set(
-    serverItems
-      .filter((e) => e.feed_type === "user_message")
-      .map((e) => String(e.data)),
-  );
-  const now = Date.now();
-  const surviving = arr.filter(
-    (m) => !texts.has(m.text) && now - m.sentAt < 30_000,
-  );
-  if (surviving.length !== arr.length) {
-    if (surviving.length === 0) pending.delete(sessionKey);
-    else pending.set(sessionKey, surviving);
-    notify();
-  }
-}
-
-// ---------------------------------------------------------------------
-// Hooks
-// ---------------------------------------------------------------------
 
 export function useChatHistory(
   agentPath: string | null,
@@ -133,10 +65,10 @@ export function useChatHistory(
     reconcilePending(sessionKey, query.data);
   }, [sessionKey, query.data]);
 
-  const pendingForSession = sessionKey ? pending.get(sessionKey) ?? [] : [];
+  const pendingMessages = sessionKey ? pendingForSession(sessionKey) : [];
   const merged: ChatEntry[] = [
     ...(query.data ?? []),
-    ...pendingForSession.map((m) => ({
+    ...pendingMessages.map((m) => ({
       feed_type: "user_message" as const,
       data: m.text,
     })),
@@ -166,53 +98,6 @@ export function useSendMessage(agentPath: string, sessionKey: string) {
       // streaming responses. `reconcilePending` inside useChatHistory
       // drops the overlay once the server copy lands.
       qc.invalidateQueries({ queryKey: ["chat", sessionKey] });
-    },
-  });
-}
-
-const TITLE_MAX = 40;
-
-/** Derive a short activity title from the user's first message —
- *  mirrors desktop's `createMission` autoTitle so the row on the
- *  board is informative without a manual rename. */
-export function autoTitleFromText(text: string): string {
-  const trimmed = text.trim();
-  if (trimmed.length === 0) return "New mission";
-  if (trimmed.length <= TITLE_MAX) return trimmed;
-  const slice = trimmed.slice(0, TITLE_MAX);
-  const lastSpace = slice.lastIndexOf(" ");
-  const base = lastSpace > 0 ? slice.slice(0, lastSpace) : slice;
-  return `${base.trimEnd()}...`;
-}
-
-export interface CreateMissionResult {
-  activity: Activity;
-  sessionKey: string;
-}
-
-/** Draft-mode "first send": create the activity + start the session in
- *  one shot, seeding an optimistic message under the NEW session key
- *  so the destination chat view has something to render immediately on
- *  mount. Caller is responsible for navigating to the new session key
- *  after `mutateAsync` resolves. */
-export function useCreateMission(agentPath: string) {
-  return useMutation({
-    mutationFn: async (prompt: string): Promise<CreateMissionResult> => {
-      const trimmed = prompt.trim();
-      const activity = await getEngine().createActivity(agentPath, {
-        title: autoTitleFromText(trimmed),
-        description: trimmed,
-      });
-      const sessionKey = `activity-${activity.id}`;
-      // Seed the optimistic overlay BEFORE startSession so the
-      // destination view sees the user's message the instant it
-      // mounts, even before the engine's FeedItem echo arrives.
-      pushPending(sessionKey, trimmed);
-      await getEngine().startSession(agentPath, {
-        sessionKey,
-        prompt: trimmed,
-      });
-      return { activity, sessionKey };
     },
   });
 }

@@ -91,8 +91,8 @@ function withCors(res: Response): Response {
 }
 
 /**
- * `POST /pair/:code` — mobile PWA redeems a 6-digit code minted by
- * the desktop. Code is `<tunnelIdBase64Url>-<userCode>`; the tunnelId
+ * `POST /pair/:code` — mobile PWA redeems a reusable access secret from
+ * the desktop QR. Code is `<tunnelIdBase64Url>-<accessSecret>`; the tunnelId
  * portion routes us to the correct Durable Object. We split on the
  * LAST dash because base64url can itself contain dashes.
  */
@@ -100,8 +100,8 @@ async function handlePairCode(request: Request, env: Env, code: string): Promise
   const dash = code.lastIndexOf("-");
   if (dash < 0) return malformedCode();
   const tunnelId = code.slice(0, dash);
-  const userCode = code.slice(dash + 1);
-  if (!tunnelId || !userCode) return malformedCode();
+  const accessSecret = code.slice(dash + 1);
+  if (!tunnelId || !accessSecret) return malformedCode();
 
   const id = env.TUNNEL.idFromName(tunnelId);
   const stub = env.TUNNEL.get(id);
@@ -110,7 +110,7 @@ async function handlePairCode(request: Request, env: Env, code: string): Promise
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      code: userCode,
+      code: accessSecret,
       deviceLabel: (body as { deviceLabel?: string })?.deviceLabel ?? "iPhone",
     }),
   });

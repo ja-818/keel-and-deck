@@ -23,14 +23,14 @@ The Mac never opens an inbound port. The engine's `houston-tunnel` client dials 
 
 Override the relay URL for local development via `HOUSTON_TUNNEL_URL` (e.g. pointing at `wrangler dev`).
 
-## Pairing (one-time per device)
+## Phone Access (Reusable QR)
 
-1. User opens desktop → Settings → Paired Devices. Desktop `POST /v1/tunnel/pairing` mints a 6-digit `userCode` and returns `code = "<tunnelId>-<userCode>"` + a QR of `https://tunnel.gethouston.ai/pair/<code>`.
+1. User opens desktop → Connect phone. Desktop `POST /v1/tunnel/pairing` returns the current durable code `"<tunnelId>-<accessSecret>"` + a QR of `https://tunnel.gethouston.ai/pair/<code>`.
 2. User scans the QR on their phone. Safari opens the URL; the relay's `GET /pair/:code` 302s to `/?code=<code>` on the same origin so the bundled SPA's `PairScreen` picks the code up.
-3. PWA `POST tunnel.gethouston.ai/pair/<code>` → relay forwards as a `pair_request` frame over the tunnel WS → desktop engine's `PairStore::redeem` mints a 48-char bearer, stores its SHA-256 hash in `engine_tokens`, returns plaintext.
+3. PWA `POST tunnel.gethouston.ai/pair/<code>` → relay forwards the access secret as a `pair_request` frame over the tunnel WS → desktop engine's `MobileAccessStore::redeem` verifies it, mints a 48-char bearer, stores its SHA-256 hash in `engine_tokens`, returns plaintext.
 4. PWA persists `{baseUrl, engineToken, deviceLabel, tunnelId}` in `localStorage`. All subsequent calls use `Authorization: Bearer <engineToken>` against `https://tunnel.gethouston.ai/e/<tunnelId>/v1/...`.
 
-Pair codes are **idempotent** within their TTL: mobile can safely retry on transient errors and get the same token back. Retry-triggering codes (`network`, `desktop_offline`, `pair_timeout`) are retried automatically with exponential backoff; fatal codes (`code_unknown`, `code_consumed`, `code_malformed`) bail immediately.
+The QR does not expire. It is a high-entropy local secret stored in `phone_access` and remains stable until the user chooses Settings → Phone access → Disconnect all phones. Reset rotates the QR secret and revokes every active device token. Mobile can safely retry transient codes (`network`, `desktop_offline`, `pair_timeout`) with exponential backoff; fatal codes (`code_unknown`, `code_malformed`) bail immediately and ask the user to scan the current QR.
 
 ## Runtime
 
@@ -52,12 +52,14 @@ Together these guarantee the user never has to manually refresh after the agent 
 
 - Desktop sends a `Ping` frame every 30s; relay DO sends one every 20s. Either side declares the link dead if no frame of any kind arrives in 75-90s and force-closes, triggering a reconnect.
 - Desktop reconnects with exponential backoff up to 60s.
-- If the relay rejects the tunnel token (401/403 on register) or fails 6 times in a row, `houston-tunnel` invalidates `tunnel.json` and re-allocates automatically — no user action needed.
+- Normal network failures, laptop sleep, shutdown, app restart, and relay timeouts keep the same `tunnelId`. Existing phones must reconnect without re-pairing.
+- If the relay rejects the tunnel token (401/403 on register), `houston-tunnel` invalidates `tunnel.json` and re-allocates automatically. This is treated as credential recovery, not normal reconnect behavior.
 
 ## Security model
 
 - Every mobile HTTP request carries a device-scoped bearer, NOT the engine's bootstrap token. Engine auth middleware SHA-256s the presented token and looks it up in `engine_tokens` where `revoked_at IS NULL`.
-- Revoking a device in Settings → Paired Devices marks `revoked_at = now()`; any future request from that device 401s.
+- Resetting phone access in Settings rotates the QR secret and marks every live `engine_tokens` row `revoked_at = now()`; any future request from those phones 401s until they scan the new QR.
+- The QR access secret is only used to mint device-scoped bearers. Normal mobile API calls never send the QR secret.
 - The desktop's `tunnel_token` is an HMAC(tunnelId, TUNNEL_SHARED_SECRET). The shared secret lives only in the relay's Worker secrets storage. Engine never holds any credential a user couldn't mint themselves.
 - Relay fails all in-flight mobile requests with 503 the moment the desktop's WS drops; mobile surfaces an "unreachable" banner and keeps serving cached reads.
 
@@ -66,7 +68,7 @@ Together these guarantee the user never has to manually refresh after the agent 
 | Purpose | Path |
 |---|---|
 | Tunnel client (outbound to relay) | `engine/houston-tunnel/` |
-| Pair code store + HTTP routes | `engine/houston-engine-server/src/{pair_store.rs,routes/tunnel.rs}` |
+| Phone access store + HTTP routes | `engine/houston-engine-server/src/{mobile_access.rs,routes/tunnel.rs}` |
 | Relay Worker + Durable Object | `houston-relay/` |
 | PWA source (React + Vite) | `mobile/` |
 | Engine client library (shared with desktop) | `ui/engine-client/` |

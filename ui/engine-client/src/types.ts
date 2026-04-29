@@ -410,7 +410,7 @@ export interface TunnelStatus {
   connected: boolean;
   tunnelId: string | null;
   publicHost: string | null;
-  lastPingMs: number | null;
+  lastActivityMs: number | null;
 }
 
 export interface PairingCode {
@@ -418,15 +418,8 @@ export interface PairingCode {
    * prefixed with `tunnelId-`. Do not split on the dash before sending.
    */
   code: string;
-  userCode: string;
-  expiresAt: string;
-}
-
-export interface PairedDevice {
-  hash: string;
-  label: string;
-  createdAt: string;
-  lastSeenAt: string | null;
+  accessSecret: string;
+  rotatedAt: string;
 }
 
 // ---------- Push (mobile notification registration) ----------

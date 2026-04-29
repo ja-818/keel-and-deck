@@ -66,6 +66,21 @@ impl Database {
             .await
             .ok();
 
+        // phone_access — stable high-entropy secret encoded into the QR
+        // shown by the desktop app. Rotating it revokes every existing
+        // device token and makes old QR codes unusable.
+        self.conn()
+            .execute_batch(
+                "CREATE TABLE IF NOT EXISTS phone_access (
+                    id INTEGER PRIMARY KEY CHECK (id = 1),
+                    access_secret TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    rotated_at TEXT NOT NULL
+                );",
+            )
+            .await
+            .ok();
+
         Ok(())
     }
 }

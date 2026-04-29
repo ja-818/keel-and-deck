@@ -7,7 +7,7 @@
 //!    public_host}` cached in `<home_dir>/tunnel.json`.
 //! 2. [`TunnelClient::new`] with the cached identity + a
 //!    [`PairingService`] implementation (typically a struct backed by
-//!    `houston_db::Database` + the pairing-codes RAM store).
+//!    `houston_db::Database` + the durable phone-access secret).
 //! 3. `tokio::spawn(client.run())` — runs forever with reconnect.
 //!
 //! The client proxies mobile traffic by calling back into the engine
@@ -19,9 +19,11 @@ pub mod frame;
 pub mod identity;
 pub mod pairing;
 pub mod proxy;
+pub mod runtime;
 
 pub use connection::{TunnelClient, TunnelConfig};
 pub use frame::TunnelFrame;
 pub use identity::{ensure, invalidate, load, save, TunnelIdentity};
 pub use pairing::{PairError, PairOutcome, PairingService};
 pub use proxy::EngineEndpoint;
+pub use runtime::{TunnelRuntimeSnapshot, TunnelRuntimeState};

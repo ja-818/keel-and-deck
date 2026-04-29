@@ -1,15 +1,14 @@
 //! Shared server state — cheap to clone via `Arc`.
 
 use crate::config::ServerConfig;
-use crate::pair_store::PairStore;
+use crate::mobile_access::MobileAccessStore;
 use anyhow::{Context, Result};
 use houston_db::Database;
 use houston_engine_core::routines::scheduler::RoutineSchedulerState;
 use houston_engine_core::{paths::EnginePaths, EngineState};
 use houston_file_watcher::WatcherState;
-use houston_tunnel::TunnelIdentity;
+use houston_tunnel::{TunnelIdentity, TunnelRuntimeState};
 use houston_ui_events::BroadcastEventSink;
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 /// Server state shared across request handlers.
@@ -24,16 +23,12 @@ pub struct ServerState {
     pub routine_scheduler: RoutineSchedulerState,
     /// Agent file watcher.
     pub watcher: WatcherState,
-    /// Tunnel identity. `None` only while `/allocate` hasn't succeeded yet
-    /// (first boot without network); pairing endpoints return 503 in that
-    /// window. Once allocated, identity is cached in `tunnel.json` and
-    /// persists across restarts.
-    pub tunnel_identity: Option<TunnelIdentity>,
-    /// Pairing-code store. Always present — `mint_pairing` 503s instead
-    /// when `tunnel_identity` is still `None`.
-    pub pair_store: PairStore,
-    /// Flipped to `true` while the tunnel client is alive + dialed.
-    pub tunnel_running: Arc<AtomicBool>,
+    /// Runtime tunnel state. `None` only while `/allocate` hasn't succeeded
+    /// yet (first boot without network). Once allocated, identity is cached in
+    /// `tunnel.json` and persists across restarts.
+    pub tunnel_runtime: Option<TunnelRuntimeState>,
+    /// Stable phone-access secret + device-token minting.
+    pub mobile_access: MobileAccessStore,
 }
 
 impl ServerState {
@@ -76,7 +71,8 @@ impl ServerState {
                 config.app_onboarding_prompt.clone(),
             );
 
-        let pair_store = PairStore::new(db);
+        let mobile_access = MobileAccessStore::new(db);
+        let tunnel_runtime = tunnel_identity.map(TunnelRuntimeState::new);
 
         Self {
             config,
@@ -84,9 +80,8 @@ impl ServerState {
             engine,
             routine_scheduler: RoutineSchedulerState::default(),
             watcher: WatcherState::default(),
-            tunnel_identity,
-            pair_store,
-            tunnel_running: Arc::new(AtomicBool::new(false)),
+            tunnel_runtime,
+            mobile_access,
         }
     }
 }

@@ -8,6 +8,15 @@
     "title": "AI provider",
     "description": "Houston uses <emph>your own</emph> subscription. We never see your credentials."
   },
+  "phoneAccess": {
+    "title": "Phone access",
+    "description": "Your QR stays the same so your phone can reconnect whenever this Mac is on and Houston is open.",
+    "resetButton": "Disconnect all phones",
+    "confirmTitle": "Disconnect all phones?",
+    "confirmDescription": "This resets the QR and signs out every phone currently connected to this Mac. Scan the new QR to connect again.",
+    "confirmLabel": "Disconnect",
+    "resetToast": "Phone access reset"
+  },
   "timezone": {
     "title": "Timezone",
     "description": "Used when your routines fire, 9am means 9am in this zone.",

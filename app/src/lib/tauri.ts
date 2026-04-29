@@ -641,7 +641,6 @@ export const tauriWatcher = {
 import type {
   TunnelStatus as EngineTunnelStatus,
   PairingCode as EnginePairingCode,
-  PairedDevice as EnginePairedDevice,
 } from "@houston-ai/engine-client";
 
 export const tauriTunnel = {
@@ -649,10 +648,6 @@ export const tauriTunnel = {
     call<EngineTunnelStatus>("tunnel_status", () => getEngine().tunnelStatus()),
   mintPairingCode: () =>
     call<EnginePairingCode>("tunnel_mint_pairing", () => getEngine().mintPairingCode()),
-  listDevices: () =>
-    call<EnginePairedDevice[]>("tunnel_list_devices", () =>
-      getEngine().listPairedDevices(),
-    ),
-  revokeDevice: (hash: string) =>
-    call<void>("tunnel_revoke_device", () => getEngine().revokePairedDevice(hash)),
+  resetAccess: () =>
+    call<EnginePairingCode>("tunnel_reset_access", () => getEngine().resetPhoneAccess()),
 };

@@ -93,10 +93,9 @@ export interface CreateMissionResult {
 }
 
 /**
- * Create an activity under the given agent and fire off the Claude session.
- * The Claude session is fire-and-forget — errors are logged but do not
- * reject this promise, because the activity row already exists and the
- * caller has what it needs to render.
+ * Create an activity under the given agent and start its Claude session.
+ * If prompt preparation or session start fails, remove the just-created
+ * activity so the board never keeps a fake "running" mission.
  */
 export async function createMission(
   agent: CreateMissionAgent,
@@ -116,20 +115,25 @@ export async function createMission(
   const conversationId = item.id;
   const sessionKey = sessionKeyForActivity(conversationId);
 
-  const prompt = opts.buildPrompt
-    ? await opts.buildPrompt(conversationId)
-    : text;
+  try {
+    const prompt = opts.buildPrompt
+      ? await opts.buildPrompt(conversationId)
+      : text;
 
-  tauriChat
-    .send(agent.folderPath, prompt, sessionKey, {
+    await tauriChat.send(agent.folderPath, prompt, sessionKey, {
       mode: opts.promptFile,
       workingDirOverride: opts.worktreePath,
       providerOverride: opts.providerOverride,
       modelOverride: opts.modelOverride,
-    })
-    .catch((e) => {
-      logger.error(`[create-mission] tauriChat.send failed: ${e}`);
     });
+  } catch (e) {
+    try {
+      await tauriActivity.delete(agent.folderPath, conversationId);
+    } catch (cleanupErr) {
+      logger.error(`[create-mission] rollback failed: ${cleanupErr}`);
+    }
+    throw e;
+  }
 
   const conversation: Conversation = {
     id: conversationId,

@@ -39,9 +39,7 @@ async fn main() {
     });
 
     let cfg = ServerConfig::from_env();
-    let listener = TcpListener::bind(cfg.bind)
-        .await
-        .expect("bind failed");
+    let listener = TcpListener::bind(cfg.bind).await.expect("bind failed");
     let actual: SocketAddr = listener.local_addr().expect("local_addr");
 
     write_manifest(&cfg, actual.port());
@@ -49,7 +47,11 @@ async fn main() {
     // Emit the port on stdout so the desktop supervisor can parse it.
     // Must print BEFORE any potentially-slow work so the supervisor's
     // banner-wait timer doesn't race startup.
-    println!("HOUSTON_ENGINE_LISTENING port={} token={}", actual.port(), cfg.token);
+    println!(
+        "HOUSTON_ENGINE_LISTENING port={} token={}",
+        actual.port(),
+        cfg.token
+    );
     tracing::info!(
         "houston-engine {} (protocol v{}) listening on {}",
         ENGINE_VERSION,
@@ -61,26 +63,25 @@ async fn main() {
     // first boot via `POST {relay}/allocate`. Failure is non-fatal — the
     // engine keeps serving local traffic; mobile companion + push stay
     // dormant until the next boot succeeds.
-    let tunnel_identity =
-        match houston_tunnel::ensure(&cfg.home_dir, &cfg.tunnel_url).await {
-            Ok(identity) => {
-                tracing::info!(
-                    target: "houston_tunnel",
-                    tunnel_id = %identity.tunnel_id,
-                    host = %identity.public_host,
-                    "tunnel identity loaded"
-                );
-                Some(identity)
-            }
-            Err(e) => {
-                tracing::warn!(
-                    target: "houston_tunnel",
-                    error = %e,
-                    "tunnel allocation failed — running local-only, pairing disabled until next boot"
-                );
-                None
-            }
-        };
+    let tunnel_identity = match houston_tunnel::ensure(&cfg.home_dir, &cfg.tunnel_url).await {
+        Ok(identity) => {
+            tracing::info!(
+                target: "houston_tunnel",
+                tunnel_id = %identity.tunnel_id,
+                host = %identity.public_host,
+                "tunnel identity loaded"
+            );
+            Some(identity)
+        }
+        Err(e) => {
+            tracing::warn!(
+                target: "houston_tunnel",
+                error = %e,
+                "tunnel allocation failed — running local-only, pairing disabled until next boot"
+            );
+            None
+        }
+    };
 
     let state = ServerState::new(cfg, tunnel_identity)
         .await
@@ -145,17 +146,18 @@ fn spawn_cli_lifecycles(state: Arc<ServerState>) {
 }
 
 fn spawn_tunnel_if_allocated(state: Arc<ServerState>, engine_port: u16) {
-    let Some(identity) = state.tunnel_identity.clone() else { return };
+    let Some(runtime) = state.tunnel_runtime.clone() else {
+        return;
+    };
+    let identity = runtime.snapshot().identity;
     let cfg = TunnelConfig {
         home_dir: state.config.home_dir.clone(),
         tunnel_url: state.config.tunnel_url.clone(),
         identity,
         endpoint: EngineEndpoint::new(engine_port),
+        runtime,
     };
-    let client = TunnelClient::new(cfg, Arc::new(state.pair_store.clone()));
-    state
-        .tunnel_running
-        .store(true, std::sync::atomic::Ordering::Relaxed);
+    let client = TunnelClient::new(cfg, Arc::new(state.mobile_access.clone()));
     tokio::spawn(async move {
         client.run().await;
     });
@@ -163,8 +165,8 @@ fn spawn_tunnel_if_allocated(state: Arc<ServerState>, engine_port: u16) {
 
 fn init_tracing() {
     use tracing_subscriber::{fmt, EnvFilter};
-    let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info,houston=debug"));
+    let filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info,houston=debug"));
     fmt().with_env_filter(filter).with_target(false).init();
 }
 
