@@ -121,3 +121,8 @@ OpenAI provider status should prefer `codex login status` over shallow
 `~/.codex/auth.json` parsing. Keep the auth-file check only as fallback for old
 Codex versions or unrelated config-load failures, because config drift should
 not look like sign-out.
+
+Never mutate `~/.codex/config.toml` to make Codex read Houston agent
+instructions. Agent directories already expose `CLAUDE.md` through an
+`AGENTS.md` symlink, and global Codex config writes can land under the active
+TOML table and break Codex startup.

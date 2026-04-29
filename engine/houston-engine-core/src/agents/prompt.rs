@@ -227,6 +227,16 @@ mod tests {
         assert_eq!(fs::read_to_string(d.path().join("CLAUDE.md")).unwrap(), "first");
     }
 
+    #[cfg(unix)]
+    #[test]
+    fn seed_agent_exposes_claude_md_to_codex() {
+        let d = TempDir::new().unwrap();
+        seed_agent(d.path()).unwrap();
+
+        let agents_md = d.path().join("AGENTS.md");
+        assert_eq!(fs::read_link(agents_md).unwrap(), Path::new("CLAUDE.md"));
+    }
+
     #[test]
     fn build_system_prompt_assembles_known_sections() {
         let d = TempDir::new().unwrap();
