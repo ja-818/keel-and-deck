@@ -62,12 +62,15 @@ export function SidebarItemRow({
           onClick={() => onSelect(item.id)}
           onKeyDown={(e) => onKeyDown(e, item.id)}
           className={cn(
-            "flex-1 flex items-center gap-2 text-left px-3 py-1.5 text-[13px] truncate min-w-0",
+            "flex-1 flex items-center gap-2 text-left px-3 py-1.5 text-[13px] min-w-0",
             isActive ? "text-foreground" : "text-accent-foreground",
           )}
         >
           {item.icon}
-          <span className="truncate">{item.name}</span>
+          <span className="min-w-0 flex-1 truncate">{item.name}</span>
+          {item.trailing && (
+            <span className="ml-auto shrink-0">{item.trailing}</span>
+          )}
         </button>
       )}
 

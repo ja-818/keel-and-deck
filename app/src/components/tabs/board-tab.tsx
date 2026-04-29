@@ -21,32 +21,14 @@ import { queryKeys } from "../../lib/query-keys";
 import { analytics } from "../../lib/analytics";
 import type { TabProps } from "../../lib/types";
 import { useDetailPanelContainer } from "../shell/detail-panel-context";
-import { HoustonHelmet, HoustonThinkingIndicator } from "../shell/experience-card";
-import { resolveAgentColor } from "../../lib/agent-colors";
+import { HoustonThinkingIndicator } from "../shell/experience-card";
+import { AgentCardAvatar } from "../shell/agent-card-avatar";
+import { AgentPanelAvatar } from "../shell/agent-panel-avatar";
 
 // Stable empty reference so the feed store selector doesn't return a new
 // object every render when this agent has no feeds yet (which would otherwise
 // trigger "getSnapshot should be cached" / infinite loop in React).
 const EMPTY_FEED_BUCKET: Record<string, never> = Object.freeze({});
-
-function PanelAvatar({ color, isRunning }: { color?: string; isRunning: boolean }) {
-  const resolved = resolveAgentColor(color);
-  if (isRunning) {
-    return (
-      <span className="size-10 rounded-full flex items-center justify-center shrink-0 card-running-glow">
-        <HoustonHelmet color={resolved} size={24} />
-      </span>
-    );
-  }
-  return (
-    <span
-      className="size-10 rounded-full flex items-center justify-center shrink-0 bg-background border-2"
-      style={{ borderColor: resolved }}
-    >
-      <HoustonHelmet color={resolved} size={24} />
-    </span>
-  );
-}
 
 export default function BoardTab({ agent, agentDef }: TabProps) {
   const { t } = useTranslation(["board", "dashboard"]);
@@ -472,13 +454,13 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
         onOpenLink={handleOpenLink}
         actions={agentModes ? cardActions : undefined}
         panelActions={panelActions}
-        cardAvatar={<HoustonHelmet color={resolveAgentColor(agent.color)} size={14} />}
+        cardAvatar={<AgentCardAvatar color={agent.color} />}
         thinkingIndicator={<HoustonThinkingIndicator />}
         panelAgentName={agent.name}
         panelAvatar={
-          <PanelAvatar
+          <AgentPanelAvatar
             color={agent.color}
-            isRunning={(rawItems ?? []).some((a) => a.id === selectedId && a.status === "running")}
+            running={(rawItems ?? []).some((a) => a.id === selectedId && a.status === "running")}
           />
         }
         cardLabels={cardLabels}

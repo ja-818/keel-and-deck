@@ -10,6 +10,7 @@ import { AlertTriangle, Plus, RefreshCw } from "lucide-react";
 import {
   Button,
   HoustonAvatar,
+  resolveAgentColor,
   Select,
   SelectContent,
   SelectItem,
@@ -225,7 +226,7 @@ function ConversationRow({
         onClick={onSelect}
       >
         <HoustonAvatar
-          color={agent?.color}
+          color={resolveAgentColor(agent?.color)}
           diameter={40}
           running={convo.status === "running"}
         />

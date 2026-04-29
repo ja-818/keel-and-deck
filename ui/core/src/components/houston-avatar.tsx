@@ -13,6 +13,7 @@
  * kanban card / detail panel variants. If your app doesn't import the
  * core globals, the avatar still renders — the halo is just inert.
  */
+import type { CSSProperties } from "react";
 import { cn } from "../utils";
 
 const HOUSTON_GRAY = "#9b9b9b";
@@ -74,6 +75,7 @@ export function HoustonAvatar({
   className,
 }: HoustonAvatarProps) {
   const bg = color ?? HOUSTON_GRAY;
+  const innerDiameter = running ? Math.max(diameter - 4, 1) : diameter;
   const inner = (
     <div
       className={cn(
@@ -81,21 +83,25 @@ export function HoustonAvatar({
         className,
       )}
       style={{
-        width: diameter,
-        height: diameter,
-        backgroundColor: bg + "1f", // ~12% alpha tint of the agent color
+        width: innerDiameter,
+        height: innerDiameter,
+        backgroundColor: `color-mix(in srgb, var(--color-secondary, #f5f5f5) 82%, ${bg} 18%)`,
       }}
     >
-      <HoustonHelmet color={bg} size={Math.round(diameter * 0.65)} />
+      <HoustonHelmet color={bg} size={Math.round(innerDiameter * 0.65)} />
     </div>
   );
   if (!running) return inner;
   return (
     <span
       className="shrink-0 rounded-full flex items-center justify-center card-running-glow"
-      style={{ width: diameter, height: diameter }}
+      style={{
+        width: diameter,
+        height: diameter,
+        "--glow-bg": "var(--color-background, #ffffff)",
+      } as CSSProperties}
     >
-      <HoustonHelmet color={bg} size={Math.round(diameter * 0.65)} />
+      {inner}
     </span>
   );
 }

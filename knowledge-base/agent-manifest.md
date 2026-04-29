@@ -136,11 +136,15 @@ Engine route: `POST /v1/store/workspaces/install-from-github`. Rust impl: `houst
 | > Connections               |  workspace-wide integrations
 |-----------------------------|
 | Your AI Agents              |
-|   > Research Agent          |  sorted by lastOpenedAt
+|   > Research Agent    [2]   |  sorted by lastOpenedAt
 |   > Project Manager         |
 |   + New Agent               |  pick agent definition
 +-----------------------------+
 ```
+
+Agent rows show a count chip for `needs_you` activity items. If any
+activity item is `running`, the row avatar uses the same comet glow as
+running board cards.
 
 ## Workspace
 - Storage: `~/.houston/workspaces/workspaces.json` (index) + one dir per workspace `~/.houston/workspaces/{Name}/`. `HOUSTON_DOCS` env var overrides the root.

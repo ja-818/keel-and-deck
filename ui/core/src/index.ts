@@ -1,5 +1,6 @@
 export * from "./types"
 export * from "./utils"
+export * from "./agent-colors"
 export * from "./hooks/use-houston-event"
 export * from "./hooks/use-mobile"
 export * from "./hooks/use-session-events"

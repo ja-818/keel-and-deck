@@ -7,11 +7,12 @@ import { useWorkspaceStore } from "../../stores/workspaces";
 import { useAgentStore } from "../../stores/agents";
 import { useAgentCatalogStore } from "../../stores/agent-catalog";
 import { useUIStore } from "../../stores/ui";
-import { AgentMiniAvatar } from "./experience-card";
 import { UpdateChecker } from "./update-checker";
 import { UserMenu } from "./user-menu";
 import { PairDeviceDialog } from "./pair-device-dialog";
 import { CreateWorkspaceDialog } from "../../App";
+import { AgentSidebarIcon, NeedsYouChip } from "./agent-sidebar-status";
+import { useAgentActivitySummaries } from "./use-agent-activity-summaries";
 
 export function Sidebar({ children }: { children: ReactNode }) {
   const { t } = useTranslation(["shell", "common"]);
@@ -39,12 +40,38 @@ export function Sidebar({ children }: { children: ReactNode }) {
     const bTime = b.lastOpenedAt ?? b.createdAt;
     return bTime.localeCompare(aTime);
   });
+  const activitySummaries = useAgentActivitySummaries(agents);
 
-  const items = sorted.map((a) => ({
-    id: a.id,
-    name: a.name,
-    icon: <AgentMiniAvatar color={a.color} />,
-  }));
+  const items = sorted.map((agent) => {
+    const summary = activitySummaries[agent.id] ?? {
+      needsYouCount: 0,
+      runningCount: 0,
+    };
+    const hasRunning = summary.runningCount > 0;
+    return {
+      id: agent.id,
+      name: agent.name,
+      icon: (
+        <AgentSidebarIcon
+          color={agent.color}
+          running={hasRunning}
+          runningLabel={t("shell:sidebar.runningCount", {
+            count: summary.runningCount,
+          })}
+        />
+      ),
+      trailing: (
+        summary.needsYouCount > 0 ? (
+          <NeedsYouChip
+            count={summary.needsYouCount}
+            label={t("shell:sidebar.needsYouCount", {
+              count: summary.needsYouCount,
+            })}
+          />
+        ) : undefined
+      ),
+    };
+  });
   const isTopLevel = viewMode === "dashboard" || viewMode === "connections" || viewMode === "settings";
 
   const handleWorkspaceSwitch = async (wsId: string) => {

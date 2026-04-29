@@ -6,8 +6,7 @@ import { useAllConversations } from "../hooks/queries";
 import { tauriActivity, tauriChat, tauriAttachments, withAttachmentPaths } from "../lib/tauri";
 import type { Agent } from "../lib/types";
 import { createElement } from "react";
-import { HoustonHelmet } from "./shell/agent-avatar";
-import { resolveAgentColor } from "../lib/agent-colors";
+import { AgentCardAvatar } from "./shell/agent-card-avatar";
 
 export function useMissionControl(agents: Agent[]) {
   // Mission control is cross-agent. Flatten the nested feed store into a
@@ -56,7 +55,7 @@ export function useMissionControl(agents: Agent[]) {
           title: c.title,
           description: c.description,
           group: c.agent_name,
-          icon: createElement(HoustonHelmet, { color: resolveAgentColor(agentColorMap[c.agent_path]), size: 14 }),
+          icon: createElement(AgentCardAvatar, { color: agentColorMap[c.agent_path] }),
           status: c.status!,
           updatedAt: c.updated_at ?? new Date().toISOString(),
           metadata: { agentPath: c.agent_path },

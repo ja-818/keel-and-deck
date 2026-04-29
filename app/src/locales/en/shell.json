@@ -5,7 +5,11 @@
     "settings": "Settings",
     "yourAgents": "Your Agents",
     "selectWorkspace": "Select workspace",
-    "connectPhone": "Connect phone"
+    "connectPhone": "Connect phone",
+    "needsYouCount_one": "{{count}} issue needs you",
+    "needsYouCount_other": "{{count}} issues need you",
+    "runningCount_one": "{{count}} issue running",
+    "runningCount_other": "{{count}} issues running"
   },
   "tabActions": {
     "newMission": "New mission"
