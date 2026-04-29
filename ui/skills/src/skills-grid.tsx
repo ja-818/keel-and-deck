@@ -19,6 +19,10 @@ import { Plus } from "lucide-react"
 import type { Skill, CommunitySkill, RepoSkill } from "./types"
 import { SkillRow } from "./skill-row"
 import { AddSkillDialog } from "./add-skill-dialog"
+import {
+  DEFAULT_SKILLS_GRID_LABELS,
+  type SkillsGridLabels,
+} from "./skills-grid-labels"
 
 /**
  * Optional translated labels. Defaults are English so existing callers
@@ -26,32 +30,6 @@ import { AddSkillDialog } from "./add-skill-dialog"
  * `t()` results from their own i18n layer — `ui/` stays i18n-agnostic
  * per the library-boundary rule.
  */
-export interface SkillsGridLabels {
-  loading?: string
-  emptyTitle?: string
-  emptyDescription?: string
-  addSkill?: string
-  descriptionShort?: string
-  /** Heading on the delete-skill confirmation. `{name}` is the skill name. */
-  deleteTitle?: (name: string) => string
-  /** Fallback heading when a name isn't available. */
-  deleteTitleFallback?: string
-  deleteDescription?: string
-  deleteConfirmLabel?: string
-}
-
-const DEFAULT_LABELS: Required<SkillsGridLabels> = {
-  loading: "Loading skills…",
-  emptyTitle: "No skills installed",
-  emptyDescription: "Skills are reusable procedures your agent can lean on.",
-  addSkill: "Add skill",
-  descriptionShort: "Reusable procedures your agent can lean on.",
-  deleteTitle: (name) => `Delete "${name}"?`,
-  deleteTitleFallback: "Delete skill?",
-  deleteDescription: "This removes the skill from your agent. You can reinstall it later.",
-  deleteConfirmLabel: "Delete",
-}
-
 export interface SkillsGridProps {
   skills: Skill[]
   loading: boolean
@@ -81,7 +59,7 @@ export function SkillsGrid({
   onInstallFromRepo,
   labels,
 }: SkillsGridProps) {
-  const l = { ...DEFAULT_LABELS, ...labels }
+  const l = { ...DEFAULT_SKILLS_GRID_LABELS, ...labels }
   const [dialogOpen, setDialogOpen] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<Skill | null>(null)
 
@@ -136,6 +114,7 @@ export function SkillsGrid({
             onInstallCommunity={onInstallCommunity}
             onListFromRepo={onListFromRepo}
             onInstallFromRepo={onInstallFromRepo}
+            labels={l.addDialog}
           />
         )}
       </>
@@ -191,6 +170,7 @@ export function SkillsGrid({
           onInstallCommunity={onInstallCommunity}
           onListFromRepo={onListFromRepo}
           onInstallFromRepo={onInstallFromRepo}
+          labels={l.addDialog}
         />
       )}
     </div>
