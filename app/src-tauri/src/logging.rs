@@ -1,6 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
+use std::time::SystemTime;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{fmt, EnvFilter};
 
@@ -19,8 +20,9 @@ pub fn init(data_dir: &Path) {
     // Store the guard so the background writer thread stays alive
     let _ = GUARD.set(guard);
 
-    let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info,houston_terminal_manager=debug,houston_tauri=debug,houston_app=debug"));
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+        EnvFilter::new("info,houston_terminal_manager=debug,houston_tauri=debug,houston_app=debug")
+    });
 
     fmt()
         .with_env_filter(filter)
@@ -56,12 +58,17 @@ pub fn write_frontend_log(level: String, message: String, context: Option<String
     };
 
     use std::io::Write;
-    if let Ok(mut f) = fs::OpenOptions::new()
+    match fs::OpenOptions::new()
         .create(true)
         .append(true)
         .open(frontend_log_path())
     {
-        let _ = f.write_all(line.as_bytes());
+        Ok(mut f) => {
+            if let Err(e) = f.write_all(line.as_bytes()) {
+                eprintln!("failed to write frontend log: {e}");
+            }
+        }
+        Err(e) => eprintln!("failed to open frontend log: {e}"),
     }
 }
 
@@ -70,9 +77,36 @@ pub fn write_frontend_log(level: String, message: String, context: Option<String
 #[tauri::command]
 pub fn read_recent_logs(lines: Option<usize>) -> serde_json::Value {
     let n = lines.unwrap_or(100);
-    let backend = tail_file(&logs_dir().join("backend.log"), n);
+    let backend = tail_file(&latest_backend_log_path(), n);
     let frontend = tail_file(&frontend_log_path(), n);
     serde_json::json!({ "backend": backend, "frontend": frontend })
+}
+
+fn latest_backend_log_path() -> PathBuf {
+    let logs = logs_dir();
+    latest_log_matching(&logs, "backend.log").unwrap_or_else(|| logs.join("backend.log"))
+}
+
+fn latest_log_matching(dir: &Path, prefix: &str) -> Option<PathBuf> {
+    let mut candidates: Vec<(SystemTime, PathBuf)> = fs::read_dir(dir)
+        .ok()?
+        .filter_map(Result::ok)
+        .filter_map(|entry| {
+            let path = entry.path();
+            let name = path.file_name()?.to_str()?;
+            if !name.starts_with(prefix) {
+                return None;
+            }
+            let modified = entry
+                .metadata()
+                .and_then(|metadata| metadata.modified())
+                .unwrap_or(SystemTime::UNIX_EPOCH);
+            Some((modified, path))
+        })
+        .collect();
+
+    candidates.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
+    candidates.pop().map(|(_, path)| path)
 }
 
 fn tail_file(path: &Path, n: usize) -> String {
@@ -83,5 +117,30 @@ fn tail_file(path: &Path, n: usize) -> String {
             lines[start..].join("\n")
         }
         Err(_) => String::new(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn latest_log_matching_uses_newest_rotated_backend_log() {
+        let dir = std::env::temp_dir().join(format!(
+            "houston-log-test-{}",
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
+        ));
+        fs::create_dir_all(&dir).expect("create temp log dir");
+
+        let old = dir.join("backend.log.2026-04-27");
+        let current = dir.join("backend.log.2026-04-28");
+        fs::write(&old, "old").expect("write old log");
+        std::thread::sleep(std::time::Duration::from_millis(5));
+        fs::write(&current, "current").expect("write current log");
+
+        let selected = latest_log_matching(&dir, "backend.log");
+        assert_eq!(selected.as_deref(), Some(current.as_path()));
+
+        fs::remove_dir_all(&dir).expect("remove temp log dir");
     }
 }
