@@ -214,7 +214,6 @@ async fn check_codex_status() -> ProviderStatus {
     let authenticated = if let Some(path) = cli_path.as_deref() {
         let home = std::env::var("HOME").unwrap_or_default();
         if check_codex_auth(path, &home).await {
-            ensure_codex_fallback_config(&home);
             true
         } else {
             false
@@ -343,36 +342,6 @@ fn check_codex_auth_file(home: &str) -> bool {
                 || v.get("tokens").is_some()
         })
         .unwrap_or(false)
-}
-
-/// Append `HOUSTON.md` to Codex's `project_doc_fallback_filenames` so it
-/// auto-reads our agent doc like it does `AGENTS.md`.
-fn ensure_codex_fallback_config(home: &str) {
-    let config_path = PathBuf::from(home).join(".codex").join("config.toml");
-    let content = std::fs::read_to_string(&config_path).unwrap_or_default();
-
-    if content.contains("HOUSTON.md") {
-        return;
-    }
-
-    let line = if content.contains("project_doc_fallback_filenames") {
-        tracing::info!(
-            "[houston:codex] project_doc_fallback_filenames exists but missing HOUSTON.md — \
-             add it manually to ~/.codex/config.toml for full Houston integration"
-        );
-        return;
-    } else {
-        "\nproject_doc_fallback_filenames = [\"HOUSTON.md\"]\n"
-    };
-
-    if let Err(e) = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&config_path)
-        .and_then(|mut f| std::io::Write::write_all(&mut f, line.as_bytes()))
-    {
-        tracing::warn!("[houston:codex] failed to update config.toml: {e}");
-    }
 }
 
 #[cfg(test)]
