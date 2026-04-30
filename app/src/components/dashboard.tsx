@@ -8,28 +8,29 @@ import {
   EmptyTitle,
   EmptyDescription,
   Button,
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
 } from "@houston-ai/core";
-import { ChevronDown, Plus } from "lucide-react";
-import { HoustonLogo } from "./shell/experience-card";
-import { HoustonHelmet } from "./shell/experience-card";
-import { resolveAgentColor } from "../lib/agent-colors";
+import { Plus } from "lucide-react";
 import { useAgentStore } from "../stores/agents";
 import { useAgentCatalogStore } from "../stores/agent-catalog";
 import { useUIStore } from "../stores/ui";
 import { tauriChat } from "../lib/tauri";
 import { useMissionControl } from "./use-mission-control";
+import { useSessionMessageQueue } from "../hooks/use-session-message-queue";
 import { AgentPickerDialog } from "./agent-picker-dialog";
 import { useAgentChatPanel } from "./use-agent-chat-panel";
+import { useQueuedMessageLabels } from "./use-queued-message-labels";
 import type { Agent } from "../lib/types";
 import { useDetailPanelContainer } from "./shell/detail-panel-context";
-import { AgentMiniAvatar, HoustonThinkingIndicator } from "./shell/experience-card";
+import { HoustonThinkingIndicator } from "./shell/experience-card";
+import { AgentCardAvatar } from "./shell/agent-card-avatar";
+import { AgentPanelAvatar } from "./shell/agent-panel-avatar";
+import { MissionControlToolbar } from "./mission-control-toolbar";
+import { MissionBoardEmptyState } from "./mission-board-empty-state";
+import { useMissionSearch } from "./use-mission-search";
 
 export function Dashboard() {
   const { t } = useTranslation(["dashboard", "board", "common"]);
+  const queuedLabels = useQueuedMessageLabels();
   const MC_COLUMNS: KanbanColumnConfig[] = [
     { id: "running", label: t("dashboard:columns.running"), statuses: ["running"] },
     { id: "needs_you", label: t("dashboard:columns.needsYou"), statuses: ["needs_you"] },
@@ -51,8 +52,10 @@ export function Dashboard() {
   const setDialogOpen = useUIStore((s) => s.setCreateAgentDialogOpen);
   const setMissionPanelOpen = useUIStore((s) => s.setMissionPanelOpen);
   const missionPanelOpen = useUIStore((s) => s.missionPanelOpen);
+  const addToast = useUIStore((s) => s.addToast);
 
   const [filterPath, setFilterPath] = useState("");
+  const [missionSearchQuery, setMissionSearchQuery] = useState("");
   const [agentPickerOpen, setAgentPickerOpen] = useState(false);
   const [newPanelOpenerReady, setNewPanelOpenerReady] = useState(false);
   // Agent the user just picked for "New Mission". Stays in scope until
@@ -100,24 +103,38 @@ export function Dashboard() {
     return map;
   }, [agents]);
 
-  const filteredItems = useMemo(() => {
+  const agentFilteredItems = useMemo(() => {
     const base = filterPath
       ? mc.items.filter((i) => i.metadata?.agentPath === filterPath)
       : mc.items;
     return base.map((item) => ({
       ...item,
-      icon: <AgentMiniAvatar color={colorByPath[item.metadata?.agentPath as string]} />,
+      icon: <AgentCardAvatar color={colorByPath[item.metadata?.agentPath as string]} />,
     }));
   }, [mc.items, filterPath, colorByPath]);
   const visibleAgents = useMemo(
     () => (filterPath ? agents.filter((a) => a.folderPath === filterPath) : agents),
     [agents, filterPath],
   );
+  const handleMissionSearchError = useCallback(() => {
+    addToast({
+      title: t("dashboard:search.historyErrorTitle"),
+      description: t("dashboard:search.historyErrorDescription"),
+      variant: "error",
+    });
+  }, [addToast, t]);
+  const missionSearch = useMissionSearch({
+    items: agentFilteredItems,
+    query: missionSearchQuery,
+    loadHistory: mc.loadHistory,
+    onHistoryLoadError: handleMissionSearchError,
+  });
 
   useEffect(() => {
     if (!mc.isLoaded) return;
+    if (missionSearch.hasQuery) return;
     const emptyKey = filterPath || "all";
-    if (filteredItems.length > 0) {
+    if (agentFilteredItems.length > 0) {
       if (emptyAutoOpenKeyRef.current === emptyKey) emptyAutoOpenKeyRef.current = null;
       return;
     }
@@ -132,9 +149,10 @@ export function Dashboard() {
   }, [
     agentPickerOpen,
     filterPath,
-    filteredItems.length,
+    agentFilteredItems.length,
     handlePickAgent,
     mc.isLoaded,
+    missionSearch.hasQuery,
     missionPanelOpen,
     newPanelOpenerReady,
     visibleAgents,
@@ -155,9 +173,6 @@ export function Dashboard() {
     }
     return pendingAgent;
   }, [selectedItem, pendingAgent, agents]);
-  // Panel avatar color tracks the active agent so a new-mission card
-  // for picked agent A uses A's color, not the selectedItem fallback.
-  const selectedColor = resolveAgentColor(activeAgent?.color);
   const activeAgentDef = activeAgent ? getAgentDef(activeAgent.configId) ?? null : null;
   const selectedSessionKey = selectedItem
     ? (selectedItem.metadata?.sessionKey as string | undefined) ?? `activity-${selectedItem.id}`
@@ -172,6 +187,47 @@ export function Dashboard() {
     selectedSessionKey,
     onSelectSession: onActionCreated,
   });
+  const selectedAgentPath = selectedItem?.metadata?.agentPath as string | undefined;
+  const selectedSessionActive = selectedSessionKey
+    ? (mc.loading[selectedSessionKey] ?? false)
+    : false;
+  const sendSelectedNow = useCallback(
+    async (text: string, files: File[]) => {
+      if (!selectedSessionKey) return;
+      await mc.handleSendMessage(selectedSessionKey, text, files);
+    },
+    [mc.handleSendMessage, selectedSessionKey],
+  );
+  const messageQueue = useSessionMessageQueue({
+    agentPath: selectedAgentPath ?? null,
+    sessionKey: selectedSessionKey,
+    isActive: selectedSessionActive,
+    sendNow: sendSelectedNow,
+  });
+  const handleSendMessage = useCallback(
+    async (sessionKey: string, text: string, files: File[]) => {
+      if (sessionKey === selectedSessionKey) {
+        await messageQueue.sendOrQueue(text, files);
+        return;
+      }
+      await mc.handleSendMessage(sessionKey, text, files);
+    },
+    [mc.handleSendMessage, selectedSessionKey, messageQueue.sendOrQueue],
+  );
+  const handleComposerSubmit = useCallback<NonNullable<typeof panel.onComposerSubmit>>(
+    async (ctx) => {
+      if (ctx.sessionKey && ctx.sessionKey === selectedSessionKey && selectedSessionActive) {
+        messageQueue.queueMessage(ctx.text, ctx.files);
+        return true;
+      }
+      return (await panel.onComposerSubmit?.(ctx)) ?? false;
+    },
+    [selectedSessionKey, selectedSessionActive, messageQueue.queueMessage, panel.onComposerSubmit],
+  );
+  const queuedMessages = useMemo(
+    () => selectedSessionKey ? { [selectedSessionKey]: messageQueue.queuedMessages } : {},
+    [selectedSessionKey, messageQueue.queuedMessages],
+  );
 
   if (agents.length === 0) {
     return (
@@ -196,73 +252,40 @@ export function Dashboard() {
   }
 
   const emptyBoard = (
-    <Empty className="border-0">
-      <EmptyHeader>
-        <EmptyTitle>{t("dashboard:empty.boardTitle")}</EmptyTitle>
-        <EmptyDescription>
-          {t("dashboard:empty.boardDescription")}
-        </EmptyDescription>
-      </EmptyHeader>
-      <Button
-        className="mt-4 rounded-full gap-1.5"
-        size="sm"
-        onClick={() => setAgentPickerOpen(true)}
-      >
-        <HoustonLogo size={16} />
-        {t("dashboard:empty.newMission")}
-      </Button>
-    </Empty>
+    <MissionBoardEmptyState
+      isSearch={missionSearch.hasQuery}
+      isSearchingText={missionSearch.isSearchingText}
+      labels={{
+        emptyTitle: t("dashboard:empty.boardTitle"),
+        emptyDescription: t("dashboard:empty.boardDescription"),
+        newMission: t("dashboard:empty.newMission"),
+        searchEmptyTitle: t("dashboard:search.emptyTitle"),
+        searchEmptyDescription: t("dashboard:search.emptyDescription"),
+        searchSearchingTitle: t("dashboard:search.searchingTitle"),
+        searchSearchingDescription: t("dashboard:search.searchingDescription"),
+        clearSearch: t("dashboard:search.clearCta"),
+      }}
+      onNewMission={() => setAgentPickerOpen(true)}
+      onClearSearch={() => setMissionSearchQuery("")}
+    />
   );
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="shrink-0 px-5 pt-4">
-        <div className="flex items-center gap-2 mb-3">
-          <h1 className="text-xl font-semibold text-foreground">
-            {t("dashboard:title")}
-          </h1>
-          <div className="ml-auto flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="rounded-full gap-1.5">
-                  {filterPath
-                    ? agents.find((a) => a.folderPath === filterPath)?.name ?? t("dashboard:filter.allAgents")
-                    : t("dashboard:filter.allAgents")}
-                  <ChevronDown className="size-3.5 text-muted-foreground" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setFilterPath("")}>
-                  {t("dashboard:filter.allAgents")}
-                </DropdownMenuItem>
-                {agents.map((a) => (
-                  <DropdownMenuItem
-                    key={a.id}
-                    onClick={() => setFilterPath(a.folderPath)}
-                    className="gap-2"
-                  >
-                    <AgentMiniAvatar color={a.color} />
-                    {a.name}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button
-              data-keep-panel-open
-              onClick={() => setAgentPickerOpen(true)}
-            >
-              <HoustonLogo size={16} />
-              New mission
-            </Button>
-          </div>
-        </div>
-      </div>
+      <MissionControlToolbar
+        agents={agents}
+        filterPath={filterPath}
+        search={missionSearchQuery}
+        isSearchingText={missionSearch.isSearchingText}
+        onFilterPathChange={setFilterPath}
+        onSearchChange={setMissionSearchQuery}
+        onNewMission={() => setAgentPickerOpen(true)}
+      />
 
       {/* Board */}
       <div className="flex-1 min-h-0">
         <AIBoard
-          items={filteredItems}
+          items={missionSearch.items}
           columns={MC_COLUMNS}
           selectedId={mc.selectedId}
           onSelect={mc.setSelectedId}
@@ -271,7 +294,10 @@ export function Dashboard() {
           onDelete={mc.handleDelete}
           onApprove={mc.handleApprove}
           onRename={mc.handleRename}
-          onSendMessage={mc.handleSendMessage}
+          onSendMessage={handleSendMessage}
+          queuedMessages={queuedMessages}
+          onRemoveQueuedMessage={(_, id) => messageQueue.removeQueuedMessage(id)}
+          queuedLabels={queuedLabels}
           onLoadHistory={mc.loadHistory}
           onHistoryLoaded={mc.handleHistoryLoaded}
           onNewPanelOpenerReady={handleOpenerReady}
@@ -281,18 +307,10 @@ export function Dashboard() {
           onStopSession={handleStopSession}
           panelAgentName={activeAgent?.name ?? selectedItem?.subtitle}
           panelAvatar={
-            selectedItem?.status === "running" ? (
-              <span className="size-10 rounded-full flex items-center justify-center shrink-0 card-running-glow">
-                <HoustonHelmet color={selectedColor} size={24} />
-              </span>
-            ) : (
-              <span
-                className="size-10 rounded-full flex items-center justify-center shrink-0 bg-background border-2"
-                style={{ borderColor: selectedColor ?? "#cdcdcd" }}
-              >
-                <HoustonHelmet color={selectedColor} size={24} />
-              </span>
-            )
+            <AgentPanelAvatar
+              color={activeAgent?.color}
+              running={selectedItem?.status === "running"}
+            />
           }
           thinkingIndicator={<HoustonThinkingIndicator />}
           cardLabels={cardLabels}
@@ -303,7 +321,7 @@ export function Dashboard() {
           chatEmptyState={panel.chatEmptyState}
           composerHeader={panel.composerHeader}
           canSendEmpty={panel.canSendEmpty}
-          onComposerSubmit={panel.onComposerSubmit}
+          onComposerSubmit={handleComposerSubmit}
           footer={panel.footer}
           renderUserMessage={panel.renderUserMessage}
           renderSystemMessage={panel.renderSystemMessage}

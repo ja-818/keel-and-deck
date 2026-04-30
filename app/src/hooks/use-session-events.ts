@@ -1,79 +1,19 @@
 import { useEffect, useRef } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { HoustonEvent } from "@houston-ai/core";
 import type { FeedItem } from "@houston-ai/chat";
 import { useFeedStore } from "../stores/feeds";
 import { useUIStore } from "../stores/ui";
 import { useWorkspaceStore } from "../stores/workspaces";
 import { useAgentStore } from "../stores/agents";
+import { useSessionStatusStore } from "../stores/session-status";
 import { subscribeHoustonEvents, listenOsEvent } from "../lib/events";
 import { logger } from "../lib/logger";
-
-// Pending navigation set when a completion notification fires.
-// Consumed on the next window focus event (however it arrives).
-let pendingNotificationNav: { agentId: string; activityId: string } | null = null;
-let pendingNavTimer: ReturnType<typeof setTimeout> | null = null;
-
-function consumePendingNav() {
-  if (!pendingNotificationNav) return;
-  const { agentId, activityId } = pendingNotificationNav;
-  pendingNotificationNav = null;
-  if (pendingNavTimer) { clearTimeout(pendingNavTimer); pendingNavTimer = null; }
-
-  const agents = useAgentStore.getState().agents;
-  logger.debug(`[notification] consuming nav: agentId=${agentId} activityId=${activityId} agents=[${agents.map(a => a.id).join(",")}]`);
-  const agent = agents.find((a) => a.id === agentId);
-  if (!agent) {
-    logger.debug("[notification] agent not found — cannot navigate");
-    return;
-  }
-
-  logger.debug(`[notification] navigating → agent=${agent.name} activity=${activityId}`);
-  useUIStore.getState().setViewMode("activity");
-  useAgentStore.getState().setCurrent(agent);
-  useUIStore.getState().setActivityPanelId(activityId);
-}
-
-async function sendNotification(
-  title: string,
-  body: string,
-  nav?: { agentId: string; activityId: string },
-) {
-  try {
-    const {
-      isPermissionGranted,
-      requestPermission,
-      sendNotification: notify,
-    } = await import("@tauri-apps/plugin-notification");
-
-    let granted = await isPermissionGranted();
-    if (!granted) {
-      const perm = await requestPermission();
-      granted = perm === "granted";
-    }
-    if (granted) {
-      notify({ title, body, sound: "Glass" });
-      if (nav) {
-        pendingNotificationNav = nav;
-        if (pendingNavTimer) clearTimeout(pendingNavTimer);
-        pendingNavTimer = setTimeout(() => { pendingNotificationNav = null; }, 5 * 60 * 1000);
-        logger.debug(`[notification] pending nav set: agentId=${nav.agentId} activityId=${nav.activityId}`);
-
-        // If the window is already focused, no focus-change event will fire when
-        // the user clicks the banner. Navigate immediately using Tauri's reliable
-        // isFocused() (unlike document.hasFocus() which is broken in WKWebView).
-        const { getCurrentWindow } = await import("@tauri-apps/api/window");
-        const focused = await getCurrentWindow().isFocused();
-        if (focused) {
-          logger.debug("[notification] window already focused (Tauri) — navigating immediately");
-          consumePendingNav();
-        }
-      }
-    }
-  } catch (e) {
-    console.error("[notification] Failed:", e);
-  }
-}
+import {
+  consumePendingNav,
+  describePendingNotificationNav,
+  listenForNotificationFocus,
+  sendSessionNotification,
+} from "./session-notifications";
 
 /**
  * Subscribe to "houston-event" from the Rust backend.
@@ -91,6 +31,7 @@ export function useSessionEvents() {
     pushFeedItem,
     addToast,
     setAuthRequired,
+    setSessionStatus: useSessionStatusStore.getState().setStatus,
     getWorkspace: () => useWorkspaceStore.getState().current,
     getAgent: () => useAgentStore.getState().current,
   });
@@ -98,6 +39,7 @@ export function useSessionEvents() {
     pushFeedItem,
     addToast,
     setAuthRequired,
+    setSessionStatus: useSessionStatusStore.getState().setStatus,
     getWorkspace: () => useWorkspaceStore.getState().current,
     getAgent: () => useAgentStore.getState().current,
   };
@@ -120,6 +62,14 @@ export function useSessionEvents() {
           break;
         case "SessionStatus": {
           const { status, error, session_key, agent_path } = payload.data;
+          if (
+            status === "starting" ||
+            status === "running" ||
+            status === "completed" ||
+            status === "error"
+          ) {
+            h.setSessionStatus(agent_path, session_key, status);
+          }
           if (status === "error" && error) {
             // When auth is required, the backend has emitted AuthRequired and
             // the inline reconnect card renders from the authRequired store
@@ -161,7 +111,7 @@ export function useSessionEvents() {
               }
             }
 
-            sendNotification(`${workspaceName} — ${agentName}`, "Your agent has finished working.", nav);
+            sendSessionNotification(`${workspaceName} — ${agentName}`, "Your agent has finished working.", nav);
           }
           break;
         }
@@ -182,7 +132,7 @@ export function useSessionEvents() {
     let unlistenNotificationAction: (() => void) | undefined;
     import("@tauri-apps/plugin-notification").then(({ onAction }) => {
       onAction((action) => {
-        logger.debug(`[notification] onAction fired: ${JSON.stringify(action)} pendingNav=${JSON.stringify(pendingNotificationNav)}`);
+        logger.debug(`[notification] onAction fired: ${JSON.stringify(action)} pendingNav=${describePendingNotificationNav()}`);
         consumePendingNav();
       }).then((unlisten) => {
         unlistenNotificationAction = () => { unlisten.unregister(); };
@@ -195,7 +145,7 @@ export function useSessionEvents() {
     // Rust emits "app-activated" via RunEvent::Resumed → we consume pending nav.
     // Also refresh the agent list so any external changes (e.g. Finder delete) are picked up.
     const unlistenActivated = listenOsEvent<unknown>("app-activated", () => {
-      logger.debug(`[notification] app-activated event fired: pendingNav=${JSON.stringify(pendingNotificationNav)}`);
+      logger.debug(`[notification] app-activated event fired: pendingNav=${describePendingNotificationNav()}`);
       consumePendingNav();
       const ws = useWorkspaceStore.getState().current;
       if (ws) {
@@ -206,17 +156,15 @@ export function useSessionEvents() {
     });
 
     // Fallback: Tauri window focus event (fires when user switches to the app any way).
-    const unlistenTauriFocus = getCurrentWindow().onFocusChanged(({ payload: focused }) => {
-      if (!focused || !pendingNotificationNav) return;
-      logger.debug(`[notification] onFocusChanged fired: focused=${focused} pendingNav=${JSON.stringify(pendingNotificationNav)}`);
-      consumePendingNav();
-    });
+    const unlistenTauriFocus = listenForNotificationFocus();
 
     return () => {
       unlisten();
       unlistenActivated();
       unlistenNotificationAction?.();
-      unlistenTauriFocus.then((fn) => fn());
+      unlistenTauriFocus?.then((fn) => fn()).catch((e) => {
+        logger.debug(`[notification] Tauri focus listener cleanup failed: ${e}`);
+      });
     };
   }, []);
 }

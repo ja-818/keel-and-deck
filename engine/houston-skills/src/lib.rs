@@ -32,6 +32,10 @@ pub enum SkillError {
     AlreadyExists(String),
     #[error("Patch failed: old text not found")]
     PatchNotFound,
+    #[error("Remote rate limited: {0}")]
+    RateLimited(String),
+    #[error("Remote unavailable: {0}")]
+    Unavailable(String),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
