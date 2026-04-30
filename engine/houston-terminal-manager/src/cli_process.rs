@@ -1,5 +1,5 @@
 use super::session_io;
-use super::types::{FeedItem, Provider, SessionStatus};
+use super::types::{FeedItem, Provider, SessionStatus, ToolRuntimeErrorKind};
 use crate::auth_error::is_auth_error;
 use crate::codex_command;
 use crate::provider_error::is_malformed_provider_json_error;
@@ -74,7 +74,7 @@ pub(crate) async fn run_cli_process(
     if let Some(stderr) = stderr {
         let tx2 = tx.clone();
         io_set.spawn(async move {
-            CliIoReport::Stderr(session_io::read_stderr_lines(stderr, tx2, provider).await)
+            CliIoReport::Stderr(session_io::read_stderr_lines(stderr, tx2).await)
         });
     }
     if let Some(stdout) = stdout {
@@ -117,7 +117,7 @@ pub(crate) async fn run_cli_process(
                 let _ = tx.send(SessionUpdate::Status(SessionStatus::Completed));
                 CliRunOutcome::Completed
             } else {
-                handle_failed_exit(tx, cli_name, status, provider, &stderr_lines)
+                handle_failed_exit(tx, cli_name, provider, &stderr_lines)
             }
         }
         Err(e) => {
@@ -132,7 +132,6 @@ pub(crate) async fn run_cli_process(
 fn handle_failed_exit(
     tx: &mpsc::UnboundedSender<SessionUpdate>,
     cli_name: &str,
-    status: std::process::ExitStatus,
     provider: Provider,
     stderr_lines: &[String],
 ) -> CliRunOutcome {
@@ -158,12 +157,17 @@ fn handle_failed_exit(
     } else {
         stderr_lines.join("\n")
     };
-    let _ = tx.send(SessionUpdate::Feed(FeedItem::ToolResult {
-        content: format!("Process stderr:\n{stderr_summary}"),
-        is_error: true,
-    }));
+    if !stderr_lines
+        .iter()
+        .any(|line| crate::stderr_filter::is_tool_runtime_stderr(line))
+    {
+        let _ = tx.send(SessionUpdate::Feed(FeedItem::ToolRuntimeError {
+            kind: ToolRuntimeErrorKind::ProviderProcess,
+            details: stderr_summary,
+        }));
+    }
     let _ = tx.send(SessionUpdate::Status(SessionStatus::Error(format!(
-        "{cli_name} exited with {status}"
+        "{cli_name} hit a runtime error"
     ))));
     CliRunOutcome::Failed
 }
