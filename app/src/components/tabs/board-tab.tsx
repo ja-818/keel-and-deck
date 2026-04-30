@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { AIBoard } from "@houston-ai/board";
-import type { KanbanItem } from "@houston-ai/board";
+import type { KanbanItem, NewPanelOpener } from "@houston-ai/board";
 import type { FeedItem } from "@houston-ai/chat";
 import { Terminal, GitBranch } from "lucide-react";
 
@@ -86,7 +86,7 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
     tauriSystem.openUrl(url).catch(console.error);
   }, []);
 
-  const openerRef = useRef<(() => void) | null>(null);
+  const openerRef = useRef<NewPanelOpener | null>(null);
   const emptyAutoOpenKeyRef = useRef<string | null>(null);
   const [newPanelOpenerReady, setNewPanelOpenerReady] = useState(false);
 
@@ -221,13 +221,13 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
 
   // Register the "Start a Mission" handler in the UI store for the TabBar
   const handleOpenerReady = useCallback(
-    (opener: () => void) => {
+    (opener: NewPanelOpener) => {
       openerRef.current = opener;
       setNewPanelOpenerReady(true);
       // Default "New mission" button — always registered
       setOnStartMission(() => {
         if (agentModes?.length) setPendingAgentMode(agentModes[0].id);
-        opener();
+        opener({ focusComposer: true });
       });
       // Extra board actions for additional agent modes (skip the first — that's the default button)
       if (agentModes && agentModes.length > 1) {
@@ -237,7 +237,7 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
             label: mode.createLabel,
             onClick: () => {
               setPendingAgentMode(mode.id);
-              opener();
+              opener({ focusComposer: true });
             },
           })),
         );
@@ -544,7 +544,7 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
       }}
       onNewMission={() => {
         if (agentModes?.length) setPendingAgentMode(agentModes[0].id);
-        openerRef.current?.();
+        openerRef.current?.({ focusComposer: true });
       }}
       onClearSearch={() => setAgentMissionSearchQuery(path, "")}
     />
