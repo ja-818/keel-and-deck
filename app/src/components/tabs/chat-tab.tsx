@@ -35,11 +35,13 @@ import {
   isProviderAuthMessage,
   providerAuthSignalKey,
 } from "./provider-auth-feed";
+import { useAttachmentRejectionDialog } from "../attachment-rejection-dialog";
 
 export default function ChatTab({ agent }: TabProps) {
   const { t } = useTranslation("chat");
   const queuedLabels = useQueuedMessageLabels();
   const { processLabels, getThinkingMessage } = useChatDisplayLabels();
+  const attachmentValidation = useAttachmentRejectionDialog();
   const { isSpecialTool, renderToolResult, renderTurnSummary } = useFileToolRenderer(agent.folderPath);
   // Free-form chat tab gets its own UUID-scoped session key per agent.
   // Must be stable across renders so streaming events land in the same bucket.
@@ -171,15 +173,6 @@ export default function ChatTab({ agent }: TabProps) {
       if (sendingRef.current) return;
       sendingRef.current = true;
       setIsLoading(true);
-      const visible = formatVisibleMessageText(
-        text,
-        files,
-        (names) => t("queue.attached", { names }),
-      );
-      pushFeedItem(agentPath, sessionKey, { feed_type: "user_message", data: visible });
-      analytics.track("chat_message_sent");
-      setComposerText("");
-      setComposerFiles([]);
       let started = false;
       try {
         const paths = await tauriAttachments.save(attachmentScope, files);
@@ -189,12 +182,22 @@ export default function ChatTab({ agent }: TabProps) {
           modelOverride: chatModel ?? undefined,
         });
         started = true;
+        const visible = formatVisibleMessageText(
+          text,
+          files,
+          (names) => t("queue.attached", { names }),
+        );
+        pushFeedItem(agentPath, sessionKey, { feed_type: "user_message", data: visible });
+        analytics.track("chat_message_sent");
+        setComposerText("");
+        setComposerFiles([]);
       } catch (err) {
         setIsLoading(false);
         pushFeedItem(agentPath, sessionKey, {
           feed_type: "system_message",
           data: t("errors.sessionStart", { error: String(err) }),
         });
+        throw err;
       } finally {
         if (!started) setIsLoading(false);
         sendingRef.current = false;
@@ -251,6 +254,8 @@ export default function ChatTab({ agent }: TabProps) {
         attachments={composerFiles}
         onAttachmentsChange={setComposerFiles}
         onNotice={handleNotice}
+        prepareAttachments={attachmentValidation.prepareAttachments}
+        onAttachmentRejections={attachmentValidation.onAttachmentRejections}
         queuedMessages={messageQueue.queuedMessages}
         onRemoveQueuedMessage={messageQueue.removeQueuedMessage}
         queuedLabels={queuedLabels}
@@ -273,6 +278,7 @@ export default function ChatTab({ agent }: TabProps) {
           </Empty>
         }
       />
+      {attachmentValidation.dialog}
     </div>
   );
 }

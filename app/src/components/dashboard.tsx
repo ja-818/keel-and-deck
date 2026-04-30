@@ -18,6 +18,7 @@ import { useMissionControl } from "./use-mission-control";
 import { useSessionMessageQueue } from "../hooks/use-session-message-queue";
 import { AgentPickerDialog } from "./agent-picker-dialog";
 import { useAgentChatPanel } from "./use-agent-chat-panel";
+import { useAttachmentRejectionDialog } from "./attachment-rejection-dialog";
 import { useQueuedMessageLabels } from "./use-queued-message-labels";
 import type { Agent } from "../lib/types";
 import { useDetailPanelContainer } from "./shell/detail-panel-context";
@@ -187,6 +188,7 @@ export function Dashboard() {
     selectedSessionKey,
     onSelectSession: onActionCreated,
   });
+  const attachmentValidation = useAttachmentRejectionDialog();
   const selectedAgentPath = selectedItem?.metadata?.agentPath as string | undefined;
   const selectedSessionActive = selectedSessionKey
     ? (mc.loading[selectedSessionKey] ?? false)
@@ -305,6 +307,8 @@ export function Dashboard() {
           panelContainer={panelContainer}
           onPanelOpenChange={setMissionPanelOpen}
           onStopSession={handleStopSession}
+          prepareAttachments={attachmentValidation.prepareAttachments}
+          onAttachmentRejections={attachmentValidation.onAttachmentRejections}
           panelAgentName={activeAgent?.name ?? selectedItem?.subtitle}
           panelAvatar={
             <AgentPanelAvatar
@@ -337,6 +341,7 @@ export function Dashboard() {
       </div>
 
       {panel.pickerDialog}
+      {attachmentValidation.dialog}
 
       <AgentPickerDialog
         open={agentPickerOpen}

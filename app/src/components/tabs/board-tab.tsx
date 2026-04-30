@@ -34,6 +34,7 @@ import { AgentPanelAvatar } from "../shell/agent-panel-avatar";
 import { useQueuedMessageLabels } from "../use-queued-message-labels";
 import { MissionBoardEmptyState } from "../mission-board-empty-state";
 import { useMissionSearch } from "../use-mission-search";
+import { useAttachmentRejectionDialog } from "../attachment-rejection-dialog";
 
 // Stable empty reference so the feed store selector doesn't return a new
 // object every render when this agent has no feeds yet (which would otherwise
@@ -75,6 +76,7 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
   const setMissionPanelOpen = useUIStore((s) => s.setMissionPanelOpen);
   const missionPanelOpen = useUIStore((s) => s.missionPanelOpen);
   const addToast = useUIStore((s) => s.addToast);
+  const attachmentValidation = useAttachmentRejectionDialog();
   const handleNotice = useCallback(
     (message: string) => addToast({ title: message }),
     [addToast],
@@ -318,7 +320,6 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
     async (text: string, files: File[]) => {
       const agentMode = pendingAgentMode ?? agentModes?.[0]?.id;
       const mode = agentModes?.find((m) => m.id === agentMode);
-      setPendingAgentMode(null);
 
       // Check if worktree mode is enabled
       let worktreePath: string | undefined;
@@ -363,6 +364,7 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
       );
       pushFeedItem(path, sessionKey, { feed_type: "user_message", data: visible });
       setLoading((prev) => ({ ...prev, [sessionKey]: true }));
+      setPendingAgentMode(null);
       // createMission bypassed useCreateActivity so invalidate manually.
       queryClient.invalidateQueries({ queryKey: queryKeys.activity(path) });
       analytics.track("mission_created", { agent_mode: agentMode ?? "default" });
@@ -389,13 +391,6 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
 
   const sendMessageNow = useCallback(
     async (sessionKey: string, text: string, files: File[]) => {
-      const visible = formatVisibleMessageText(
-        text,
-        files,
-        (names) => t("chat:queue.attached", { names }),
-      );
-      pushFeedItem(path, sessionKey, { feed_type: "user_message", data: visible });
-      setLoading((prev) => ({ ...prev, [sessionKey]: true }));
       const activity = (rawItems ?? []).find(
         (t) => (t.session_key ?? `activity-${t.id}`) === sessionKey,
       );
@@ -414,12 +409,20 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
           providerOverride: chatProvider ?? undefined,
           modelOverride: chatModel ?? undefined,
         });
+        const visible = formatVisibleMessageText(
+          text,
+          files,
+          (names) => t("chat:queue.attached", { names }),
+        );
+        pushFeedItem(path, sessionKey, { feed_type: "user_message", data: visible });
+        setLoading((prev) => ({ ...prev, [sessionKey]: true }));
       } catch (err) {
         setLoading((prev) => ({ ...prev, [sessionKey]: false }));
         pushFeedItem(path, sessionKey, {
           feed_type: "system_message",
           data: t("chat:errors.sessionStart", { error: String(err) }),
         });
+        throw err;
       }
     },
     [path, pushFeedItem, rawItems, agentModes, chatProvider, chatModel, t],
@@ -580,6 +583,8 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
           drafts={boardDrafts}
           onDraftChange={handleDraftChange}
           onNotice={handleNotice}
+          prepareAttachments={attachmentValidation.prepareAttachments}
+          onAttachmentRejections={attachmentValidation.onAttachmentRejections}
           onOpenLink={handleOpenLink}
           actions={agentModes ? cardActions : undefined}
           panelActions={panelActions}
@@ -615,6 +620,7 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
         />
       </div>
       {panel.pickerDialog}
+      {attachmentValidation.dialog}
     </div>
   );
 }

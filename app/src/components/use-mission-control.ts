@@ -143,24 +143,24 @@ export function useMissionControl(agents: Agent[]) {
       const activityId = sessionKey.replace("activity-", "");
       const agentPath = pathMapRef.current[activityId];
       if (!agentPath) return;
-      const visible = formatVisibleMessageText(
-        text,
-        files,
-        (names) => t("queue.attached", { names }),
-      );
-      pushFeedItem(agentPath, sessionKey, { feed_type: "user_message", data: visible });
-      setLoading((prev) => ({ ...prev, [sessionKey]: true }));
-      tauriActivity.update(agentPath, activityId, { status: "running" }).catch(console.error);
       try {
         const paths = await tauriAttachments.save(`activity-${activityId}`, files);
         const prompt = withAttachmentPaths(text, paths);
         await tauriChat.send(agentPath, prompt, sessionKey);
+        const visible = formatVisibleMessageText(
+          text,
+          files,
+          (names) => t("queue.attached", { names }),
+        );
+        pushFeedItem(agentPath, sessionKey, { feed_type: "user_message", data: visible });
+        setLoading((prev) => ({ ...prev, [sessionKey]: true }));
       } catch (err) {
         setLoading((prev) => ({ ...prev, [sessionKey]: false }));
         pushFeedItem(agentPath, sessionKey, {
           feed_type: "system_message",
           data: t("errors.sessionStart", { error: String(err) }),
         });
+        throw err;
       }
     },
     [pushFeedItem, t],
