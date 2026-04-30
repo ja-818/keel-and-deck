@@ -336,6 +336,17 @@ info → Run anyway") on first install. Plan:
 Until that lands, the unsigned MSI is acceptable for personal
 testing — it installs fine, just with one extra confirmation click.
 
+Note that "Windows MSI signing" above refers to **OS code-signing**
+(SmartScreen / Mark-of-the-Web); it's distinct from the
+**Tauri-updater minisign signature** that gates auto-update. The
+updater signature IS produced and uploaded for Windows builds (see
+`build-windows`'s "Extend latest.json with Windows updater entry"
+step) and the in-app updater verifies against the public key
+embedded at build time — same signing key as the macOS .app.tar.gz
+flow. So Windows users on older Houston versions get the same
+auto-update prompt as macOS users, just with a SmartScreen warning
+when the new MSI runs until SignPath integration ships.
+
 ## Files involved
 
 - `cli-deps.json` — pinned versions, URLs, checksums, Windows

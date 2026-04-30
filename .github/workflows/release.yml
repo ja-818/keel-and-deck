@@ -815,7 +815,7 @@ jobs:
           SLACK_BUG_WEBHOOK_URL: ${{ secrets.SLACK_BUG_WEBHOOK_URL }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
-      - name: Locate MSI artifact
+      - name: Locate MSI + updater signature artifacts
         id: artifacts-windows
         shell: bash
         run: |
@@ -823,31 +823,102 @@ jobs:
           BUNDLE="target/x86_64-pc-windows-msvc/release/bundle"
 
           MSI=$(ls -t "$BUNDLE/msi/"*.msi 2>/dev/null | head -1 || true)
+          # Tauri's `createUpdaterArtifacts: true` emits an `<msi>.sig`
+          # next to the .msi (minisign signature over the .msi bytes).
+          # The Tauri updater on Windows verifies this against the
+          # public key embedded at build time and only proceeds if it
+          # matches. No `.sig` ⇒ no auto-update.
+          SIG=$(ls -t "$BUNDLE/msi/"*.msi.sig 2>/dev/null | head -1 || true)
 
-          if [ -z "$MSI" ] || [ ! -f "$MSI" ]; then
-            echo "::error::MSI not produced under $BUNDLE/msi/"
+          missing=()
+          [ -f "$MSI" ] || missing+=("MSI")
+          [ -f "$SIG" ] || missing+=("MSI .sig (updater signature)")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Windows artifacts missing: ${missing[*]}"
+            echo "Bundle contents:"
             ls -laR "$BUNDLE" 2>&1 | head -50
             exit 1
           fi
 
           echo "msi=$MSI" >> "$GITHUB_OUTPUT"
-          echo "Artifact:"
-          echo "  .msi: $MSI ($(du -sh "$MSI" | cut -f1))"
+          echo "sig=$SIG" >> "$GITHUB_OUTPUT"
+          echo "Artifacts:"
+          echo "  .msi:     $MSI ($(du -sh "$MSI" | cut -f1))"
+          echo "  .msi.sig: $SIG ($(wc -c < "$SIG") bytes)"
 
-      - name: Upload Windows MSI to draft release
+      - name: Upload Windows MSI + updater signature to draft release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
+          # Both files are required for users on older Houston builds
+          # to upgrade automatically: the .msi is the installer payload
+          # and the .sig is the minisign signature the in-app updater
+          # verifies before swallowing the new MSI.
           # `--clobber` lets us re-run the workflow without renaming
           # the artifact if a prior partial upload left one in place.
           gh release upload "$GITHUB_REF_NAME" \
             "${{ steps.artifacts-windows.outputs.msi }}" \
+            "${{ steps.artifacts-windows.outputs.sig }}" \
             --clobber
 
-          echo "::notice::Windows MSI uploaded to draft https://github.com/${{ github.repository }}/releases/tag/$GITHUB_REF_NAME"
-          echo "::warning::This MSI is UNSIGNED — Windows SmartScreen will warn on first install. SignPath signing is wired in a follow-up PR."
+          echo "::notice::Windows MSI + .sig uploaded to draft https://github.com/${{ github.repository }}/releases/tag/$GITHUB_REF_NAME"
+          echo "::warning::This MSI is UNSIGNED (code-signing wise) — Windows SmartScreen will warn on first install. The updater minisign signature above is separate; it covers in-app auto-update verification, not OS code-signing. SignPath integration lands in a follow-up PR."
+
+      # Extend the macOS-only `latest.json` (uploaded by build-macos) with a
+      # `windows-x86_64` entry pointing at the just-uploaded MSI + its
+      # minisign signature. After this step, users on Houston for Windows
+      # who built with the same `TAURI_SIGNING_PRIVATE_KEY` will see an
+      # auto-update prompt the next time they launch.
+      #
+      # Why merge here instead of generating from scratch:
+      #   build-macos already produces the right schema (version / notes
+      #   / pub_date) and uploads it to the draft release. We just need
+      #   to add the Windows platform key and reupload with --clobber.
+      #   Generating latest.json from scratch in two places risks the
+      #   metadata drifting between OSes (date format, notes preview,
+      #   etc.) and is more painful to keep in sync.
+      - name: Extend latest.json with Windows updater entry
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          MSI_NAME=$(basename "${{ steps.artifacts-windows.outputs.msi }}")
+          MSI_URL="https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/$MSI_NAME"
+          MSI_SIG=$(cat "${{ steps.artifacts-windows.outputs.sig }}")
+
+          # Pull the existing latest.json down. build-macos uploads it
+          # before this job runs (we depend on build-macos via `needs`).
+          tmpdir=$(mktemp -d)
+          gh release download "$GITHUB_REF_NAME" \
+            --pattern 'latest.json' \
+            --dir "$tmpdir"
+
+          if [ ! -s "$tmpdir/latest.json" ]; then
+            echo "::error::latest.json not found in draft release; build-macos must have failed to upload it"
+            exit 1
+          fi
+
+          # Tauri's updater checks `windows-x86_64` for both NSIS and MSI
+          # installers (the format is detected from the URL extension at
+          # update time). We add a single entry pointing at the MSI; if
+          # we ever ship NSIS too, we keep the same key and let users
+          # opt into one-or-the-other via the URL the updater receives.
+          jq \
+            --arg sig "$MSI_SIG" \
+            --arg url "$MSI_URL" \
+            '.platforms["windows-x86_64"] = {signature: $sig, url: $url}' \
+            "$tmpdir/latest.json" > "$tmpdir/latest.next.json"
+
+          echo "Updated latest.json:"
+          cat "$tmpdir/latest.next.json"
+
+          mv "$tmpdir/latest.next.json" "$tmpdir/latest.json"
+          gh release upload "$GITHUB_REF_NAME" "$tmpdir/latest.json" --clobber
+          echo "::notice::latest.json now advertises macOS + Windows for the in-app updater"
 
       # Pings the team Slack channel so anyone can grab the DMG and try the
       # build before we publish. No-ops when SLACK_RELEASE_WEBHOOK_URL is

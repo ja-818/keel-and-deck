@@ -108,12 +108,18 @@ gaps:
    houston-engine-server`). Mac-host cross-compile remains
    unsupported (no `xwin` SDK) and is not on the roadmap.
 
-Two new gaps introduced in Wave 2:
+One new gap introduced in Wave 2:
 
 6. **Windows MSI signing** — Wave 2 ships UNSIGNED. SignPath
    Foundation integration is blocked on operational provisioning
    (project + secret rotation in CI). See cli-bundling.md "Windows
-   signing — deferred" for the wire-up plan.
-7. **Auto-updater** — `latest.json` carries macOS entries only.
-   Windows users manually grab a fresh MSI from the GitHub release
-   page when a new version drops.
+   signing — deferred" for the wire-up plan. The Tauri-updater
+   minisign signature (covering in-app auto-update verification) IS
+   produced and uploaded — that's separate from OS code-signing.
+
+Auto-updater Windows entries are now wired: `build-windows`
+downloads the macOS-only `latest.json` uploaded by `build-macos`,
+adds a `windows-x86_64` entry pointing at the MSI + its minisign
+.sig, and re-uploads with `--clobber`. The Tauri updater plugin
+already runs on Windows; users on previous builds will see the
+update prompt automatically the next time they launch.
