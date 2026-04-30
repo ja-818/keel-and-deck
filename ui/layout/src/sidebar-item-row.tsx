@@ -68,40 +68,51 @@ export function SidebarItemRow({
         >
           {item.icon}
           <span className="min-w-0 flex-1 truncate">{item.name}</span>
-          {item.trailing && (
-            <span className="ml-auto shrink-0">{item.trailing}</span>
-          )}
         </button>
       )}
 
-      {hasMenu && !isEditing && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              className="shrink-0 size-7 flex items-center justify-center rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground hover:bg-accent transition-all mr-1"
-              onClick={(e) => e.stopPropagation()}
+      {!isEditing && (item.trailing || hasMenu) && (
+        <div className="relative shrink-0 mr-1 h-7 min-w-7 flex items-center justify-end">
+          {item.trailing && (
+            <span
+              className={cn(
+                "absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none",
+                hasMenu && "transition-opacity group-hover:opacity-0",
+              )}
             >
-              <MoreHorizontal className="size-4" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" side="bottom">
-            {onStartRename && (
-              <DropdownMenuItem
-                onClick={() => onStartRename(item.id, item.name)}
-              >
-                Rename
-              </DropdownMenuItem>
-            )}
-            {onDelete && (
-              <DropdownMenuItem
-                onClick={() => onDelete(item.id)}
-                className="text-destructive focus:text-destructive"
-              >
-                Delete
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              {item.trailing}
+            </span>
+          )}
+          {hasMenu && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="absolute right-0 top-1/2 -translate-y-1/2 size-7 flex items-center justify-center rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground hover:bg-accent transition-opacity"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreHorizontal className="size-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" side="bottom">
+                {onStartRename && (
+                  <DropdownMenuItem
+                    onClick={() => onStartRename(item.id, item.name)}
+                  >
+                    Rename
+                  </DropdownMenuItem>
+                )}
+                {onDelete && (
+                  <DropdownMenuItem
+                    onClick={() => onDelete(item.id)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    Delete
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       )}
     </div>
   );
