@@ -1,10 +1,9 @@
 ---
 name: set-up-my-marketing-info
-description: "Tell me the basics about your company, your customer, and how you talk so I can give you better marketing help. I ask a few quick questions about your product, positioning, ICP, voice, and what you're selling right now. You only need to do this once, and I keep it updated as things change."
+description: "Tell me the basics about your company, your customer, and how you talk so I can give you better marketing help. I ask a few quick questions about your product, positioning, ideal customer, voice, and what you're selling right now. You only need to do this once, and I keep it updated as things change."
 version: 1
-tags: [marketing, define, positioning]
 category: Marketing
-featured: yes
+featured: no
 image: megaphone
 integrations: [googledocs, notion]
 ---
@@ -18,7 +17,7 @@ This skill create or update your positioning doc. Every other marketing skill re
 
 - "help me write a positioning statement" / "draft my positioning" /
   "let's do positioning".
-- "update the positioning doc" / "our ICP changed, fix the context
+- "update the positioning doc" / "our ideal customer changed, fix the context
   doc".
 - Called implicitly by any other skill needing positioning, finding
   doc missing  -  only after confirming with user.
@@ -38,14 +37,14 @@ I can run this skill with no connections at all, I'll just lean harder on what y
 I read your marketing context first. For every required field that's missing I ask ONE plain-language question (best modality: connected app > file drop > URL > paste) and wait.
 
 - **Your company basics**  -  Required. Why I need it: the doc opens with what you make and who for. If missing I ask: "What's your company name, your website, and how would you describe what you do in one sentence?"
-- **Your ICP**  -  Required. Why I need it: positioning without a target reader is just adjectives. If missing I ask: "Who's the customer you're trying to win, role, company size, what triggers them to look?"
+- **Your ideal customer**  -  Required. Why I need it: positioning without a target reader is just adjectives. If missing I ask: "Who's the customer you're trying to win, role, company size, what triggers them to look?"
 - **Your voice**  -  Required. Why I need it: the doc carries voice rules every other skill reads. If missing I ask: "Connect your sent inbox so I can sample your voice, or paste two or three things you've written."
 - **Two or three verbatim customer quotes**  -  Required. Why I need it: I won't paraphrase customers into marketer-speak. If missing I ask: "Drop a recent sales call recording, paste two or three customer phrases you remember word-for-word, or connect Gong / Fireflies so I can pull them."
 - **One or two anchor accounts**  -  Optional. If missing I ask: "Name one or two real customers, or target customers, you'd point at as the perfect fit. If you don't have it I keep going with TBD."
 
 ## Steps
 
-1. **Read config.** Load `config/company.json`, `config/icp.json`,
+1. **Read config.** Load `config/company.json`, `config/ideal-customer.json`,
    `config/voice.md`. If any missing, run `onboard-me` first (or
    ask ONE missing piece just-in-time with best-modality hint:
    connected app > file > URL > paste).
@@ -66,7 +65,7 @@ I read your marketing context first. For every required field that's missing I a
 
    1. **Company overview**  -  one paragraph: what we make, who for,
       what make it worth building now.
-   2. **ICP**  -  industry, size, role, triggers. Name **1-2 anchor
+   2. **Ideal customer**  -  industry, size, role, triggers. Name **1-2 anchor
       accounts** (real closed-won or target).
    3. **Jobs-to-be-done**  -  2-3 real jobs buyer hire product for.
       Verbatim customer language preferred.

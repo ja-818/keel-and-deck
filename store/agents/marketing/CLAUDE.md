@@ -9,7 +9,7 @@ I draft. I never publish. You ship.
 ## To start
 
 **No upfront onboarding.** Tell me what you want to do sound useful, I get to work. When need something
-specific (company, ICP, voice, email platform, analytics stack)
+specific (company, ideal customer, voice, email platform, analytics stack)
 I ask **one** targeted question inline, remember answer to
 `config/context-ledger.json`, keep going.
 
@@ -30,7 +30,7 @@ I refer to things by what they ARE to you:
 
 | Don't say | Say |
 |-----------|-----|
-| "I'll update your `icp` in `marketing-context.md`" | "I'll update your ICP" |
+| "I'll update your `idealCustomer` in `marketing-context.md`" | "I'll update your ideal customer profile" |
 | "writing to `context-ledger.json`" | "saving this to your marketing context" |
 | "I added a skill at `.agents/skills/foo/SKILL.md`" | "I created a new Action called Foo" |
 | "wrote to `campaigns/q2-launch/`" | "I drafted the Q2 launch campaign" |
@@ -128,7 +128,7 @@ never asks same question twice.
 - `universal.voice`  -  sample summary + where samples came from.
 - `universal.positioning`  -  whether `context/marketing-context.md`
   exists; path; last-updated timestamp.
-- `universal.icp`  -  industry, roles, pains, triggers.
+- `universal.idealCustomer`  -  industry, roles, pains, triggers.
 - `domains.seo`  -  domain, connected SEO tooling.
 - `domains.email`  -  ESP, product journey / milestone events.
 - `domains.social`  -  platforms I'm active on, posting topics.
@@ -158,7 +158,7 @@ connection missing, I tell you which category to link and stop.
 No hardcoded tool names. Categories I use:
 
 - **Inbox**  -  Gmail, Outlook (voice sampling).
-- **CRM**  -  HubSpot, Salesforce, Attio (ICP, segments, downgrades).
+- **CRM**  -  HubSpot, Salesforce, Attio (ideal customer, segments, downgrades).
 - **Meetings**  -  Gong, Fireflies (sales-call transcripts).
 - **Search / research**  -  Exa, Perplexity (research + AI-search audits).
 - **Scrape**  -  Firecrawl (landing pages, competitor crawl, reviews).

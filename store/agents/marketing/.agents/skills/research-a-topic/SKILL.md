@@ -2,9 +2,8 @@
 name: research-a-topic
 description: "Get a structured brief on any topic you need to understand before making a marketing decision. I run deep research, cite every source, and deliver angles worth writing about. Feeds blog drafts, ad strategies, and content plans."
 version: 1
-tags: [marketing, synthesize, research]
 category: Marketing
-featured: yes
+featured: no
 image: megaphone
 integrations: [firecrawl, perplexityai]
 ---
@@ -33,7 +32,7 @@ If web search isn't connected I stop. The scrape fallback keeps me going on its 
 
 I read your marketing context first. For every required field that's missing I ask ONE plain-language question (best modality: connected app > file drop > URL > paste) and wait.
 
-- **Your positioning**  -  Required. Why I need it: a brief that doesn't filter for your ICP and category is just generic internet research. If missing I ask: "Want me to draft your positioning first? It's one skill, takes about five minutes."
+- **Your positioning**  -  Required. Why I need it: a brief that doesn't filter for your ideal customer and category is just generic internet research. If missing I ask: "Want me to draft your positioning first? It's one skill, takes about five minutes."
 - **The research question**  -  Required. Why I need it: scope creep makes briefs useless. If missing I ask: "What's the one question this brief should answer, and what decision does it unblock?"
 - **Depth**  -  Optional, default standard. If missing I ask: "How deep should I go, a fifteen-minute scan, an hour-long dive, or a deep run? If you don't have a preference I keep going with standard depth."
 
@@ -44,7 +43,7 @@ I read your marketing context first. For every required field that's missing I a
    - What decision must unblock?
    - Depth  -  15-min scan, 60-min dive, or deep?
 
-2. **Read positioning doc** (own file): `context/marketing-context.md`. Ground brief in our ICP and category  -  generic internet research not a brief.
+2. **Read positioning doc** (own file): `context/marketing-context.md`. Ground brief in our ideal customer and category  -  generic internet research not a brief.
 
 3. **Discover research tools at runtime.** Do NOT hardcode tool names. Run `composio search research`, `composio search web-search`, `composio search web-scrape` and pick best connected slug per step. If web-search is missing, stop and ask the user to connect a provider (Integrations tab). If only web-scrape is missing, keep going on basic HTTP fetch and flag that JS-heavy sources will be thin.
 
@@ -52,7 +51,7 @@ I read your marketing context first. For every required field that's missing I a
    1. **Landscape scan**  -  players, category terminology, top 5-10 authoritative sources.
    2. **Evidence drill**  -  fetch top sources, extract claims, quotes, data points. Cite URL + fetch timestamp per claim.
    3. **Contradiction check**  -  where sources disagree? Name both sides; don't average to mush.
-   4. **Relevance filter**  -  which findings matter for OUR ICP / OUR positioning / decision at hand? Cut rest.
+   4. **Relevance filter**  -  which findings matter for OUR ideal customer / OUR positioning / decision at hand? Cut rest.
 
 5. **Structure brief (markdown, ~500-900 words standard depth).**
 

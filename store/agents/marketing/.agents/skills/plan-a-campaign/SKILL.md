@@ -2,9 +2,8 @@
 name: plan-a-campaign
 description: "Plan a full campaign spec grounded in your positioning. Pick the type: a paid campaign with audience and budget, a product launch plan, a lifecycle drip, a welcome series, a churn-save email, or a feature announcement with email plus in-app copy. Specs only, I never send or launch."
 version: 1
-tags: [marketing, plan, campaign]
 category: Marketing
-featured: yes
+featured: no
 image: megaphone
 integrations: [hubspot, stripe, linkedin, mailchimp, customerio, googleads, metaads]
 ---
@@ -12,7 +11,7 @@ integrations: [hubspot, stripe, linkedin, mailchimp, customerio, googleads, meta
 
 # Plan a Campaign
 
-One skill, every campaign spec. `type` param picks shape; positioning, voice, ICP, "drafts only, no guilt tactics" shared.
+One skill, every campaign spec. `type` param picks shape; positioning, voice, ideal customer, "drafts only, no guilt tactics" shared.
 
 ## Parameter: `type`
 
@@ -47,7 +46,7 @@ I read your marketing context first. For every required field that's missing I a
 
 - **Your positioning**  -  Required for every type. Why I need it: targeting, objection handling, and the primary CTA all flow from it. If missing I ask: "Want me to draft your positioning first? It's one skill, takes about five minutes."
 - **Your voice**  -  Required for `lifecycle-drip`, `welcome`, `churn-save`, `announcement`. Why I need it: emails written in chatbot voice get deleted. If missing I ask: "Connect your sent inbox so I can sample your voice, or paste two or three emails you've sent."
-- **Your ICP**  -  Required. Why I need it: shapes targeting and copy angles. If missing I ask: "Who's the customer you're trying to win? A paragraph is fine, or point me at your CRM."
+- **Your ideal customer**  -  Required. Why I need it: shapes targeting and copy angles. If missing I ask: "Who's the customer you're trying to win? A paragraph is fine, or point me at your CRM."
 - **Your email platform and product journey**  -  Required for `lifecycle-drip`, `welcome`, `churn-save`, `announcement`. Why I need it: the drip plan keys to your real activation event. If missing I ask: "Which email tool do you use, and what's your activation moment, the thing a new user has to do for the product to click?"
 - **Your ad channels, analytics, and primary conversion**  -  Required for `paid`. If missing I ask: "Which ad platform are we planning for, and what's the one conversion event the campaign needs to drive?"
 - **Your save policy**  -  Required for `churn-save`. Why I need it: I won't draft offers you can't honor. If missing I ask: "What's the one genuine offer you'll make to a churning customer, a pause, a downgrade, a concierge call, or a refund window?"
@@ -56,7 +55,7 @@ I read your marketing context first. For every required field that's missing I a
 
 1. **Read ledger + positioning.** Gather missing required fields per list above (ONE question each, best-modality first).
 2. **Branch on type.**
-   - `paid`: run `composio search {channel}` (googleads / metaads / linkedin-ads) find platform slugs. If connected, call list-accounts / list-keywords / list-audiences. Draft brief: **Objective** (one sentence tied to primary conversion), **Audience** (keywords for search; interests / lookalikes / job titles for social  -  grounded in ICP), **Budget plan** (daily + monthly, split by ad group), **Ad-group structure** (2-5 groups with theme + sample targeting), **Creative angles** (3-5 tied to pains / differentiators  -  hand to `write-a-post` or dedicated ad-copy skill for exact copy), **Landing-page requirement** (which URL per group; flag if `audit-a-surface` surface=landing-page should run first), **KPI targets** (CPC / CPM / CPA / CTR with source cited), **Tracking** (events + UTMs), **Launch checklist**.
+   - `paid`: run `composio search {channel}` (googleads / metaads / linkedin-ads) find platform slugs. If connected, call list-accounts / list-keywords / list-audiences. Draft brief: **Objective** (one sentence tied to primary conversion), **Audience** (keywords for search; interests / lookalikes / job titles for social  -  grounded in ideal customer), **Budget plan** (daily + monthly, split by ad group), **Ad-group structure** (2-5 groups with theme + sample targeting), **Creative angles** (3-5 tied to pains / differentiators  -  hand to `write-a-post` or dedicated ad-copy skill for exact copy), **Landing-page requirement** (which URL per group; flag if `audit-a-surface` surface=landing-page should run first), **KPI targets** (cost per click / cost per thousand impressions / cost per acquisition / click-through rate with source cited), **Tracking** (events + UTMs), **Launch checklist**.
    - `launch`: ask for any missing launch inputs ONE tight question (feature name + target date, "why now" pain, audience segment, scale = soft / standard / big  -  default standard). Draft sequenced plan across three phases:
      - **Pre-launch (Day -7 → Day -1)**  -  positioning delta + launch narrative, blog post brief (→ `write-a-post` surface=blog), case study if applicable, paid creative brief (→ this skill type=paid), landing-page updates (→ `write-my-page-copy` + `audit-a-surface` surface=landing-page), announcement email + in-app spec (→ this skill type=announcement), teaser calendar across social platforms (→ `write-a-post` channels).
      - **Launch day (Day 0)**  -  hour-by-hour sequence, what ships when, who approves.

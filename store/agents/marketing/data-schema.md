@@ -51,7 +51,7 @@ interface ContextLedger {
       path: "context/marketing-context.md";
       lastUpdatedAt?: string;
     };
-    icp?: {
+    idealCustomer?: {
       industry: string[];
       roles: string[];
       pains: string[];
@@ -123,7 +123,7 @@ copy, content, or campaign.** Owned and updated exclusively by
 Structure (filled in by `set-up-my-marketing-info`):
 
 - Company overview (name, site, 30s pitch, stage).
-- ICP (industry, roles, pains, JTBD, triggers, anchor accounts).
+- Ideal customer (industry, roles, pains, JTBD, triggers, anchor accounts).
 - Positioning statement.
 - Category & differentiators.
 - Brand voice notes.
@@ -173,7 +173,7 @@ Rules:
 
 | Folder | Written by | Notes |
 |---|---|---|
-| `personas/{slug}.md` | `profile-my-customer` | One per ICP segment. |
+| `personas/{slug}.md` | `profile-my-customer` | One per ideal customer segment. |
 | `competitor-briefs/{source}-{slug}.md` | `watch-my-competitors` | `source` = `product` / `ads` / `social-feed`. |
 | `research/{slug}.md` | `research-a-topic` | Deep-research briefs. |
 | `call-insights/{YYYY-MM-DD}.md` | `mine-my-sales-calls` | Batch per session. |

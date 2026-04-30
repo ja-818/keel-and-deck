@@ -2,7 +2,6 @@
 name: mine-my-sales-calls
 description: "Pull the exact words your customers use from your sales call recordings. I extract verbatim pain phrases, objection patterns, and positioning signals from Gong or Fireflies transcripts, ranked by frequency. This is the single best source for headlines, ad copy, and landing pages that sound like your buyer."
 version: 1
-tags: [marketing, mine, sales]
 category: Marketing
 featured: yes
 image: megaphone

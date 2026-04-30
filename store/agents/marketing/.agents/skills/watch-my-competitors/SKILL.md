@@ -2,9 +2,8 @@
 name: watch-my-competitors
 description: "Keep tabs on what your competitors are doing and whether any of it matters. Pick what to watch: their product moves and messaging changes, the ads they're running, or posts in your feed worth jumping on. Real threats vs noise, not a news dump."
 version: 1
-tags: [marketing, monitor, competitors]
 category: Marketing
-featured: yes
+featured: no
 image: megaphone
 integrations: [linkedin, twitter, reddit, instagram, googleads, metaads, firecrawl]
 ---
@@ -42,12 +41,12 @@ If `ads` or `social-feed` requires a connection that isn't there I stop. For `pr
 I read your marketing context first. For every required field that's missing I ask ONE plain-language question (best modality: connected app > file drop > URL > paste) and wait.
 
 - **Your positioning**  -  Required for every source. Why I need it: gives me your competitor list and the differentiators I judge threats against. If missing I ask: "Want me to draft your positioning first? It's one skill, takes about five minutes."
-- **Your ICP**  -  Required. Why I need it: filters which competitor signals actually matter for your buyer. If missing I ask: "Who's the customer you're trying to win? A paragraph is fine, or point me at your CRM."
+- **Your ideal customer**  -  Required. Why I need it: filters which competitor signals actually matter for your buyer. If missing I ask: "Who's the customer you're trying to win? A paragraph is fine, or point me at your CRM."
 - **Your social platforms and topics**  -  Required for `social-feed`. Why I need it: tells me which feed to scan and what counts as relevant. If missing I ask: "Which platforms do you post on, and what topics do you want me to track in your feed?"
 
 ## Steps
 
-1. **Read ledger + positioning.** Extract named competitor list + our differentiators + top 2-3 ICP objections. Gather missing required fields (ONE question each).
+1. **Read ledger + positioning.** Extract named competitor list + our differentiators + top 2-3 ideal customer objections. Gather missing required fields (ONE question each).
 2. **Determine mode + target list.**
    - `product`: user named one -> teardown; "weekly pulse" or multiple -> digest (default top 3 from positioning).
    - `ads`: user named one -> that competitor; else top 3 from positioning. Check prior `competitor-briefs/` for deltas.

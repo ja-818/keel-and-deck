@@ -2,7 +2,6 @@
 name: plan-my-social-week
 description: "Build your social posting plan for the week. I fill Monday through Friday across your active platforms with a mix of original posts, repurposed content, and engagement blocks. No duplicate angles, no generic filler."
 version: 1
-tags: [marketing, plan, social]
 category: Marketing
 featured: yes
 image: megaphone
@@ -31,7 +30,7 @@ If none of your active social platforms are connected I stop and ask you to conn
 
 I read your marketing context first. For every required field that's missing I ask ONE plain-language question (best modality: connected app > file drop > URL > paste) and wait.
 
-- **Your positioning**  -  Required. Why I need it: every slot has to ladder back to your category and ICP, not generic content. If missing I ask: "Want me to draft your positioning first? It's one skill, takes about five minutes."
+- **Your positioning**  -  Required. Why I need it: every slot has to ladder back to your category and ideal customer, not generic content. If missing I ask: "Want me to draft your positioning first? It's one skill, takes about five minutes."
 - **Your voice**  -  Required. Why I need it: the calendar names angles and hooks, those need to sound like you. If missing I ask: "Connect your sent inbox so I can sample your voice, or paste two or three things you've written."
 - **Your active platforms and topics**  -  Required. Why I need it: I won't plan for platforms you don't post on. If missing I ask: "Which platforms do you post on, and what topics do you want me to rotate through?"
 - **Posting cadence**  -  Optional, default LinkedIn 3 / X 5 / Reddit 2 per week. If missing I ask: "How many posts per week per platform do you want to aim for? If you don't have a number I keep going with the default."

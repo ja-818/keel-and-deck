@@ -2,9 +2,8 @@
 name: research-my-seo
 description: "Build the SEO foundation you need to rank. Pick the focus: keyword research that clusters terms by intent and difficulty and names the pillars worth owning, or a backlink plan that finds target sites and drafts a personalized pitch for each one. Both grounded in your positioning so you chase the right traffic."
 version: 1
-tags: [marketing, seo, research]
 category: Marketing
-featured: yes
+featured: no
 image: megaphone
 integrations: [semrush, ahrefs, firecrawl]
 ---
@@ -12,7 +11,7 @@ integrations: [semrush, ahrefs, firecrawl]
 
 # Research My SEO
 
-One skill for the two foundational SEO research jobs. `focus` param picks whether you're building keyword clusters or a backlink outreach plan. Both read your positioning first so every recommendation ladders back to your ICP and category.
+One skill for the two foundational SEO research jobs. `focus` param picks whether you're building keyword clusters or a backlink outreach plan. Both read your positioning first so every recommendation ladders back to your ideal customer and category.
 
 ## Parameter: `focus`
 
@@ -49,7 +48,7 @@ If neither Ahrefs nor Semrush is connected for `backlinks` I stop and ask you to
 
 I read your marketing context first. For every required field that's missing I ask ONE plain-language question (best modality: connected app > file drop > URL > paste) and wait.
 
-- **Your positioning**  -  Required (both focuses). Why I need it: ICP and category framing decide which keywords are worth ranking for (`keywords`) and which sites are relevant vs noise (`backlinks`). If missing I ask: "Want me to draft your positioning first? It's one skill, takes about five minutes."
+- **Your positioning**  -  Required (both focuses). Why I need it: Ideal customer and category framing decide which keywords are worth ranking for (`keywords`) and which sites are relevant vs noise (`backlinks`). If missing I ask: "Want me to draft your positioning first? It's one skill, takes about five minutes."
 - **Your website domain**  -  Required (both focuses). Why I need it: for `keywords` I check what you already rank for so I don't propose keywords you already own; for `backlinks` I check who already links to you so I don't pitch sites that already cover you. If missing I ask: "What's your website? Paste the URL."
 - **The seed topic**  -  Required for `keywords`. Why I need it: one cluster per run, I don't want to guess. If missing I ask: "What's the seed topic or term you want a keyword cluster around?"
 - **Your voice**  -  Required for `backlinks` pitch emails. If missing I ask: "Connect your sent inbox so I can match your voice, or paste two or three emails you've sent."
@@ -72,8 +71,8 @@ I read your marketing context first. For every required field that's missing I a
    - Expand seed into 15-40 related terms (head + long-tail).
    - Pull per-term: search volume, keyword difficulty, SERP intent (informational / commercial / navigational / transactional).
    - Group into sub-clusters by intent or sub-topic.
-   - Score each term priority: `(volume / difficulty) x intent-fit x ICP-fit`. ICP-fit references positioning doc.
-6. **Write per-cluster detail** to `keyword-clusters/{cluster-slug}.md` atomically. Structure: cluster summary, ICP / positioning rationale, sub-clusters table (term / volume / difficulty / intent / priority), recommended first 3 posts to draft.
+   - Score each term priority: `(volume / difficulty) x intent-fit x ideal-customer-fit`. Ideal-customer-fit references positioning doc.
+6. **Write per-cluster detail** to `keyword-clusters/{cluster-slug}.md` atomically. Structure: cluster summary, ideal customer / positioning rationale, sub-clusters table (term / volume / difficulty / intent / priority), recommended first 3 posts to draft.
 7. **Append to `keyword-map.md`** (living doc at agent root). File missing -> create with short preamble. Append new section for this cluster with link to per-cluster detail file + top 5 priority terms. Atomic write: read -> append in memory -> write `*.tmp` -> rename.
 8. **Append to `outputs.json`**  -  `{ id, type: "keyword-map", title, summary, path: "keyword-clusters/{slug}.md", status: "draft", createdAt, updatedAt }`.
 9. **Summarize to user**  -  name top 3 priority terms, flag best first post to draft, link both cluster detail + updated `keyword-map.md`.
@@ -83,7 +82,7 @@ I read your marketing context first. For every required field that's missing I a
 4. **Read `config/voice.md`** if exists (for pitch-email tone). If voice missing, ask ONE question: "Connect your sent inbox via Composio so I can match your voice, or paste 2-3 emails you've sent  -  which?"
 5. **Build target list** (15-30 prospects). Each target:
    - Domain + specific page/author to pitch.
-   - Why them: topical relevance, Domain Authority (or proxy metric), past linking behaviour to similar products, ICP overlap.
+   - Why them: topical relevance, Domain Authority (or proxy metric), past linking behaviour to similar products, ideal customer overlap.
    - Link opportunity type: guest post / resource page / broken-link replacement / "best X" list addition / expert round-up / podcast.
 6. **Tier list**: Tier 1 (high-value, high-effort), Tier 2 (medium / medium), Tier 3 (quick wins). Aim ~5 / 10 / 10.
 7. **Draft per-target pitch emails.** Each target produce concise (<150 word) pitch: specific compliment tied to real post of theirs, value-exchange, soft CTA. Match voice from `config/voice.md` (if available) and positioning from shared doc.

@@ -2,9 +2,8 @@
 name: profile-my-customer
 description: "Build a detailed profile of the customer you're trying to win. I pull from your CRM or what you paste, and give you a persona with jobs-to-be-done, ranked pains, buying triggers, objection patterns, and real anchor accounts. Every ad, landing page, and email I write pulls from here."
 version: 1
-tags: [marketing, profile, icp]
 category: Marketing
-featured: yes
+featured: no
 image: megaphone
 integrations: [hubspot, salesforce, attio]
 ---
@@ -16,10 +15,10 @@ Source template: Gumloop "Market Segmentation: Buyer Persona Pain Point Report".
 
 ## When to use
 
-- "profile our ICP" / "build a persona for {segment}" / "help me nail buyer persona for {role}".
+- "profile our ideal customer" / "build a persona for {segment}" / "help me nail buyer persona for {role}".
 - "going upmarket, redo persona" / "SMB persona changed, update it".
 - "build a persona from closed-won accounts" / "pull from my CRM, not vibes" / "who's actually buying this  -  look at closed-won".
-- Called implicitly when another skill (e.g. `plan-a-campaign`, `set-up-my-marketing-info`) needs more persona depth than `config/icp.json` provides.
+- Called implicitly when another skill (e.g. `plan-a-campaign`, `set-up-my-marketing-info`) needs more persona depth than `config/ideal-customer.json` provides.
 
 ## Connections I need
 
@@ -36,14 +35,14 @@ If you want a CRM-grounded persona and no CRM is connected, I stop and ask you t
 I read your marketing context first. For every required field that's missing I ask ONE plain-language question (best modality: connected app > file drop > URL > paste) and wait.
 
 - **Your positioning**  -  Required. Why I need it: persona work is wasted without a positioning anchor. If missing I ask: "Want me to draft your positioning first? It's one skill, takes about five minutes."
-- **The segment to profile**  -  Required. Why I need it: one persona per run, I don't want to build the wrong one. If missing I ask: "Which segment are we profiling, your core ICP or a new one? A short description works, or point me at your CRM."
+- **The segment to profile**  -  Required. Why I need it: one persona per run, I don't want to build the wrong one. If missing I ask: "Which segment are we profiling, your core ideal customer or a new one? A short description works, or point me at your CRM."
 - **Top accounts to learn from**  -  Required. Why I need it: I won't invent demographics. If missing I ask: "Connect your CRM so I can pull your closed-won list, or paste five accounts (won or target) you want me to learn from."
 
 ## Steps
 
 1. **Read positioning doc** (own file, since this is HoM): `context/marketing-context.md`. If missing, run `set-up-my-marketing-info` first  -  persona work wasted without positioning anchor.
 
-2. **Read config.** `config/icp.json`, `config/company.json`. If ICP config thin and user hasn't named segment, ask ONE targeted question: "Which segment are we profiling  -  your core ICP or a new one?" (Best modality: paste line, or point at connected CRM via Composio so I infer from top accounts.)
+2. **Read config.** `config/ideal-customer.json`, `config/company.json`. If ideal customer config thin and user hasn't named segment, ask ONE targeted question: "Which segment are we profiling  -  your core ideal customer or a new one?" (Best modality: paste line, or point at connected CRM via Composio so I infer from top accounts.)
 
 3. **Gather evidence.** Priority order:
    - Existing `call-insights/` under this agent root  -  verbatim customer language is gold.
@@ -67,7 +66,7 @@ I read your marketing context first. For every required field that's missing I a
 
 5. **Mark UNKNOWN, don't guess.** Every section with insufficient evidence gets `UNKNOWN  -  {what would resolve it}` note. No invented demographics.
 
-6. **Update `config/icp.json` if persona sharpens default ICP.** Atomic write. Ask user before overwriting, unless they said "update the ICP".
+6. **Update `config/ideal-customer.json` if persona sharpens default ideal customer.** Atomic write. Ask user before overwriting, unless they said "update the ideal customer".
 
 7. **Write atomically** to `personas/{segment-slug}.md`  -  write `{path}.tmp`, then rename.
 
@@ -92,4 +91,4 @@ I read your marketing context first. For every required field that's missing I a
 
 - `personas/{segment-slug}.md`
 - Appends to `outputs.json` with `type: "persona"`.
-- May update `config/icp.json` (with user approval).
+- May update `config/ideal-customer.json` (with user approval).

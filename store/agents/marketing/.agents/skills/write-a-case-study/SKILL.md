@@ -2,9 +2,8 @@
 name: write-a-case-study
 description: "Turn a customer win into a case study you can put on your site or hand to sales. I structure it as challenge, approach, and results with real numbers in your voice. Any number I can't verify gets flagged for you to confirm."
 version: 1
-tags: [marketing, write, case]
 category: Marketing
-featured: yes
+featured: no
 image: megaphone
 integrations: [notion, airtable]
 ---

@@ -2,7 +2,6 @@
 name: write-my-page-copy
 description: "Rewrite the copy on any page or in-product surface. Pick the surface: homepage, pricing, about, a landing page, your signup flow, in-app onboarding, upgrade paywall, or a popup. You get current vs proposed with the reasoning behind each change. Drafts only."
 version: 1
-tags: [marketing, write, page]
 category: Marketing
 featured: yes
 image: megaphone
@@ -46,7 +45,7 @@ I read your marketing context first. For every required field that's missing I a
 - **Your company name and pitch**  -  Required. If missing I ask: "What's the company name, and how do you describe what it does in one sentence?"
 - **Your voice**  -  Required. Why I need it: this is rewriting your own page, it has to sound like you. If missing I ask: "Connect your sent inbox so I can sample your voice, or paste two or three things you've written."
 - **Your positioning**  -  Required. If missing I ask: "Want me to draft your positioning first? It's one skill, takes about five minutes."
-- **Your ICP**  -  Required. Why I need it: grounds the value props in real buyer pains. If missing I ask: "Who's the customer this page is trying to convert? A paragraph is fine, or point me at your CRM."
+- **Your ideal customer**  -  Required. Why I need it: grounds the value props in real buyer pains. If missing I ask: "Who's the customer this page is trying to convert? A paragraph is fine, or point me at your CRM."
 - **The primary action this page should drive**  -  Required for `homepage`, `pricing`, `about`, `landing`. If missing I ask: "What's the one action you want a visitor to take on this page, sign up, book a demo, start a trial, request pricing?"
 - **The page URL or screenshot**  -  Required. If missing I ask: "Paste the URL of the page you want rewritten. If it's an in-product surface, drop a screenshot or paste the current copy."
 
@@ -58,7 +57,7 @@ I read your marketing context first. For every required field that's missing I a
    - Try recent `analyses/` or `audits/` artifacts in this agent for prior mined quotes.
    - Else run `composio search` for review-scrape providers (G2, Capterra, Trustpilot, Reddit, App Store), pull verbatim phrases. Nothing available → ask user for 3-5 quotes, stop. Never invent quotes.
 4. **Branch on surface.**
-   - `homepage` | `pricing` | `about` | `landing`: enumerate sections to rewrite (hero headline + subhead → social-proof slot → 3-5 value props tied to ICP pains → how-it-works → objections (from positioning) → final CTA recap). Per section: **Current** (quoted verbatim) → **Proposed** (founder's voice) → **Why** (principle + ICP pain + positioning claim). Give 2-3 options for hero headline + primary CTA with "ship this first" flag. Flag any current-page claim contradicting positioning in "Flagged" section (do NOT rewrite positioning  -  `set-up-my-marketing-info` owns that).
+   - `homepage` | `pricing` | `about` | `landing`: enumerate sections to rewrite (hero headline + subhead → social-proof slot → 3-5 value props tied to ideal customer pains → how-it-works → objections (from positioning) → final CTA recap). Per section: **Current** (quoted verbatim) → **Proposed** (founder's voice) → **Why** (principle + ideal customer pain + positioning claim). Give 2-3 options for hero headline + primary CTA with "ship this first" flag. Flag any current-page claim contradicting positioning in "Flagged" section (do NOT rewrite positioning  -  `set-up-my-marketing-info` owns that).
    - `signup-flow`: map flow as enumerated step list (entry → landing → email/SSO → verification → plan → password → org → billing). Mark conversion-event step. Per step: **Necessity** (keep / merge / defer / kill), **Friction** (cognitive-load / missing-value / error-shame / etc.), **Drop triggers**, full **Copy rewrites** (headline, subhead, labels, CTA, errors, confirmation). Call out what should defer post-conversion. Finish with one consolidated top-to-bottom end-state flow + top-3 ship-this-week + current vs. recommended step count.
    - `onboarding`: name aha-moment (ask if not obvious). Map surfaces: welcome screen → empty states → onboarding checklist (3-5 items, verb + outcome, ordered by aha-adjacency) → tooltips → aha-moment confirmation. Each surface: **Current / Proposed / Why** with principle named (value-first, single-next-action, action-led-label, aha-adjacency, empty-state-promise). Flag sequencing issues when data belongs in signup-flow instead (or vice versa).
    - `paywall`: **Audit timing FIRST**  -  user hit aha before this fires? Trigger behavioral or temporal? Dismissal gentle or punishing? Timing broken → call it as first issue. Then audit content  -  headline (value of upgrading, not limitation of free), plan comparison (one recommended, outcome-led names), objection handling (from positioning), social-proof placement, primary CTA (action + outcome), dismissal pattern. Flag compliance / trust issues (auto-renew, cancel policy, trial-to-paid default).

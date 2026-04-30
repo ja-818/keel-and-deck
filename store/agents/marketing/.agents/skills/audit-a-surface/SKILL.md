@@ -2,9 +2,8 @@
 name: audit-a-surface
 description: "Grade a specific marketing surface and get a prioritized fix list. Pick what to audit: your site's SEO health, your visibility in AI search engines like ChatGPT and Perplexity, a landing page scored on six dimensions, or a form that's leaking conversions. Every finding ranked by impact and ease."
 version: 1
-tags: [marketing, audit]
 category: Marketing
-featured: yes
+featured: no
 image: megaphone
 integrations: [firecrawl, semrush, ahrefs, perplexityai]
 ---
@@ -60,7 +59,7 @@ For `site-seo` I stop if no SEO tool is connected. For `ai-search` I stop if no 
 I read your marketing context first. For every required field that's missing I ask ONE plain-language question (best modality: connected app > file drop > URL > paste) and wait.
 
 - **Your positioning**  -  Required. Why I need it: every audit grades content against who you serve and what you stand for. If missing I ask: "Want me to draft your positioning first? It's one skill, takes about five minutes."
-- **Your ICP**  -  Required for `landing-page` and `form` (so I can grade objection handling and field choices). If missing I ask: "Who is the customer you want this page or form to convert? A short paragraph or paste from your CRM works."
+- **Your ideal customer**  -  Required for `landing-page` and `form` (so I can grade objection handling and field choices). If missing I ask: "Who is the customer you want this page or form to convert? A short paragraph or paste from your CRM works."
 - **Your website domain**  -  Required for `site-seo` and `ai-search`. If missing I ask: "What's the domain you want me to audit? Paste the URL."
 - **Your SEO tool**  -  Required for `site-seo` and `ai-search`. If missing I ask: "Open Integrations and connect Semrush or Ahrefs, or paste a list of pages you want me to grade."
 
@@ -87,7 +86,7 @@ I read your marketing context first. For every required field that's missing I a
    - `ai-search`: build query set (3 buckets of 3-5 queries each):
      **Brand** ("what is {product}", "{product} vs {competitor}",
      "{product} pricing"), **Category** (top JTBD questions from
-     positioning), **Problem** (ICP pain-point phrasings). Query each
+     positioning), **Problem** (ideal customer pain-point phrasings). Query each
      engine via discovered slugs  -  minimum ChatGPT / Perplexity /
      Gemini / Google AI Overviews. Per query-engine pair capture:
      cited (yes / mentioned / no), citing URL, who cited instead,
@@ -103,7 +102,7 @@ I read your marketing context first. For every required field that's missing I a
      4. **Primary CTA** (one unambiguous action matching primary
         conversion).
      5. **Objection handling** (FAQ / guarantee / pricing against
-        top 2-3 ICP objections from positioning).
+        top 2-3 ideal customer objections from positioning).
      6. **Visual hierarchy** (eye-path -> CTA, no competing CTAs).
      Bonus: page-speed signals if tool returns them.
    - `form`: accept URL, screenshot, or pasted field list. URL ->

@@ -2,9 +2,8 @@
 name: pitch-me-on-podcasts
 description: "Find podcasts where your ideal customer listens and draft a personalized pitch for each one. I shortlist shows by audience fit, check they're active, and write per-show emails with a hook that references a real episode. No template spam, you send from your own inbox."
 version: 1
-tags: [marketing, pitch, podcast]
 category: Marketing
-featured: yes
+featured: no
 image: megaphone
 integrations: [twitter]
 ---
@@ -14,7 +13,7 @@ integrations: [twitter]
 
 ## When to use
 
-- User: "pitch me onto podcasts" / "podcast outreach" / "find shows for our ICP" / "draft pitches for {N} shows".
+- User: "pitch me onto podcasts" / "podcast outreach" / "find shows for our ideal customer" / "draft pitches for {N} shows".
 - Monthly cadence natural  -  routinize OK.
 
 ## Connections I need
@@ -47,7 +46,7 @@ I read your marketing context first. For every required field that's missing I a
 3. **Discover target podcasts.** Run `composio search podcast` (or `composio search listen-notes`) to find podcast-directory tool. Execute with angle + audience, pull 10-20 candidates. No directory tool connected → tell user which category to link, stop. Never fabricate shows.
 
 4. **Rank and filter.** Per candidate, judge:
-   - **Audience fit.** Matches ICP from positioning doc? Named audience segment?
+   - **Audience fit.** Matches ideal customer from positioning doc? Named audience segment?
    - **Show health.** Publishes monthly+, recent episodes last 90 days.
    - **Host angle.** Host interview operators / founders our space?
    - **Reachability.** Contact surface exist (email, form, Twitter)?
@@ -87,7 +86,7 @@ I read your marketing context first. For every required field that's missing I a
 
 7. **Append to `outputs.json`**  -  new entry, `type: "podcast-pitch"`, `path: "podcast-pitches/{YYYY-MM-DD}.md"`, `status: "draft"`.
 
-8. **Summarize to user**  -  one paragraph: "{N} shows pitched: {list of show names}. Top match: {show}  -  host interviews {ICP} and ran a recent episode on {angle}. Review, pick which to send, then send from your inbox  -  I never send."
+8. **Summarize to user**  -  one paragraph: "{N} shows pitched: {list of show names}. Top match: {show}  -  host interviews {ideal customer} and ran a recent episode on {angle}. Review, pick which to send, then send from your inbox  -  I never send."
 
 ## Outputs
 

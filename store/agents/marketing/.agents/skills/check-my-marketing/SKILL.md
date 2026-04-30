@@ -2,7 +2,6 @@
 name: check-my-marketing
 description: "Get a read on how your marketing is actually doing. Pick what you need: a funnel readout that flags the biggest leak with experiments to run, a content gap analysis vs a competitor, or a weekly rollup of everything I shipped and what's missing. Numbers and next moves, not a dashboard."
 version: 1
-tags: [marketing, analyze]
 category: Marketing
 featured: yes
 image: megaphone

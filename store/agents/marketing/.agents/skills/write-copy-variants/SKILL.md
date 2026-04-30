@@ -2,9 +2,8 @@
 name: write-copy-variants
 description: "Get copy variants for the piece that needs the most help right now. Pick the job: headline variants for a page, CTA button options, ad copy for a campaign, or a tightening pass on existing copy. Every variant is grounded in a real customer quote or positioning claim, ranked so you know what to test first. Drafts only."
 version: 1
-tags: [marketing, write, copy, variants]
 category: Marketing
-featured: yes
+featured: no
 image: megaphone
 integrations: [reddit, firecrawl, linkedin]
 ---
@@ -70,7 +69,7 @@ For `edit`: I can run with no connections if you paste the copy directly.
 
 I read your marketing context first. For every required field that's missing I ask ONE plain-language question (best modality: connected app > file drop > URL > paste) and wait.
 
-- **Your positioning**  -  Required (all jobs). Why I need it: every variant has to be grounded in your category and ICP, not generic patterns. If missing I ask: "Want me to draft your positioning first? It's one skill, takes about five minutes."
+- **Your positioning**  -  Required (all jobs). Why I need it: every variant has to be grounded in your category and ideal customer, not generic patterns. If missing I ask: "Want me to draft your positioning first? It's one skill, takes about five minutes."
 - **Your voice**  -  Required (all jobs). Why I need it: variants in the wrong voice are unusable; for `edit`, without voice rules the pass turns into chatbot-speak. If missing I ask: "Connect your sent inbox so I can sample your voice, or paste two or three things you've written."
 - **The page and primary conversion**  -  Required for `headlines` and `ctas`. Why I need it: a hero headline and a meta-title carry different constraints; a signup CTA and a pricing CTA carry different jobs. If missing I ask: "Which page is this for, and what's the one action a visitor should take?"
 - **Customer quotes**  -  Required for `headlines` and `ad-copy`. Why I need it: I won't write a headline without a real phrase behind it. If missing I ask: "Connect Gong or Fireflies so I can mine your sales calls, paste five verbatim customer phrases, or point me at G2 / Capterra reviews."

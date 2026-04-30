@@ -2,7 +2,6 @@
 name: write-a-post
 description: "Draft a piece of content in your voice, grounded in your positioning. Pick the channel: a long-form blog post, a LinkedIn post, an X thread, a newsletter, or a Reddit reply. Channel-native copy that sounds like you, not a content mill. Drafts only, you always post."
 version: 1
-tags: [marketing, write, content]
 category: Marketing
 featured: yes
 image: megaphone

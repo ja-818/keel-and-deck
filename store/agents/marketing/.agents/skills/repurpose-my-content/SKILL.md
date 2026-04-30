@@ -2,9 +2,8 @@
 name: repurpose-my-content
 description: "Turn something you already have into something new. Give me a blog post, a YouTube video, an article, or a competitor post, and tell me the target format. I reshape it for the new channel in your voice. No plagiarism, no generic-ify."
 version: 1
-tags: [marketing, repurpose, content]
 category: Marketing
-featured: yes
+featured: no
 image: megaphone
 integrations: [linkedin, twitter, youtube, firecrawl]
 ---

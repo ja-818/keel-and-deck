@@ -2,9 +2,8 @@
 name: measure-my-marketing
 description: "Set up the measurement you need so you're not guessing. Pick what you need: an event tracking plan you can hand a developer, a full A/B test spec with hypothesis and sample size, or a weekly LinkedIn digest showing how your posts performed and who's worth engaging with."
 version: 1
-tags: [marketing, measurement, tracking]
 category: Marketing
-featured: yes
+featured: no
 image: megaphone
 integrations: [linkedin, reddit]
 ---
@@ -12,7 +11,7 @@ integrations: [linkedin, reddit]
 
 # Measure My Marketing
 
-One skill for every measurement job. `scope` param picks the output shape: a developer-ready event tracking spec, a rigorous A/B test doc, or a weekly LinkedIn performance digest. All grounded in your positioning so you measure what matters to your ICP, not vanity numbers.
+One skill for every measurement job. `scope` param picks the output shape: a developer-ready event tracking spec, a rigorous A/B test doc, or a weekly LinkedIn performance digest. All grounded in your positioning so you measure what matters to your ideal customer, not vanity numbers.
 
 ## Parameter: `scope`
 
@@ -57,7 +56,7 @@ If LinkedIn isn't connected for `linkedin-digest` I stop and ask you to link it 
 
 I read your marketing context first. For every required field that's missing I ask ONE plain-language question (best modality: connected app > file drop > URL > paste) and wait.
 
-- **Your positioning**  -  Required (all scopes). Why I need it: for `tracking-plan` it tells me what counts as a meaningful event versus noise; for `ab-test` the hypothesis has to tie back to a real ICP pain or objection; for `linkedin-digest` I judge posts against your category and ICP. If missing I ask: "Want me to draft your positioning first? It's one skill, takes about five minutes."
+- **Your positioning**  -  Required (all scopes). Why I need it: for `tracking-plan` it tells me what counts as a meaningful event versus noise; for `ab-test` the hypothesis has to tie back to a real ideal customer pain or objection; for `linkedin-digest` I judge posts against your category and ideal customer. If missing I ask: "Want me to draft your positioning first? It's one skill, takes about five minutes."
 - **Your primary conversion event**  -  Required for `tracking-plan` and `ab-test`. Why I need it: every flow ends in a measurable success event (`tracking-plan`); that's the test's primary metric (`ab-test`). If missing I ask: "What's the one event that means this flow worked, signup, activation, purchase, demo booked?"
 - **The flow to spec**  -  Required for `tracking-plan`. Why I need it: tracking plans are scoped to one flow at a time. If missing I ask: "Which flow are we tracking, signup, activation, pricing-to-checkout, campaign attribution, or something else?"
 - **Your ad channels**  -  Optional for `tracking-plan`, only if you want a UTM matrix that names them. If missing I ask: "Which channels do you want UTM templates for, Google, Meta, LinkedIn, newsletter, organic social? If you don't have a list I keep going with the common defaults."
