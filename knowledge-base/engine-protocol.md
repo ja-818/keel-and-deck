@@ -110,6 +110,12 @@ module.
 | GET | `/v1/agents/:agent_path/sessions/:key/history` | Load chat history |
 | POST | `/v1/sessions/summarize` | Activity title/description |
 
+`POST /v1/sessions/summarize` accepts `{ message, agentPath?, provider?, model? }`.
+It resolves provider/model from explicit fields, then `agentPath`, then default
+Anthropic. It is best-effort: provider CLI errors, timeouts, or malformed JSON
+return a deterministic fallback title instead of failing the client flow. Do
+not hardcode Claude for this path: Codex-only users may not have Claude Code.
+
 Session starts are exclusive per `workingDir`. If another chat or routine
 session is already running in the same directory, start returns
 `CONFLICT`. This keeps session file-change attribution correct. On

@@ -6,6 +6,7 @@
 
 import { tauriActivity, tauriChat } from "./tauri";
 import { logger } from "./logger";
+import { fallbackMissionTitle, refreshMissionTitle } from "./mission-title";
 
 /** Build a session key for a given activity id. */
 function sessionKeyForActivity(activityId: string): string {
@@ -31,8 +32,6 @@ export interface Conversation {
   agentPath: string;
 }
 
-const TITLE_MAX = 40;
-
 /**
  * Derive an activity title from the user's message.
  * - Trims whitespace; empty input becomes "New mission".
@@ -40,13 +39,7 @@ const TITLE_MAX = 40;
  *   the message was longer.
  */
 export function autoTitleFromText(text: string): string {
-  const trimmed = text.trim();
-  if (trimmed.length === 0) return "New mission";
-  if (trimmed.length <= TITLE_MAX) return trimmed;
-  const slice = trimmed.slice(0, TITLE_MAX);
-  const lastSpace = slice.lastIndexOf(" ");
-  const base = lastSpace > 0 ? slice.slice(0, lastSpace) : slice;
-  return `${base.trimEnd()}...`;
+  return fallbackMissionTitle(text);
 }
 
 export interface CreateMissionAgent {
@@ -81,6 +74,8 @@ export interface CreateMissionOptions {
    * should not bleed into the kanban card title.
    */
   title?: string;
+  /** Source text used for async AI title generation. Defaults to `text`. */
+  titleText?: string;
 }
 
 export interface CreateMissionResult {
@@ -102,7 +97,8 @@ export async function createMission(
   text: string,
   opts: CreateMissionOptions = {},
 ): Promise<CreateMissionResult> {
-  const title = opts.title ?? autoTitleFromText(text);
+  const titleText = opts.titleText ?? text;
+  const title = opts.title ?? fallbackMissionTitle(titleText);
   const description = text;
 
   const item = await tauriActivity.create(
@@ -126,6 +122,16 @@ export async function createMission(
       providerOverride: opts.providerOverride,
       modelOverride: opts.modelOverride,
     });
+
+    if (!opts.title) {
+      void refreshMissionTitle({
+        agentPath: agent.folderPath,
+        activityId: conversationId,
+        text: titleText,
+        provider: opts.providerOverride,
+        model: opts.modelOverride,
+      });
+    }
   } catch (e) {
     try {
       await tauriActivity.delete(agent.folderPath, conversationId);

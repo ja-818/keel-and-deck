@@ -159,14 +159,36 @@ async fn load_history(
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SummarizeRequest {
     pub message: String,
+    #[serde(default)]
+    pub agent_path: Option<String>,
+    #[serde(default)]
+    pub provider: Option<String>,
+    #[serde(default)]
+    pub model: Option<String>,
 }
 
 async fn summarize_activity(
+    State(st): State<Arc<ServerState>>,
     Json(req): Json<SummarizeRequest>,
 ) -> Result<Json<summarize::SummarizeResult>, ApiError> {
-    Ok(Json(summarize::summarize(&req.message).await?))
+    let (provider, model) = if let Some(p_str) = req.provider.as_deref() {
+        let provider = p_str
+            .parse()
+            .map_err(|e: String| CoreError::BadRequest(e))?;
+        (provider, req.model)
+    } else if let Some(agent_path) = req.agent_path.as_deref() {
+        let agent_dir = resolve_agent_dir(&st.engine.paths, agent_path);
+        let resolved = resolve_provider(&st.engine.paths, &agent_dir);
+        (resolved.provider, req.model.or(resolved.model))
+    } else {
+        (Provider::Anthropic, req.model)
+    };
+    Ok(Json(
+        summarize::summarize(&req.message, provider, model.as_deref()).await?,
+    ))
 }
 
 async fn cancel_session(
@@ -226,4 +248,3 @@ fn resolve_provider_with_overrides(
         model: resolved.model,
     })
 }
-

@@ -21,6 +21,7 @@ pub mod file_changes;
 pub mod history;
 pub mod provider;
 pub mod summarize;
+mod summary_text;
 mod workdir_locks;
 
 use crate::agents::prompt as agent_prompt;

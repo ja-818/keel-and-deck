@@ -310,6 +310,9 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
       // buildPrompt callback fires after the activity row exists so we can
       // scope attachments to `activity-{id}` and decorate the prompt with
       // their absolute paths in one pass.
+      const visible = files.length > 0
+        ? `${text}${text ? "\n\n" : ""}Attached: ${files.map((f) => f.name).join(", ")}`
+        : text;
       const { conversationId, sessionKey } = await createMission(
         { id: agent.id, name: agent.name, color: agent.color, folderPath: path },
         text,
@@ -319,15 +322,13 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
           promptFile: mode?.promptFile,
           providerOverride: chatProvider ?? undefined,
           modelOverride: chatModel ?? undefined,
+          titleText: visible,
           buildPrompt: async (activityId) => {
             const saved = await tauriAttachments.save(`activity-${activityId}`, files);
             return withAttachmentPaths(text, saved);
           },
         },
       );
-      const visible = files.length > 0
-        ? `${text}${text ? "\n\n" : ""}Attached: ${files.map((f) => f.name).join(", ")}`
-        : text;
       pushFeedItem(path, sessionKey, { feed_type: "user_message", data: visible });
       setLoading((prev) => ({ ...prev, [sessionKey]: true }));
       // createMission bypassed useCreateActivity so invalidate manually.
