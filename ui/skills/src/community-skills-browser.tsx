@@ -109,10 +109,10 @@ export function CommunitySkillsSection({
     <section className="space-y-3">
       <div>
         <h2 className="text-sm font-medium text-foreground">
-          Discover skills from the community
+          Discover actions from the community
         </h2>
         <p className="text-xs text-muted-foreground mt-0.5">
-          Browse thousands of ready-made procedures on skills.sh
+          Browse reusable procedures on Skills.sh
         </p>
       </div>
 
@@ -142,7 +142,7 @@ export function CommunitySkillsSection({
 
       {!loading && !searchError && results.length === 0 && query.trim().length >= 2 && (
         <p className="text-sm text-muted-foreground">
-          No skills found for "{query.trim()}"
+          No actions found for "{query.trim()}"
         </p>
       )}
 
