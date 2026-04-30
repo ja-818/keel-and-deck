@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { AIBoard } from "@houston-ai/board";
-import type { KanbanItem } from "@houston-ai/board";
+import type { KanbanItem, NewPanelOpener } from "@houston-ai/board";
 import type { FeedItem } from "@houston-ai/chat";
 import { Terminal, GitBranch } from "lucide-react";
 
@@ -35,6 +35,7 @@ import { useQueuedMessageLabels } from "../use-queued-message-labels";
 import { MissionBoardEmptyState } from "../mission-board-empty-state";
 import { useMissionSearch } from "../use-mission-search";
 import { useAttachmentRejectionDialog } from "../attachment-rejection-dialog";
+import { buildMissionBoardColumns } from "../mission-board-columns";
 
 // Stable empty reference so the feed store selector doesn't return a new
 // object every render when this agent has no feeds yet (which would otherwise
@@ -55,11 +56,6 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
   // Mirror Mission Control's columns so the tab and dashboard stay in
   // sync. Without an explicit `columns` prop AIBoard falls back to its
   // hardcoded English defaults.
-  const boardColumns = [
-    { id: "running", label: t("dashboard:columns.running"), statuses: ["running"] },
-    { id: "needs_you", label: t("dashboard:columns.needsYou"), statuses: ["needs_you"] },
-    { id: "done", label: t("dashboard:columns.done"), statuses: ["done", "cancelled"] },
-  ];
   const panelContainer = useDetailPanelContainer();
   const path = agent.folderPath;
   const agentModes = agentDef.config.agents;
@@ -85,9 +81,22 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
     tauriSystem.openUrl(url).catch(console.error);
   }, []);
 
-  const openerRef = useRef<(() => void) | null>(null);
+  const openerRef = useRef<NewPanelOpener | null>(null);
   const emptyAutoOpenKeyRef = useRef<string | null>(null);
   const [newPanelOpenerReady, setNewPanelOpenerReady] = useState(false);
+  const openDefaultMission = useCallback(() => {
+    if (agentModes?.length) setPendingAgentMode(agentModes[0].id);
+    openerRef.current?.({ focusComposer: true });
+  }, [agentModes]);
+  const boardColumns = buildMissionBoardColumns(
+    {
+      running: t("dashboard:columns.running"),
+      needsYou: t("dashboard:columns.needsYou"),
+      done: t("dashboard:columns.done"),
+      newMission: t("empty.newMission"),
+    },
+    openDefaultMission,
+  );
 
   const items: KanbanItem[] = useMemo(
     () => (rawItems ?? []).map((t) => {
@@ -220,14 +229,11 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
 
   // Register the "Start a Mission" handler in the UI store for the TabBar
   const handleOpenerReady = useCallback(
-    (opener: () => void) => {
+    (opener: NewPanelOpener) => {
       openerRef.current = opener;
       setNewPanelOpenerReady(true);
       // Default "New mission" button — always registered
-      setOnStartMission(() => {
-        if (agentModes?.length) setPendingAgentMode(agentModes[0].id);
-        opener();
-      });
+      setOnStartMission(openDefaultMission);
       // Extra board actions for additional agent modes (skip the first — that's the default button)
       if (agentModes && agentModes.length > 1) {
         setBoardActions(
@@ -236,13 +242,13 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
             label: mode.createLabel,
             onClick: () => {
               setPendingAgentMode(mode.id);
-              opener();
+              opener({ focusComposer: true });
             },
           })),
         );
       }
     },
-    [setOnStartMission, setBoardActions, agentModes],
+    [setOnStartMission, setBoardActions, agentModes, openDefaultMission],
   );
 
   const loadHistory = useCallback(
@@ -544,10 +550,7 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
         searchSearchingDescription: t("search.searchingDescription"),
         clearSearch: t("search.clearCta"),
       }}
-      onNewMission={() => {
-        if (agentModes?.length) setPendingAgentMode(agentModes[0].id);
-        openerRef.current?.();
-      }}
+      onNewMission={openDefaultMission}
       onClearSearch={() => setAgentMissionSearchQuery(path, "")}
     />
   );

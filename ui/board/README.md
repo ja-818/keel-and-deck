@@ -16,7 +16,13 @@ import "@houston-ai/board/src/styles.css"
 
 const columns = [
   { id: "todo",    label: "To Do",   statuses: ["todo"] },
-  { id: "running", label: "Running", statuses: ["running"] },
+  {
+    id: "running",
+    label: "Running",
+    statuses: ["running"],
+    onAdd: openNewTask,
+    addLabel: "New task",
+  },
   { id: "done",    label: "Done",    statuses: ["completed"] },
 ]
 
@@ -36,6 +42,8 @@ const columns = [
 - `KanbanCard` -- individual card with glow, delete, approve actions
 - `KanbanDetailPanel` -- slide-in detail view for selected items
 - Types: `KanbanItem`, `KanbanColumn` (config)
+
+Columns with `onAdd` render a visible plus button under the last card.
 
 ## The Glow
 

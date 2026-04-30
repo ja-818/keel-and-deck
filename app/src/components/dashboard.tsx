@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AIBoard } from "@houston-ai/board";
-import type { KanbanColumnConfig } from "@houston-ai/board";
+import type { KanbanColumnConfig, NewPanelOpener } from "@houston-ai/board";
 import {
   Empty,
   EmptyHeader,
@@ -28,15 +28,11 @@ import { AgentPanelAvatar } from "./shell/agent-panel-avatar";
 import { MissionControlToolbar } from "./mission-control-toolbar";
 import { MissionBoardEmptyState } from "./mission-board-empty-state";
 import { useMissionSearch } from "./use-mission-search";
+import { buildMissionBoardColumns } from "./mission-board-columns";
 
 export function Dashboard() {
   const { t } = useTranslation(["dashboard", "board", "common"]);
   const queuedLabels = useQueuedMessageLabels();
-  const MC_COLUMNS: KanbanColumnConfig[] = [
-    { id: "running", label: t("dashboard:columns.running"), statuses: ["running"] },
-    { id: "needs_you", label: t("dashboard:columns.needsYou"), statuses: ["needs_you"] },
-    { id: "done", label: t("dashboard:columns.done"), statuses: ["done", "cancelled"] },
-  ];
   // Card-action tooltips (Approve / Rename / Delete) — shared with the
   // per-agent board tab so the affordance reads the same everywhere.
   const cardLabels = {
@@ -63,8 +59,18 @@ export function Dashboard() {
   // the new conversation is created (and selectedItem takes over) or
   // the user clicks a different card.
   const [pendingAgent, setPendingAgent] = useState<Agent | null>(null);
-  const openerRef = useRef<(() => void) | null>(null);
+  const openerRef = useRef<NewPanelOpener | null>(null);
   const emptyAutoOpenKeyRef = useRef<string | null>(null);
+  const openNewMission = useCallback(() => setAgentPickerOpen(true), [setAgentPickerOpen]);
+  const MC_COLUMNS: KanbanColumnConfig[] = buildMissionBoardColumns(
+    {
+      running: t("dashboard:columns.running"),
+      needsYou: t("dashboard:columns.needsYou"),
+      done: t("dashboard:columns.done"),
+      newMission: t("dashboard:empty.newMission"),
+    },
+    openNewMission,
+  );
 
   const mc = useMissionControl(agents);
   const setMissionControlSelectedId = mc.setSelectedId;
@@ -73,13 +79,13 @@ export function Dashboard() {
   // Control: we set the pending agent so the right panel scopes its
   // actions/model/etc. to that agent, then ask AIBoard to open the
   // empty new-conversation panel.
-  const handlePickAgent = useCallback((agent: Agent) => {
+  const handlePickAgent = useCallback((agent: Agent, options?: { focusComposer?: boolean }) => {
     setPendingAgent(agent);
     setMissionControlSelectedId(null);
-    openerRef.current?.();
+    openerRef.current?.({ focusComposer: options?.focusComposer ?? true });
   }, [setMissionControlSelectedId]);
 
-  const handleOpenerReady = useCallback((opener: () => void) => {
+  const handleOpenerReady = useCallback((opener: NewPanelOpener) => {
     openerRef.current = opener;
     setNewPanelOpenerReady(true);
   }, []);
@@ -143,7 +149,7 @@ export function Dashboard() {
     if (emptyAutoOpenKeyRef.current === emptyKey) return;
     emptyAutoOpenKeyRef.current = emptyKey;
     if (visibleAgents.length === 1) {
-      handlePickAgent(visibleAgents[0]);
+      handlePickAgent(visibleAgents[0], { focusComposer: false });
     } else if (visibleAgents.length > 1) {
       setAgentPickerOpen(true);
     }
@@ -267,7 +273,7 @@ export function Dashboard() {
         searchSearchingDescription: t("dashboard:search.searchingDescription"),
         clearSearch: t("dashboard:search.clearCta"),
       }}
-      onNewMission={() => setAgentPickerOpen(true)}
+      onNewMission={openNewMission}
       onClearSearch={() => setMissionSearchQuery("")}
     />
   );
@@ -281,7 +287,7 @@ export function Dashboard() {
         isSearchingText={missionSearch.isSearchingText}
         onFilterPathChange={setFilterPath}
         onSearchChange={setMissionSearchQuery}
-        onNewMission={() => setAgentPickerOpen(true)}
+        onNewMission={openNewMission}
       />
 
       {/* Board */}
