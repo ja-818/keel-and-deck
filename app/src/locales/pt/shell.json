@@ -5,7 +5,11 @@
     "settings": "Configurações",
     "yourAgents": "Seus agentes",
     "selectWorkspace": "Escolha um espaço de trabalho",
-    "connectPhone": "Conectar celular"
+    "connectPhone": "Conectar celular",
+    "needsYouCount_one": "{{count}} assunto precisa de você",
+    "needsYouCount_other": "{{count}} assuntos precisam de você",
+    "runningCount_one": "{{count}} assunto em execução",
+    "runningCount_other": "{{count}} assuntos em execução"
   },
   "tabActions": {
     "newMission": "Nova missão"

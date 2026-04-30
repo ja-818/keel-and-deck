@@ -490,6 +490,12 @@ export interface SummarizeResult {
   description: string;
 }
 
+export interface SummarizeOptions {
+  agentPath?: string;
+  provider?: string;
+  model?: string;
+}
+
 // ---------- Attachments ----------
 
 export interface AttachmentUploadRequest {

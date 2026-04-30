@@ -38,6 +38,13 @@ UI is grayscale. Color ONLY for:
 
 Never decorative color.
 
+### Agent avatars
+Use `HoustonAvatar` from `@houston-ai/core` for agent avatar badges. Resting
+state = no border, gray background softly mixed with the agent color, colored
+helmet glyph. Running state = same badge inside the comet glow. Resolve stored
+semantic ids with `resolveAgentColor` from `@houston-ai/core`, not app-local
+helpers, so desktop and mobile render same palette.
+
 ## Brand theming
 Override `--color-primary` via globals.css. NEVER hardcode hex — always semantic token.
 

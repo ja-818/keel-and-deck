@@ -13,6 +13,8 @@ import {
   ChatInputAttachButton,
   ChatInputAttachments,
 } from "./chat-input-attachments";
+import { QueuedMessageList } from "./queued-message-list";
+import type { QueuedChatMessage, QueuedMessageLabels } from "./queued-message-list";
 import { useControllable, mergeUniqueFiles } from "./use-file-drop-zone";
 
 type InputStatus = "ready" | "streaming" | "submitted";
@@ -40,6 +42,10 @@ export interface ChatInputProps {
   footer?: ReactNode;
   /** Optional content rendered inside the composer above the textarea. */
   header?: ReactNode;
+  /** Messages accepted while a turn is active, waiting to be sent as one turn. */
+  queuedMessages?: QueuedChatMessage[];
+  onRemoveQueuedMessage?: (id: string) => void;
+  queuedLabels?: QueuedMessageLabels;
   /** Enables submit even when text/files are empty. */
   canSendEmpty?: boolean;
 }
@@ -58,6 +64,9 @@ export function ChatInput({
   onAttachmentRejections,
   footer,
   header,
+  queuedMessages = [],
+  onRemoveQueuedMessage,
+  queuedLabels,
   canSendEmpty = false,
 }: ChatInputProps) {
   const [text, setText] = useControllable(value, onValueChange, "");
@@ -94,7 +103,7 @@ export function ChatInput({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Escape" && status === "streaming" && onStop) {
+      if (e.key === "Escape" && status !== "ready" && onStop) {
         e.preventDefault();
         onStop();
       }
@@ -148,6 +157,12 @@ export function ChatInput({
           files={files}
           onFileChange={handleFileChange}
           onRemoveFile={removeFile}
+        />
+
+        <QueuedMessageList
+          messages={queuedMessages}
+          onRemove={onRemoveQueuedMessage}
+          labels={queuedLabels}
         />
 
         <PromptInput onSubmit={handleSubmit}>

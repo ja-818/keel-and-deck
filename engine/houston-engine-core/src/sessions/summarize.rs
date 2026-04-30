@@ -1,69 +1,166 @@
 //! Activity summarizer — relocated from `app/src-tauri/src/commands/chat.rs`.
 //!
-//! Shells out to the user's local `claude` CLI with the Haiku model to
-//! generate a concise `{title, description}` JSON object. Engine-side
-//! callers use this for new-activity titling.
+//! Shells out to the user's configured provider CLI to generate a concise
+//! `{title, description}` JSON object. Failures degrade to a deterministic
+//! local title so conversation creation never depends on title generation.
 
-use crate::error::{CoreError, CoreResult};
-use houston_terminal_manager::claude_path;
-use serde::{Deserialize, Serialize};
+use super::summary_text::{
+    fallback_summary, normalize_spaces, parse_summary, truncate_chars, DESCRIPTION_MAX_CHARS,
+};
+use crate::error::CoreResult;
+use houston_terminal_manager::{claude_path, Provider};
+use serde_json::Value;
+use std::time::Duration;
 use tokio::io::AsyncWriteExt;
+use tokio::process::Command;
+use tokio::time::timeout;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "snake_case")]
-pub struct SummarizeResult {
-    pub title: String,
-    pub description: String,
+const SUMMARY_TIMEOUT: Duration = Duration::from_secs(12);
+const CLAUDE_TITLE_MODEL: &str = "haiku";
+const CODEX_TITLE_MODEL: &str = "gpt-5.4-mini";
+
+pub use super::summary_text::SummarizeResult;
+
+pub async fn summarize(
+    message: &str,
+    provider: Provider,
+    model: Option<&str>,
+) -> CoreResult<SummarizeResult> {
+    let fallback = fallback_summary(message);
+    let raw = match run_provider_summary(message, provider, model).await {
+        Ok(raw) => raw,
+        Err(e) => {
+            tracing::warn!(provider = %provider, error = %e, "title summary fallback");
+            return Ok(fallback);
+        }
+    };
+
+    match parse_summary(&raw, &fallback) {
+        Ok(summary) => Ok(summary),
+        Err(e) => {
+            tracing::warn!(provider = %provider, error = %e, "title summary parse fallback");
+            Ok(fallback)
+        }
+    }
 }
 
-pub async fn summarize(message: &str) -> CoreResult<SummarizeResult> {
+fn title_prompt(message: &str) -> String {
     let prompt = format!(
-        "Generate a title and description for this task.\n\
-         Title: max 6 words, concise. Description: 1 short sentence.\n\
+        "Generate a concise title and description for this conversation.\n\
+         Title: max 6 words. Description: one short sentence.\n\
          Return ONLY valid JSON, no markdown fences:\n\
          {{\"title\": \"...\", \"description\": \"...\"}}\n\n\
          Task: {message}"
     );
+    prompt
+}
 
+async fn run_provider_summary(
+    message: &str,
+    provider: Provider,
+    model: Option<&str>,
+) -> Result<String, String> {
+    let prompt = title_prompt(message);
+    match provider {
+        Provider::Anthropic => run_claude_summary(&prompt, model).await,
+        Provider::OpenAI => run_codex_summary(&prompt, model).await,
+    }
+}
+
+async fn run_claude_summary(prompt: &str, model: Option<&str>) -> Result<String, String> {
     let mut cmd = tokio::process::Command::new("claude");
     cmd.env("PATH", claude_path::shell_path());
     cmd.env_remove("CLAUDE_CODE_ENTRYPOINT");
     cmd.env_remove("CLAUDECODE");
     cmd.arg("-p")
         .arg("--model")
-        .arg("haiku")
+        .arg(model.unwrap_or(CLAUDE_TITLE_MODEL))
         .arg("--output-format")
         .arg("text")
         .arg("--allowedTools")
         .arg("");
+    run_command_with_prompt(cmd, prompt).await
+}
+
+async fn run_codex_summary(prompt: &str, model: Option<&str>) -> Result<String, String> {
+    let mut cmd = tokio::process::Command::new("codex");
+    cmd.env("PATH", claude_path::shell_path());
+    cmd.arg("exec")
+        .arg("--json")
+        .arg("--dangerously-bypass-approvals-and-sandbox")
+        .arg("--skip-git-repo-check")
+        .arg("--model")
+        .arg(model.unwrap_or(CODEX_TITLE_MODEL))
+        .arg("-");
+    let stdout = run_command_with_prompt(cmd, prompt).await?;
+    extract_codex_text(&stdout)
+}
+
+async fn run_command_with_prompt(mut cmd: Command, prompt: &str) -> Result<String, String> {
+    cmd.kill_on_drop(true);
     cmd.stdin(std::process::Stdio::piped());
     cmd.stdout(std::process::Stdio::piped());
-    cmd.stderr(std::process::Stdio::null());
+    cmd.stderr(std::process::Stdio::piped());
 
-    let mut child = cmd
-        .spawn()
-        .map_err(|e| CoreError::Internal(format!("Failed to spawn claude: {e}")))?;
+    let mut child = cmd.spawn().map_err(|e| format!("spawn failed: {e}"))?;
 
     if let Some(mut stdin) = child.stdin.take() {
         stdin
             .write_all(prompt.as_bytes())
             .await
-            .map_err(|e| CoreError::Internal(format!("Failed to write prompt: {e}")))?;
+            .map_err(|e| format!("stdin write failed: {e}"))?;
         drop(stdin);
     }
 
-    let output = child
-        .wait_with_output()
-        .await
-        .map_err(|e| CoreError::Internal(format!("Claude process failed: {e}")))?;
+    let output = match timeout(SUMMARY_TIMEOUT, child.wait_with_output()).await {
+        Ok(Ok(output)) => output,
+        Ok(Err(e)) => return Err(format!("process failed: {e}")),
+        Err(_) => return Err("process timed out".to_string()),
+    };
 
-    let raw = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    let json_str = raw
-        .trim_start_matches("```json")
-        .trim_start_matches("```")
-        .trim_end_matches("```")
-        .trim();
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let summary = truncate_chars(&normalize_spaces(&stderr), DESCRIPTION_MAX_CHARS);
+        return Err(format!("process exited {}: {summary}", output.status));
+    }
 
-    serde_json::from_str(json_str)
-        .map_err(|e| CoreError::Internal(format!("Failed to parse response: {e}\nRaw: {raw}")))
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+fn extract_codex_text(stdout: &str) -> Result<String, String> {
+    let mut latest = String::new();
+    for line in stdout.lines() {
+        let Ok(event) = serde_json::from_str::<Value>(line.trim()) else {
+            continue;
+        };
+        let Some(item) = event.get("item") else {
+            continue;
+        };
+        if item.get("type").and_then(Value::as_str) == Some("agent_message") {
+            if let Some(text) = item.get("text").and_then(Value::as_str) {
+                latest = text.to_string();
+            }
+        }
+    }
+    if latest.trim().is_empty() {
+        Err("codex output had no agent_message text".to_string())
+    } else {
+        Ok(latest)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extracts_codex_agent_message_text() {
+        let raw = r#"{"type":"thread.started","thread_id":"t1"}
+{"type":"item.completed","item":{"type":"agent_message","text":"{\"title\":\"Fix upload error\",\"description\":\"Debug 413 uploads.\"}"}}"#;
+
+        assert_eq!(
+            extract_codex_text(raw).unwrap(),
+            "{\"title\":\"Fix upload error\",\"description\":\"Debug 413 uploads.\"}"
+        );
+    }
 }

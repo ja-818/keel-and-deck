@@ -53,6 +53,9 @@ export function ChatPanel({
   onAttachmentRejections,
   footer,
   composerHeader,
+  queuedMessages,
+  onRemoveQueuedMessage,
+  queuedLabels,
   canSendEmpty,
   composerOverride,
 }: ChatPanelProps) {
@@ -157,6 +160,9 @@ export function ChatPanel({
           onAttachmentRejections={onAttachmentRejections}
           footer={footer}
           header={composerHeader}
+          queuedMessages={queuedMessages}
+          onRemoveQueuedMessage={onRemoveQueuedMessage}
+          queuedLabels={queuedLabels}
           canSendEmpty={canSendEmpty}
         />
       )}

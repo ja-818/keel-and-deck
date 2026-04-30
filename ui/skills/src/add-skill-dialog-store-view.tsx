@@ -3,25 +3,34 @@
  * Body-only: hosted inside a fixed-size dialog shell.
  */
 import { useCallback, useEffect, useRef, useState } from "react"
-import { cn, Spinner } from "@houston-ai/core"
-import { Check, Loader2, Plus, Search } from "lucide-react"
+import { Spinner } from "@houston-ai/core"
+import { Search } from "lucide-react"
 import type { CommunitySkill } from "./types"
+import {
+  DEFAULT_STORE_VIEW_LABELS,
+  type StoreViewLabels,
+} from "./add-skill-dialog-store-labels"
+import { StoreRow } from "./add-skill-dialog-store-row"
 
 export interface StoreViewProps {
   open: boolean
   onSearch: (query: string) => Promise<CommunitySkill[]>
   onInstall: (skill: CommunitySkill) => Promise<string>
+  labels?: StoreViewLabels
 }
 
-export function StoreView({ open, onSearch, onInstall }: StoreViewProps) {
+export function StoreView({ open, onSearch, onInstall, labels }: StoreViewProps) {
+  const l = { ...DEFAULT_STORE_VIEW_LABELS, ...labels }
   const [query, setQuery] = useState("")
   const [results, setResults] = useState<CommunitySkill[]>([])
   const [featured, setFeatured] = useState<CommunitySkill[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchError, setSearchError] = useState(false)
   const [installingIds, setInstallingIds] = useState<Set<string>>(new Set())
   const [installedIds, setInstalledIds] = useState<Set<string>>(new Set())
   const mountedRef = useRef(true)
   const loadedRef = useRef(false)
+  const searchSeqRef = useRef(0)
 
   useEffect(() => {
     mountedRef.current = true
@@ -33,6 +42,7 @@ export function StoreView({ open, onSearch, onInstall }: StoreViewProps) {
       setQuery("")
       setResults([])
       setLoading(true)
+      setSearchError(false)
       loadedRef.current = false
       return
     }
@@ -54,26 +64,37 @@ export function StoreView({ open, onSearch, onInstall }: StoreViewProps) {
   }, [open, onSearch])
 
   useEffect(() => {
+    const requestId = searchSeqRef.current + 1
+    searchSeqRef.current = requestId
     const q = query.trim()
+    setSearchError(false)
     if (!q) {
       setResults([])
+      setLoading(false)
+      return
+    }
+    if (q.length < 2) {
+      setResults([])
+      setLoading(false)
       return
     }
     setLoading(true)
     const timer = setTimeout(async () => {
       try {
         const skills = await onSearch(q)
-        if (mountedRef.current) setResults(skills)
+        if (mountedRef.current && searchSeqRef.current === requestId) {
+          setResults(skills)
+        }
       } catch {
-        if (mountedRef.current) setResults([])
+        if (mountedRef.current && searchSeqRef.current === requestId) {
+          setResults([])
+          setSearchError(true)
+        }
       } finally {
-        if (mountedRef.current) setLoading(false)
+        if (mountedRef.current && searchSeqRef.current === requestId) setLoading(false)
       }
     }, 350)
-    return () => {
-      clearTimeout(timer)
-      setLoading(false)
-    }
+    return () => clearTimeout(timer)
   }, [query, onSearch])
 
   const handleInstall = useCallback(
@@ -106,7 +127,7 @@ export function StoreView({ open, onSearch, onInstall }: StoreViewProps) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search skills..."
+            placeholder={l.searchPlaceholder}
             autoFocus
             className="w-full h-9 pl-9 pr-3 rounded-full border border-border bg-background text-sm
                        placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
@@ -121,15 +142,27 @@ export function StoreView({ open, onSearch, onInstall }: StoreViewProps) {
           </div>
         )}
 
-        {!loading && visibleSkills.length === 0 && query.trim() && (
-          <p className="text-sm text-muted-foreground px-6 py-4">
-            No skills found for &ldquo;{query.trim()}&rdquo;
+        {!loading && query.trim().length === 1 && (
+          <p className="text-sm text-muted-foreground px-6 py-4 text-center">
+            {l.minQuery}
           </p>
         )}
 
-        {!loading && visibleSkills.length === 0 && !query.trim() && (
+        {!loading && searchError && query.trim().length >= 2 && (
           <p className="text-sm text-muted-foreground px-6 py-4 text-center">
-            Type to search for skills
+            {l.searchUnavailable}
+          </p>
+        )}
+
+        {!loading && !searchError && visibleSkills.length === 0 && query.trim().length >= 2 && (
+          <p className="text-sm text-muted-foreground px-6 py-4">
+            {l.noResults(query.trim())}
+          </p>
+        )}
+
+        {!loading && !searchError && visibleSkills.length === 0 && !query.trim() && (
+          <p className="text-sm text-muted-foreground px-6 py-4 text-center">
+            {l.typeToSearch}
           </p>
         )}
 
@@ -142,60 +175,12 @@ export function StoreView({ open, onSearch, onInstall }: StoreViewProps) {
                 installing={installingIds.has(skill.id)}
                 installed={installedIds.has(skill.id)}
                 onInstall={() => handleInstall(skill)}
+                labels={l}
               />
             ))}
           </div>
         )}
       </div>
     </>
-  )
-}
-
-function formatInstalls(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`
-  return String(n)
-}
-
-function StoreRow({
-  skill,
-  installing,
-  installed,
-  onInstall,
-}: {
-  skill: CommunitySkill
-  installing: boolean
-  installed: boolean
-  onInstall: () => void
-}) {
-  return (
-    <div className="flex items-center gap-3 px-6 py-3 hover:bg-accent/50 transition-colors">
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-foreground truncate">{skill.name}</p>
-        <p className="text-xs text-muted-foreground truncate">
-          {skill.source}
-          {skill.installs > 0 && ` · ${formatInstalls(skill.installs)} installs`}
-        </p>
-      </div>
-      <button
-        onClick={onInstall}
-        disabled={installing || installed}
-        className={cn(
-          "shrink-0 size-8 flex items-center justify-center rounded-full transition-colors",
-          installed
-            ? "text-muted-foreground cursor-default"
-            : "text-muted-foreground hover:bg-secondary hover:text-foreground",
-          installing && "opacity-50 cursor-wait",
-        )}
-      >
-        {installing ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : installed ? (
-          <Check className="size-4" />
-        ) : (
-          <Plus className="size-4" />
-        )}
-      </button>
-    </div>
   )
 }

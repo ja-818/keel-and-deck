@@ -59,6 +59,7 @@ import type {
   SkillDetail,
   SkillSummary,
   StoreListing,
+  SummarizeOptions,
   SummarizeResult,
   TunnelStatus,
   PairingCode,
@@ -570,8 +571,13 @@ export class HoustonClient {
       `/agents/${this.seg(agentPath)}/sessions/${this.seg(sessionKey)}/history`,
     );
   }
-  summarizeActivity(message: string): Promise<SummarizeResult> {
-    return this.request("POST", "/sessions/summarize", { message });
+  summarizeActivity(message: string, opts: SummarizeOptions = {}): Promise<SummarizeResult> {
+    return this.request("POST", "/sessions/summarize", {
+      message,
+      agentPath: opts.agentPath,
+      provider: opts.provider,
+      model: opts.model,
+    });
   }
 
   // ---------- routine scheduler ----------

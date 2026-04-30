@@ -5,9 +5,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  HoustonAvatar,
+  resolveAgentColor,
 } from "@houston-ai/core";
-import { HoustonHelmet } from "./shell/experience-card";
-import { resolveAgentColor } from "../lib/agent-colors";
 import type { Agent } from "../lib/types";
 
 interface Props {
@@ -49,12 +49,7 @@ export function AgentPickerDialog({ open, onOpenChange, agents, onPick }: Props)
                   }}
                   className="flex items-center gap-4 rounded-2xl bg-secondary p-4 text-left transition-colors duration-200 hover:bg-accent w-full"
                 >
-                  <span
-                    className="size-12 rounded-full flex items-center justify-center shrink-0 bg-background border-2"
-                    style={{ borderColor: color }}
-                  >
-                    <HoustonHelmet color={color} size={26} />
-                  </span>
+                  <HoustonAvatar color={color} diameter={48} />
                   <span className="text-sm font-semibold text-foreground">
                     {a.name}
                   </span>
