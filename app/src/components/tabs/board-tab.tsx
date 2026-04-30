@@ -32,7 +32,6 @@ import { HoustonThinkingIndicator } from "../shell/experience-card";
 import { AgentCardAvatar } from "../shell/agent-card-avatar";
 import { AgentPanelAvatar } from "../shell/agent-panel-avatar";
 import { useQueuedMessageLabels } from "../use-queued-message-labels";
-import { MissionSearchInput } from "../mission-search-input";
 import { MissionBoardEmptyState } from "../mission-board-empty-state";
 import { useMissionSearch } from "../use-mission-search";
 
@@ -64,13 +63,15 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
   const path = agent.folderPath;
   const agentModes = agentDef.config.agents;
   const [pendingAgentMode, setPendingAgentMode] = useState<string | null>(null);
-  const [missionSearchQuery, setMissionSearchQuery] = useState("");
   const { data: rawItems } = useActivity(path);
   const deleteActivity = useDeleteActivity(path);
   const updateActivity = useUpdateActivity(path);
   const queryClient = useQueryClient();
   const setOnStartMission = useUIStore((s) => s.setOnStartMission);
   const setBoardActions = useUIStore((s) => s.setBoardActions);
+  const missionSearchQuery = useUIStore((s) => s.agentMissionSearchQueries[path] ?? "");
+  const setAgentMissionSearchQuery = useUIStore((s) => s.setAgentMissionSearchQuery);
+  const setAgentMissionSearchLoading = useUIStore((s) => s.setAgentMissionSearchLoading);
   const setMissionPanelOpen = useUIStore((s) => s.setMissionPanelOpen);
   const missionPanelOpen = useUIStore((s) => s.missionPanelOpen);
   const addToast = useUIStore((s) => s.addToast);
@@ -262,6 +263,11 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
     loadHistory,
     onHistoryLoadError: handleMissionSearchError,
   });
+
+  useEffect(() => {
+    setAgentMissionSearchLoading(path, missionSearch.isSearchingText);
+    return () => setAgentMissionSearchLoading(path, false);
+  }, [missionSearch.isSearchingText, path, setAgentMissionSearchLoading]);
 
   useEffect(() => {
     if (!rawItems) return;
@@ -539,25 +545,12 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
         if (agentModes?.length) setPendingAgentMode(agentModes[0].id);
         openerRef.current?.();
       }}
-      onClearSearch={() => setMissionSearchQuery("")}
+      onClearSearch={() => setAgentMissionSearchQuery(path, "")}
     />
   );
 
   return (
     <div className="flex flex-col h-full">
-      <div className="shrink-0 px-3 pt-3">
-        <MissionSearchInput
-          value={missionSearchQuery}
-          isSearchingText={missionSearch.isSearchingText}
-          labels={{
-            placeholder: t("search.placeholder"),
-            clear: t("search.clear"),
-            searchingText: t("search.searchingText"),
-          }}
-          className="relative max-w-sm"
-          onChange={setMissionSearchQuery}
-        />
-      </div>
       <div className="flex-1 min-h-0">
         <AIBoard
           items={missionSearch.items}

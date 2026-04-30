@@ -23,6 +23,10 @@ interface UIState {
   onStartMission: (() => void) | null;
   /** Extra create actions registered by the board tab (e.g. "New Planning Session"). */
   boardActions: Array<{ id: string; label: string; onClick: () => void }>;
+  /** Per-agent mission search query shown in the agent header. */
+  agentMissionSearchQueries: Record<string, string>;
+  /** Whether a per-agent mission search is loading conversation text. */
+  agentMissionSearchLoading: Record<string, boolean>;
   /** Whether the mission chat panel is open (hides tab bar for full-height panel) */
   missionPanelOpen: boolean;
   jobDescriptionTarget: JobDescriptionTarget | null;
@@ -36,6 +40,8 @@ interface UIState {
   setCreateAgentDialogOpen: (open: boolean) => void;
   setOnStartMission: (cb: (() => void) | null) => void;
   setBoardActions: (actions: Array<{ id: string; label: string; onClick: () => void }>) => void;
+  setAgentMissionSearchQuery: (agentPath: string, query: string) => void;
+  setAgentMissionSearchLoading: (agentPath: string, loading: boolean) => void;
   setMissionPanelOpen: (open: boolean) => void;
   setJobDescriptionTarget: (target: JobDescriptionTarget | null) => void;
 }
@@ -52,6 +58,8 @@ export const useUIStore = create<UIState>((set) => ({
   createAgentDialogOpen: false,
   onStartMission: null,
   boardActions: [],
+  agentMissionSearchQueries: {},
+  agentMissionSearchLoading: {},
   missionPanelOpen: false,
   jobDescriptionTarget: null,
 
@@ -84,6 +92,20 @@ export const useUIStore = create<UIState>((set) => ({
 
   setOnStartMission: (onStartMission) => set({ onStartMission }),
   setBoardActions: (boardActions) => set({ boardActions }),
+  setAgentMissionSearchQuery: (agentPath, query) =>
+    set((s) => {
+      const next = { ...s.agentMissionSearchQueries };
+      if (query) next[agentPath] = query;
+      else delete next[agentPath];
+      return { agentMissionSearchQueries: next };
+    }),
+  setAgentMissionSearchLoading: (agentPath, loading) =>
+    set((s) => {
+      const next = { ...s.agentMissionSearchLoading };
+      if (loading) next[agentPath] = true;
+      else delete next[agentPath];
+      return { agentMissionSearchLoading: next };
+    }),
   setMissionPanelOpen: (missionPanelOpen) => set({ missionPanelOpen }),
   setJobDescriptionTarget: (jobDescriptionTarget) => set({ jobDescriptionTarget }),
 }));

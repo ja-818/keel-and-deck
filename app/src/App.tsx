@@ -45,6 +45,7 @@ import { IntegrationsView } from "./components/tabs/integrations-view";
 import { SettingsView } from "./components/tabs/settings-view";
 import { WorkspaceSetupFlow } from "./components/shell/workspace-setup-flow";
 import { DetailPanelProvider } from "./components/shell/detail-panel-context";
+import { MissionSearchInput } from "./components/mission-search-input";
 
 export default function App() {
   useHoustonInit();
@@ -114,7 +115,7 @@ export default function App() {
     return () => document.removeEventListener("contextmenu", handler);
   }, []);
 
-  const { t } = useTranslation(["agents", "shell", "common"]);
+  const { t } = useTranslation(["agents", "shell", "common", "board"]);
   const wsLoading = useWorkspaceStore((s) => s.loading);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const createWorkspace = useWorkspaceStore((s) => s.create);
@@ -129,12 +130,20 @@ export default function App() {
   const dismissToast = useUIStore((s) => s.dismissToast);
   const onStartMission = useUIStore((s) => s.onStartMission);
   const boardActions = useUIStore((s) => s.boardActions);
+  const agentMissionSearchQuery = useUIStore((s) =>
+    currentAgent ? s.agentMissionSearchQueries[currentAgent.folderPath] ?? "" : "",
+  );
+  const agentMissionSearchLoading = useUIStore((s) =>
+    currentAgent ? s.agentMissionSearchLoading[currentAgent.folderPath] ?? false : false,
+  );
+  const setAgentMissionSearchQuery = useUIStore((s) => s.setAgentMissionSearchQuery);
   const missionPanelOpen = useUIStore((s) => s.missionPanelOpen);
   const setCreateAgentDialogOpen = useUIStore((s) => s.setCreateAgentDialogOpen);
   const [panelContainer, setPanelContainer] = useState<HTMLDivElement | null>(null);
 
   const agentDef = currentAgent ? getById(currentAgent.configId) : undefined;
   const tabs = agentDef?.config.tabs ?? [];
+  const hasActivityTab = tabs.some((tab) => tab.id === "activity");
   const { data: activities } = useActivity(currentAgent?.folderPath);
   const needsYouCount = (activities ?? []).filter((a) => a.status === "needs_you").length;
 
@@ -234,6 +243,22 @@ export default function App() {
                     }}
                     actions={
                       <div data-keep-panel-open className="flex items-center gap-2">
+                        {currentAgent && hasActivityTab && (
+                          <MissionSearchInput
+                            value={agentMissionSearchQuery}
+                            isSearchingText={agentMissionSearchLoading}
+                            labels={{
+                              placeholder: t("board:search.placeholder"),
+                              clear: t("board:search.clear"),
+                              searchingText: t("board:search.searchingText"),
+                            }}
+                            className="relative w-[240px]"
+                            onChange={(value) => {
+                              setAgentMissionSearchQuery(currentAgent.folderPath, value);
+                              if (viewMode !== "activity") setViewMode("activity");
+                            }}
+                          />
+                        )}
                         {onStartMission && (
                           <Button
                             onClick={() => {
@@ -244,7 +269,7 @@ export default function App() {
                             }}
                           >
                             <HoustonLogo size={16} />
-                            New mission
+                            {t("shell:tabActions.newMission")}
                           </Button>
                         )}
                         {boardActions.map((action) => (
