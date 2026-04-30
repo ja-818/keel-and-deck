@@ -1,10 +1,16 @@
 use super::codex_parser;
-use super::manager::SessionUpdate;
 use super::parser;
 use super::stderr_filter::{stderr_feed_item, StderrState};
 use super::types::{FeedItem, Provider};
+use crate::provider_error::is_malformed_provider_json_error;
+use crate::session_update::SessionUpdate;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::sync::mpsc;
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct StdoutReadReport {
+    pub malformed_provider_json: bool,
+}
 
 /// Read all stderr lines, emitting only user-actionable feed items.
 /// Returns the collected lines so the caller can include them in error reports.
@@ -34,22 +40,26 @@ pub async fn read_stdout_events(
     stdout: tokio::process::ChildStdout,
     tx: mpsc::UnboundedSender<SessionUpdate>,
     provider: Provider,
-) {
+) -> StdoutReadReport {
     match provider {
         Provider::Anthropic => read_claude_stdout(stdout, tx).await,
-        Provider::OpenAI => read_codex_stdout(stdout, tx).await,
+        Provider::OpenAI => {
+            read_codex_stdout(stdout, tx).await;
+            StdoutReadReport::default()
+        }
     }
 }
 
 async fn read_claude_stdout(
     stdout: tokio::process::ChildStdout,
     tx: mpsc::UnboundedSender<SessionUpdate>,
-) {
+) -> StdoutReadReport {
     let reader = BufReader::new(stdout);
     let mut lines = reader.lines();
     let mut acc = parser::StreamAccumulator::new();
     let mut line_count = 0u64;
     let mut item_count = 0u64;
+    let mut report = StdoutReadReport::default();
     while let Ok(Some(line)) = lines.next_line().await {
         line_count += 1;
         let line_type = line.trim().chars().take(80).collect::<String>();
@@ -58,12 +68,18 @@ async fn read_claude_stdout(
         if let Some(sid) = parser::extract_session_id(&line) {
             let _ = tx.send(SessionUpdate::SessionId(sid));
         }
+        if is_malformed_provider_json_error(&line) {
+            report.malformed_provider_json = true;
+            tracing::warn!("[houston:stdout:claude] suppressed malformed provider JSON error");
+            continue;
+        }
         let items = parser::parse_event(&line, &mut acc);
         item_count += log_and_send(&tx, items);
     }
     tracing::debug!(
         "[houston:stdout:claude] stream ended. {line_count} lines, {item_count} feed items"
     );
+    report
 }
 
 async fn read_codex_stdout(
