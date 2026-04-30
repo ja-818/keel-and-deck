@@ -13,6 +13,7 @@ pub mod parser;
 pub mod provider_auth;
 pub mod session_io;
 pub mod session_pump;
+mod stderr_filter;
 pub mod types;
 
 // Re-export key types for convenience.
@@ -22,4 +23,5 @@ pub use parser::{extract_session_id, parse_event, StreamAccumulator};
 pub use provider_auth::ProviderAuthState;
 pub use types::{
     ClaudeEvent, ContentBlock, FeedItem, FileChanges, Provider, SessionFeedBuffer, SessionStatus,
+    ToolRuntimeErrorKind,
 };
