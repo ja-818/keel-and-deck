@@ -35,6 +35,8 @@ export interface KanbanColumn {
   id: string
   label: string
   statuses: string[]
-  /** Show a "+" button in the column header */
+  /** Show a "+" button after the column's cards. */
   onAdd?: () => void
+  /** Accessible label for the add button. */
+  addLabel?: string
 }

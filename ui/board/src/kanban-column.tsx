@@ -8,6 +8,7 @@ export interface KanbanColumnProps {
   items: KanbanItem[]
   selectedId?: string | null
   onAdd?: () => void
+  addLabel?: string
   onSelect: (item: KanbanItem) => void
   onDelete?: (item: KanbanItem) => void
   onApprove?: (item: KanbanItem) => void
@@ -24,6 +25,7 @@ export function KanbanColumn({
   label,
   items,
   onAdd,
+  addLabel = "Add item",
   onSelect,
   onDelete,
   onApprove,
@@ -47,14 +49,6 @@ export function KanbanColumn({
             </span>
           )}
         </div>
-        {onAdd && (
-          <button
-            onClick={onAdd}
-            className="absolute right-3 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-          </button>
-        )}
       </div>
 
       {/* Cards */}
@@ -88,6 +82,17 @@ export function KanbanColumn({
             </motion.div>
           ))}
         </AnimatePresence>
+        {onAdd && (
+          <button
+            type="button"
+            aria-label={addLabel}
+            title={addLabel}
+            onClick={onAdd}
+            className="flex h-10 w-full items-center justify-center rounded-2xl border border-black/[0.06] bg-white/80 text-muted-foreground/80 transition-colors hover:border-black/[0.12] hover:bg-white hover:text-foreground [[data-theme=dark]_&]:border-black/70 [[data-theme=dark]_&]:bg-[#0d0d0d] [[data-theme=dark]_&]:text-muted-foreground [[data-theme=dark]_&]:hover:border-black [[data-theme=dark]_&]:hover:bg-[#141414] [[data-theme=dark]_&]:hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        )}
       </div>
     </div>
   )
