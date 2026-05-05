@@ -935,6 +935,14 @@ jobs:
     needs: [build-macos, build-windows]
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # No `actions/checkout` step on this job — finalize doesn't need the
+    # source tree, just `gh` + `jq` + `curl`. Without a git remote,
+    # though, `gh` can't infer which repo it's operating on, so we set
+    # GH_REPO at the job level. Every `gh` invocation in the steps
+    # below picks it up automatically without each step having to pass
+    # `--repo`.
+    env:
+      GH_REPO: ${{ github.repository }}
     steps:
       - name: Download release-notes.md artifact
         uses: actions/download-artifact@v4
