@@ -923,8 +923,16 @@ jobs:
       # Pings the team Slack channel so anyone can grab the DMG and try the
       # build before we publish. No-ops when SLACK_RELEASE_WEBHOOK_URL is
       # unset, so forks and personal builds stay quiet.
+      #
+      # NOTE: build-windows runs on a windows-latest runner whose default
+      # shell is PowerShell. The bash-syntax `if [ -z ... ]` below would
+      # otherwise be parsed by pwsh and fail with "Missing '(' after 'if'
+      # in if statement". `shell: bash` forces Git Bash (preinstalled on
+      # the runner image) so this step works identically on macOS and
+      # Windows.
       - name: Notify Slack of new draft release
         if: success()
+        shell: bash
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_RELEASE_WEBHOOK_URL }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
