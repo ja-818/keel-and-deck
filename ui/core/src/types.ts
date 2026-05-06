@@ -115,4 +115,8 @@ export type HoustonEvent =
   | {
       type: "ComposioCliFailed";
       data: { message: string };
+    }
+  | {
+      type: "ComposioConnectionAdded";
+      data: { toolkit: string };
     };

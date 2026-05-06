@@ -8,6 +8,7 @@ pub mod apps;
 pub mod auth;
 pub mod cli;
 pub mod commands;
+pub mod connection_watcher;
 pub mod install;
 pub mod lifecycle;
 pub mod mcp;

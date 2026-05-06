@@ -20,7 +20,7 @@
  * - `routines:{agent_path}` — RoutinesChanged, RoutineRunsChanged
  * - `agent:{agent_path}` — ActivityChanged, SkillsChanged, FilesChanged,
  *    ConfigChanged, ContextChanged, LearningsChanged, ConversationsChanged
- * - `composio` — ComposioCliReady, ComposioCliFailed
+ * - `composio` — ComposioCliReady, ComposioCliFailed, ComposioConnectionAdded
  *
  * (The legacy `sync` topic was removed — mobile now uses the same WS
  * directly through the reverse tunnel.)

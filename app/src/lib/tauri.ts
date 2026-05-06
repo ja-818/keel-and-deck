@@ -366,6 +366,17 @@ export const tauriConnections = {
         toolkit: r.toolkit,
       };
     }),
+  watchConnection: (toolkit: string) =>
+    call<void>(
+      "watch_composio_connection",
+      () => getEngine().composioWatchConnection(toolkit),
+      { toolkit },
+      // Fire-and-forget — caller awaits only to know the request was
+      // accepted; the result is delivered as a `ComposioConnectionAdded`
+      // WS event. Don't toast; failure here just means we fall back to
+      // the client-side watcher.
+      { toast: false },
+    ),
   startOAuth: () =>
     call<StartLoginResponse>("start_composio_oauth", async () => {
       const r = await getEngine().composioStartLogin();

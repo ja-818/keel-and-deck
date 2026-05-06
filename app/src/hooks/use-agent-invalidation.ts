@@ -60,6 +60,11 @@ export function useAgentInvalidation() {
           qc.invalidateQueries({ queryKey: queryKeys.composioApps() });
           qc.invalidateQueries({ queryKey: queryKeys.connectedToolkits() });
           break;
+        // Engine-side watcher saw a toolkit land in the consumer
+        // connections list — flip every visible Composio card.
+        case "ComposioConnectionAdded":
+          qc.invalidateQueries({ queryKey: queryKeys.connectedToolkits() });
+          break;
       }
     });
 

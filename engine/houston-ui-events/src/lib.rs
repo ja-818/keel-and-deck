@@ -127,6 +127,17 @@ pub enum HoustonEvent {
     ComposioCliReady,
     /// Composio CLI install or upgrade failed.
     ComposioCliFailed { message: String },
+    /// A toolkit became visible in the consumer `connected_toolkits`
+    /// endpoint after a `start_link` flow. Emitted at most once per
+    /// watch by `houston_composio::connection_watcher`. Frontend
+    /// invalidates the `connectedToolkits` query so the inline chat
+    /// card and the Integrations tab flip to "Connected".
+    ///
+    /// Single source of truth for "connection landed" — replaces the
+    /// frontend's focus/visibility/interval probing, which fights
+    /// browser lifecycle and Composio's eventual-consistency lag on
+    /// `GET /api/v3/org/consumer/connected_toolkits`.
+    ComposioConnectionAdded { toolkit: String },
 
     // ----- Claude Code CLI lifecycle -----
     //
