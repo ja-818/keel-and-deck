@@ -20,6 +20,7 @@ import { useSession } from "./hooks/use-session";
 import { SignInScreen } from "./components/auth/sign-in-screen";
 import { PersonalAssistantOnboarding } from "./components/onboarding/personal-assistant-onboarding";
 import { WorkspaceShell } from "./components/shell/workspace-shell";
+import { shouldAllowNativeContextMenu } from "./lib/context-menu";
 
 export default function App() {
   useHoustonInit();
@@ -84,7 +85,10 @@ export default function App() {
   // to end users. Left enabled in dev so Inspect Element still works.
   useEffect(() => {
     if (!import.meta.env.PROD) return;
-    const handler = (e: MouseEvent) => e.preventDefault();
+    const handler = (e: MouseEvent) => {
+      if (shouldAllowNativeContextMenu(e.target)) return;
+      e.preventDefault();
+    };
     document.addEventListener("contextmenu", handler);
     return () => document.removeEventListener("contextmenu", handler);
   }, []);
