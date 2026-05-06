@@ -33,15 +33,15 @@
     }
   },
   "composio": {
-    "integration": "Composio integration",
+    "integration": "App integration",
     "alreadyConnected": "Already connected",
     "connected": "Connected",
     "connect": "Connect"
   },
   "composioSignin": {
-    "appName": "Composio",
-    "description": "Sign in to let your assistant use your apps",
-    "alreadySignedIn": "You're signed into Composio",
+    "appName": "Integrations provider",
+    "description": "Sign in to let your assistant use your apps. Default provider: Composio.",
+    "alreadySignedIn": "You're signed in to your integrations provider",
     "signedIn": "Signed in",
     "signIn": "Sign in"
   },

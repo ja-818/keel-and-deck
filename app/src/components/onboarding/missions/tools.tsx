@@ -9,9 +9,6 @@ import {
 import { useComposioAuth } from "../../../hooks/use-composio-auth";
 import { ComposioAuthDialog } from "../../composio-auth-dialog";
 
-const COMPOSIO_LOGO =
-  "https://www.google.com/s2/favicons?domain=composio.dev&sz=128";
-
 interface ToolsMissionProps {
   onContinue: () => void;
 }
@@ -41,11 +38,6 @@ export function ToolsMission({ onContinue }: ToolsMissionProps) {
           isSignedIn ? "border-emerald-200" : "border-black/5",
         )}
       >
-        <img
-          src={COMPOSIO_LOGO}
-          alt="Composio"
-          className="size-10 rounded-lg object-contain shrink-0"
-        />
         <div className="flex min-w-0 flex-1 flex-col">
           <p className="text-sm font-medium text-foreground">
             {t("tutorial.missions.tools.cardTitle")}

@@ -59,11 +59,11 @@
       },
       "tools": {
         "title": "Dê as suas próprias ferramentas",
-        "body": "O Houston se conecta ao Gmail, Calendar e mais de 1000 apps via Composio. Entre uma vez para seu assistente poder trabalhar com seus apps reais.",
-        "cardTitle": "Composio",
-        "cardBody": "Entre para seu assistente usar seus apps",
+        "body": "O Houston se conecta ao Gmail, Calendar e mais de 1000 apps através do seu provedor de integrações. Por padrão usamos o Composio. Entre uma vez para seu assistente poder trabalhar com seus apps reais.",
+        "cardTitle": "Provedor de integrações",
+        "cardBody": "Entre para seu assistente usar seus apps. Provedor padrão: Composio.",
         "cardSignedInBody": "Seu assistente já pode usar seus apps",
-        "signIn": "Entrar no Composio",
+        "signIn": "Entrar",
         "signedInPill": "Conectado",
         "continue": "Continuar",
         "continueHint": "Seu assistente vai pedir cada app na primeira vez que precisar."

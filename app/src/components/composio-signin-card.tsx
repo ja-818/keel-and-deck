@@ -34,7 +34,7 @@ export function ComposioSigninCard() {
       <span className="inline-flex items-center gap-3 px-3 py-2.5 rounded-xl border border-black/5 bg-background min-w-0">
         <img
           src={COMPOSIO_LOGO}
-          alt="Composio"
+          alt={t("composioSignin.appName")}
           className="size-8 rounded-lg object-contain shrink-0"
         />
         <span className="flex-1 min-w-0 flex flex-col">
