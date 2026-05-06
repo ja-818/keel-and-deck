@@ -33,15 +33,15 @@
     }
   },
   "composio": {
-    "integration": "Integração do Composio",
+    "integration": "Integração de app",
     "alreadyConnected": "Já conectado",
     "connected": "Conectado",
     "connect": "Conectar"
   },
   "composioSignin": {
-    "appName": "Composio",
-    "description": "Entre para que seu assistente use seus apps",
-    "alreadySignedIn": "Você já está conectado ao Composio",
+    "appName": "Provedor de integrações",
+    "description": "Entre para seu assistente usar seus apps. Provedor padrão: Composio.",
+    "alreadySignedIn": "Você já está conectado ao seu provedor de integrações",
     "signedIn": "Conectado",
     "signIn": "Entrar"
   },

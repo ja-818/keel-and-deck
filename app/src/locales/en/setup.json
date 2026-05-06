@@ -59,11 +59,11 @@
       },
       "tools": {
         "title": "Give it your own tools",
-        "body": "Houston connects to Gmail, Calendar and 1000+ apps through Composio. Sign in once so your assistant can actually do work with your real apps.",
-        "cardTitle": "Composio",
-        "cardBody": "Sign in to let your assistant use your apps",
+        "body": "Houston connects to Gmail, Calendar and 1000+ apps through your integrations provider. We use Composio by default. Sign in once so your assistant can actually do work with your real apps.",
+        "cardTitle": "Integrations provider",
+        "cardBody": "Sign in to let your assistant use your apps. Default provider: Composio.",
         "cardSignedInBody": "Your assistant can now use your apps",
-        "signIn": "Sign in to Composio",
+        "signIn": "Sign in",
         "signedInPill": "Signed in",
         "continue": "Continue",
         "continueHint": "Your assistant will ask for each app the first time it needs it."
