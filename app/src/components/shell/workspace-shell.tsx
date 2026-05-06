@@ -18,7 +18,7 @@ import { useUIStore } from "../../stores/ui";
 import { AgentRenderer } from "./experience-renderer";
 import { Dashboard } from "../dashboard";
 import { IntegrationsView } from "../tabs/integrations-view";
-import { SettingsView } from "../tabs/settings-view";
+import { SettingsView } from "../settings/settings-view";
 import { Sidebar } from "./sidebar";
 import { HoustonLogo } from "./experience-card";
 import { CreateAgentDialog } from "./create-workspace-dialog";
