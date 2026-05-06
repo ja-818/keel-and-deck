@@ -203,7 +203,7 @@ export function UiTour({ steps, onDismiss }: UiTourProps) {
       {cutout ? (
         <div
           aria-hidden
-          className="pointer-events-auto fixed z-50 rounded-xl ring-2 ring-white/70 transition-[top,left,width,height] duration-200"
+          className="pointer-events-auto fixed z-[60] rounded-xl ring-2 ring-white/70 transition-[top,left,width,height] duration-200"
           style={{
             top: cutout.top,
             left: cutout.left,
@@ -215,7 +215,7 @@ export function UiTour({ steps, onDismiss }: UiTourProps) {
       ) : (
         <div
           aria-hidden
-          className="pointer-events-auto fixed inset-0 z-50 bg-foreground/45"
+          className="pointer-events-auto fixed inset-0 z-[60] bg-foreground/45"
         />
       )}
 
@@ -224,7 +224,7 @@ export function UiTour({ steps, onDismiss }: UiTourProps) {
       {cutout && (
         <div
           aria-hidden
-          className="pointer-events-none fixed z-50 rounded-xl ring-2 ring-white/40 motion-safe:animate-pulse"
+          className="pointer-events-none fixed z-[60] rounded-xl ring-2 ring-white/40 motion-safe:animate-pulse"
           style={{
             top: cutout.top - 4,
             left: cutout.left - 4,
@@ -238,7 +238,7 @@ export function UiTour({ steps, onDismiss }: UiTourProps) {
           is no target. */}
       <div
         className={cn(
-          "fixed z-50 rounded-2xl border border-black/5 bg-background p-5 shadow-[0_10px_40px_rgba(0,0,0,0.18)]",
+          "fixed z-[60] rounded-2xl border border-black/5 bg-background p-5 shadow-[0_10px_40px_rgba(0,0,0,0.18)]",
         )}
         style={{
           top: tooltip.top,
