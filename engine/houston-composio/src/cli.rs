@@ -425,6 +425,11 @@ pub async fn list_connected_toolkits() -> Vec<String> {
     match list_connected_toolkits_inner().await {
         Ok(mut slugs) => {
             slugs.sort();
+            tracing::info!(
+                "[composio] connected_toolkits returned {} slugs: {:?}",
+                slugs.len(),
+                slugs
+            );
             slugs
         }
         Err(e) => {

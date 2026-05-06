@@ -645,6 +645,16 @@ export class HoustonClient {
   composioConnectApp(toolkit: string): Promise<ComposioStartLinkResponse> {
     return this.request("POST", "/composio/connections", { toolkit });
   }
+  /**
+   * Ask the engine to actively watch for `toolkit` to land in the
+   * consumer connections list and emit `ComposioConnectionAdded` over
+   * the WS firehose when it does. Idempotent — duplicate calls while
+   * a watch is active are no-ops on the engine. Returns immediately;
+   * the result arrives as a WS event.
+   */
+  composioWatchConnection(toolkit: string): Promise<void> {
+    return this.request("POST", "/composio/connections/watch", { toolkit });
+  }
 
   // ---------- WebSocket access (see ws.ts) ----------
 

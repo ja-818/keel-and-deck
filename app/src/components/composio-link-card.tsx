@@ -1,8 +1,28 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, ExternalLink, Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Check, ExternalLink, Loader2, RefreshCw } from "lucide-react";
 import { useComposioApps } from "../hooks/queries";
+import { useComposioConnectionWatcher } from "../hooks/use-composio-connection-watcher";
 import { useComposioRefetchOnReturn } from "../hooks/use-composio-refetch-on-return";
+import {
+  normalizeToolkitSlug,
+  normalizeToolkitSlugs,
+} from "../lib/composio-toolkits";
+import { queryKeys } from "../lib/query-keys";
+import { useUIStore } from "../stores/ui";
+
+/**
+ * After clicking Connect, the user goes to the browser to authorize.
+ * This is how long we leave the spinner up before flipping to a
+ * manual "I've connected" button. Short enough that a stuck card
+ * recovers quickly; long enough to cover the typical OAuth round-trip
+ * + Composio backend propagation when the engine-side watcher catches
+ * the event for us.
+ */
+const OPENING_GRACE_MS = 6_000;
+
+type Phase = "idle" | "opening" | "verify" | "verifying";
 
 interface ComposioLinkCardProps {
   toolkit: string;
@@ -40,14 +60,40 @@ export function ComposioLinkCard({
   onOpen,
 }: ComposioLinkCardProps) {
   const { t } = useTranslation("chat");
-  const [opening, setOpening] = useState(false);
+  const [phase, setPhase] = useState<Phase>("idle");
+  const graceTimer = useRef<number | null>(null);
+  const qc = useQueryClient();
+  const addToast = useUIStore((s) => s.addToast);
   const { data: apiApps } = useComposioApps();
   const markWaitingForAuth = useComposioRefetchOnReturn();
+  // Ambient freshness: while the card shows "not connected", keep the
+  // connectedToolkits query honest so the card flips the instant a
+  // connection lands via any path (this Connect, Integrations tab,
+  // another agent, CLI, stale cache from a prior session).
+  useComposioConnectionWatcher(isConnected);
 
-  // When the probe comes back connected, clear the local spinner.
+  // Once the probe comes back connected, drop any local intermediate
+  // state — the parent owns the visual now.
   useEffect(() => {
-    if (isConnected) setOpening(false);
+    if (isConnected) {
+      setPhase("idle");
+      if (graceTimer.current !== null) {
+        window.clearTimeout(graceTimer.current);
+        graceTimer.current = null;
+      }
+    }
   }, [isConnected]);
+
+  // Always clean up the grace timer on unmount so it never fires
+  // against a dead component.
+  useEffect(() => {
+    return () => {
+      if (graceTimer.current !== null) {
+        window.clearTimeout(graceTimer.current);
+        graceTimer.current = null;
+      }
+    };
+  }, []);
 
   const app = (() => {
     const fromApi = apiApps?.find((a) => a.toolkit === toolkit);
@@ -68,15 +114,107 @@ export function ComposioLinkCard({
   })();
 
   const handleConnect = useCallback(() => {
-    setOpening(true);
+    setPhase("opening");
     markWaitingForAuth(toolkit);
     onOpen();
-    // Safety net: if the user never returns focus and never completes
-    // auth (closes the browser tab), clear the spinner after 90s so
-    // the button becomes clickable again. The polling loop in
-    // `useComposioRefetchOnReturn` stops itself at 60s.
-    window.setTimeout(() => setOpening(false), 90_000);
+    // After the grace window, hand control to the user. The engine
+    // watcher and the ambient connection watcher are both still
+    // running; if a connection lands while we're in `verify` state,
+    // the parent's `isConnected` will flip and the effect above
+    // resets the phase.
+    if (graceTimer.current !== null) window.clearTimeout(graceTimer.current);
+    graceTimer.current = window.setTimeout(() => {
+      setPhase((p) => (p === "opening" ? "verify" : p));
+      graceTimer.current = null;
+    }, OPENING_GRACE_MS);
   }, [onOpen, markWaitingForAuth, toolkit]);
+
+  const handleVerify = useCallback(async () => {
+    setPhase("verifying");
+    // Hard refresh: cancel anything in flight so a stale "[]" can't
+    // race past us, force the registered query to refetch, then read
+    // the freshly-written cache. We don't trust the cached
+    // `isConnected` prop here — the user explicitly asked us to
+    // re-check.
+    await qc.cancelQueries({ queryKey: queryKeys.connectedToolkits() });
+    await qc.refetchQueries({
+      queryKey: queryKeys.connectedToolkits(),
+      type: "active",
+    });
+    const target = normalizeToolkitSlug(toolkit);
+    const fresh = normalizeToolkitSlugs(
+      qc.getQueryData<string[]>(queryKeys.connectedToolkits()) ?? [],
+    );
+    const connected = fresh.includes(target);
+    if (connected) {
+      addToast({
+        title: t("composio.verifiedToast", { name: app.name }),
+        variant: "success",
+      });
+      // Parent's isConnected will flip on the next render; effect
+      // above resets phase to idle.
+    } else {
+      addToast({
+        title: t("composio.notVerified"),
+        variant: "info",
+      });
+      setPhase("verify");
+    }
+  }, [qc, toolkit, addToast, t, app.name]);
+
+  const renderRightSlot = () => {
+    if (isConnected) {
+      return (
+        <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium shrink-0">
+          <Check className="size-3" />
+          {t("composio.connected")}
+        </span>
+      );
+    }
+    if (phase === "opening") {
+      return (
+        <button
+          type="button"
+          disabled
+          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full border border-border bg-foreground text-background text-xs font-medium opacity-50 shrink-0"
+        >
+          <Loader2 className="size-3 animate-spin" />
+        </button>
+      );
+    }
+    if (phase === "verify" || phase === "verifying") {
+      return (
+        <button
+          type="button"
+          onClick={phase === "verifying" ? undefined : handleVerify}
+          disabled={phase === "verifying"}
+          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full border border-border bg-secondary text-foreground text-xs font-medium hover:bg-black/[0.05] transition-colors duration-200 disabled:opacity-50 shrink-0"
+        >
+          {phase === "verifying" ? (
+            <>
+              <Loader2 className="size-3 animate-spin" />
+              {t("composio.verifying")}
+            </>
+          ) : (
+            <>
+              <RefreshCw className="size-3" />
+              {t("composio.verify")}
+            </>
+          )}
+        </button>
+      );
+    }
+    return (
+      <button
+        type="button"
+        onClick={handleConnect}
+        className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full border border-border bg-foreground text-background text-xs font-medium hover:opacity-90 transition-opacity duration-200 shrink-0"
+      >
+        {t("composio.connect")}
+        <ExternalLink className="size-3" />
+      </button>
+    );
+  };
 
   return (
     <span className="not-prose inline-flex my-1 max-w-full align-middle">
@@ -90,28 +228,7 @@ export function ComposioLinkCard({
             {isConnected ? t("composio.alreadyConnected") : app.description}
           </span>
         </span>
-        {isConnected ? (
-          <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium shrink-0">
-            <Check className="size-3" />
-            {t("composio.connected")}
-          </span>
-        ) : (
-          <button
-            type="button"
-            onClick={handleConnect}
-            disabled={opening}
-            className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full border border-border bg-foreground text-background text-xs font-medium hover:opacity-90 transition-opacity duration-200 disabled:opacity-50 shrink-0"
-          >
-            {opening ? (
-              <Loader2 className="size-3 animate-spin" />
-            ) : (
-              <>
-                {t("composio.connect")}
-                <ExternalLink className="size-3" />
-              </>
-            )}
-          </button>
-        )}
+        {renderRightSlot()}
       </span>
     </span>
   );

@@ -13,9 +13,18 @@ import {
  * by opening a browser (Integrations tab Connect button, inline
  * `ComposioLinkCard` in chat, etc.).
  *
- * `markWaitingForAuth(slug)` kicks off a ~60s poll loop that checks
- * `composio connections list` every 4s until the slug appears in the
- * result, then invalidates the shared query so every surface updates.
+ * `markWaitingForAuth(slug)` does two things:
+ *
+ *   1. Asks the engine to start a server-side watch on this toolkit.
+ *      The engine polls Composio's consumer connections endpoint for
+ *      up to 5 minutes and emits `ComposioConnectionAdded` over WS
+ *      when the slug appears. That event invalidates the shared
+ *      `connectedToolkits` query so every visible card flips at
+ *      once. Push-based, no UI lifecycle dependencies.
+ *
+ *   2. Runs a short client-side polling loop (~60s) as defense in
+ *      depth — survives engine restarts mid-OAuth and covers the
+ *      brief window before the engine watch is registered.
  */
 export function useComposioRefetchOnReturn(): (slug: string) => void {
   const qc = useQueryClient();
@@ -49,6 +58,17 @@ export function useComposioRefetchOnReturn(): (slug: string) => void {
     (slug: string) => {
       const targetSlug = normalizeToolkitSlug(slug);
       if (!targetSlug) return;
+
+      // Push-path: ask the engine to watch. Fires
+      // `ComposioConnectionAdded` over WS when the connection lands.
+      // Idempotent server-side, so duplicate calls (chat card +
+      // integrations tab racing on the same toolkit) collapse into
+      // one watch.
+      void tauriConnections.watchConnection(targetSlug).catch(() => {
+        // Engine watch is best-effort. The pull-path below covers the
+        // failure case.
+      });
+
       if (pollersRef.current.has(targetSlug)) return;
 
       waitingRef.current.add(targetSlug);

@@ -145,9 +145,9 @@ pub fn event_topic(event: &HoustonEvent) -> String {
         | HoustonEvent::ContextChanged { agent_path }
         | HoustonEvent::LearningsChanged { agent_path } => format!("agent:{agent_path}"),
         HoustonEvent::ConversationsChanged { agent_path, .. } => format!("agent:{agent_path}"),
-        HoustonEvent::ComposioCliReady | HoustonEvent::ComposioCliFailed { .. } => {
-            "composio".into()
-        }
+        HoustonEvent::ComposioCliReady
+        | HoustonEvent::ComposioCliFailed { .. }
+        | HoustonEvent::ComposioConnectionAdded { .. } => "composio".into(),
         HoustonEvent::ClaudeCliInstalling { .. }
         | HoustonEvent::ClaudeCliReady
         | HoustonEvent::ClaudeCliFailed { .. } => "claude".into(),

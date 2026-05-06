@@ -14,6 +14,7 @@ use axum::{
 use houston_composio::apps::ComposioAppEntry;
 use houston_composio::cli::{ComposioStatus, StartLinkResponse, StartLoginResponse};
 use houston_composio::commands as inner;
+use houston_composio::connection_watcher;
 use houston_engine_core::CoreError;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -30,6 +31,7 @@ pub fn router() -> Router<Arc<ServerState>> {
             "/composio/connections",
             get(list_connections).post(connect_app),
         )
+        .route("/composio/connections/watch", post(watch_connection))
 }
 
 #[derive(Serialize)]
@@ -45,6 +47,11 @@ struct CompleteLogin {
 
 #[derive(Deserialize)]
 struct ConnectApp {
+    toolkit: String,
+}
+
+#[derive(Deserialize)]
+struct WatchConnection {
     toolkit: String,
 }
 
@@ -97,4 +104,24 @@ async fn connect_app(
         .await
         .map(Json)
         .map_err(lift)
+}
+
+/// Start an engine-side watch for `toolkit` to land in the consumer
+/// connections list. Returns immediately; the watcher emits
+/// `ComposioConnectionAdded` over the WS firehose when it sees the
+/// slug appear (or self-cancels after a 5-minute deadline).
+///
+/// Idempotent: a second call for the same slug while a watch is
+/// already running is a no-op. Safe to call from multiple frontends
+/// (chat card, integrations tab) racing on the same connect.
+async fn watch_connection(
+    State(st): State<Arc<ServerState>>,
+    Json(req): Json<WatchConnection>,
+) -> Result<(), ApiError> {
+    let toolkit = req.toolkit.trim();
+    if toolkit.is_empty() {
+        return Err(lift("toolkit must not be empty".into()));
+    }
+    connection_watcher::watch(toolkit, Arc::new(st.events.clone()));
+    Ok(())
 }
