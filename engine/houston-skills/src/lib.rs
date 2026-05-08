@@ -10,7 +10,7 @@ pub mod index;
 pub mod patch;
 #[cfg(feature = "remote")]
 pub mod remote;
-mod validate;
+pub(crate) mod validate;
 
 use serde::{Deserialize, Serialize};
 use std::path::Path;

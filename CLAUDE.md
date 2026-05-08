@@ -193,8 +193,31 @@ Every feature gets tests. No exceptions. Tests don't count toward 200-line limit
 ### Type safety over strings
 Domain concepts (status, classification) MUST be enums. TS → discriminated unions. Rust → enums w/ Display/FromStr.
 
-### No silent failures
-Errors surface. No swallowed errors. `let _ = x.await` banned for ops that can fail. No `unwrap()` in production Rust.
+### No silent failures (beta-stage policy)
+
+We are in beta. Every error a user-initiated action can produce MUST reach the user as a visible toast with a "Report bug" affordance. Silent fallbacks rob us of the bug report — we WANT the noise.
+
+**Banned patterns (Rust):**
+- `let _ = <fallible>` / `let _ = <fallible>.await` — discarding a `Result`
+- `.ok()` to drop a Result on the floor
+- `.unwrap_or(...)`, `.unwrap_or_default()`, `.unwrap_or_else(|_| ...)` over an op the user initiated
+- `match x { Ok(v) => ..., Err(_) => <log + default> }` — log-and-continue
+- catch-and-`tracing::warn!`-and-continue inside loops where the user expected progress (the `install_from_repo` "skip" pattern is the canonical anti-example)
+- `unwrap()` / `expect()` outside of test code or genuine compile-time invariants
+
+**Banned patterns (TypeScript):**
+- `.catch(() => ...)` returning `null` / `[]` / `{}`
+- `try { ... } catch { ... }` with no rethrow and no toast
+- `try { ... } catch (e) { console.error(e) }` — log only, no surface
+- React Query `onError` that toasts a generic string instead of `errorMessage(err)`
+- Top-level event handlers that fire-and-forget a Promise with no `.catch`
+
+**Required surfacing path:**
+Engine `SkillError` / `CoreError` → `ApiError` → TS `errorMessage(err)` → toast hook → user sees the real reason AND a Report-bug button that bundles the most recent engine + app log tail.
+
+**The one exception:** `tracing::error!` from event-emit / file-watcher callbacks where there is no UI thread to toast on. Everything else surfaces.
+
+When unsure: don't swallow. A noisy beta is a productive beta.
 
 ### No hover-only affordances
 Interactive elements visible without hovering. Hover may enhance, never gate.
