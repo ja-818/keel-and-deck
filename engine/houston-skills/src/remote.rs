@@ -533,20 +533,29 @@ pub async fn list_skills_from_repo(source: &str) -> Result<Vec<RepoSkill>, Skill
         return Err(SkillError::RepoEmpty(source.to_string()));
     }
 
-    // Build RepoSkill stubs — we don't fetch content here, just metadata.
-    // The install step fetches actual content.
+    // Build RepoSkill stubs. We do fetch content here so we can prefer the
+    // SKILL.md frontmatter `name:` over a path-derived id — repos named
+    // `My_Repo` or `cool_skill` (anything outside `[a-z0-9-]`) cannot be
+    // used as install ids directly, but the SKILL.md author almost always
+    // declares a clean slug in frontmatter.
     let repo_name = source.split('/').last().unwrap_or(source);
     let mut skills = Vec::new();
 
     for path in skill_paths {
-        let id = skill_id_from_path(&path, repo_name);
-        // Peek at description by fetching content (small files, fast).
-        let (name, description) = match fetch_skill_md_at_path(&client, source, &path).await {
+        let derived_id = skill_id_from_path(&path, repo_name);
+        let (id, name, description) = match fetch_skill_md_at_path(&client, source, &path).await {
             Ok(raw) => {
-                let parsed = parse_skill_md(&raw, &id);
-                (parsed.name, parsed.description)
+                let parsed = parse_skill_md(&raw, &derived_id);
+                let id = extract_frontmatter_name(&raw)
+                    .filter(|n| crate::validate::name(n).is_ok())
+                    .unwrap_or_else(|| slugify(&derived_id));
+                (id, parsed.name, parsed.description)
             }
-            Err(_) => (kebab_to_title(&id), String::new()),
+            Err(_) => (
+                slugify(&derived_id),
+                kebab_to_title(&derived_id),
+                String::new(),
+            ),
         };
         skills.push(RepoSkill {
             id,
@@ -557,6 +566,38 @@ pub async fn list_skills_from_repo(source: &str) -> Result<Vec<RepoSkill>, Skill
     }
 
     Ok(skills)
+}
+
+/// Coerce an arbitrary string into a valid skill slug:
+/// lowercase, only `[a-z0-9-]`, no leading/trailing/repeat dashes,
+/// max 64 chars. Used as a defensive fallback when a repo's name
+/// contains characters that would fail `validate::name`.
+fn slugify(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut prev_dash = true; // suppress leading dash
+    for c in s.chars() {
+        let cc = c.to_ascii_lowercase();
+        if cc.is_ascii_lowercase() || cc.is_ascii_digit() {
+            out.push(cc);
+            prev_dash = false;
+        } else if !prev_dash {
+            out.push('-');
+            prev_dash = true;
+        }
+    }
+    while out.ends_with('-') {
+        out.pop();
+    }
+    if out.len() > 64 {
+        out.truncate(64);
+        while out.ends_with('-') {
+            out.pop();
+        }
+    }
+    if out.is_empty() {
+        out.push_str("skill");
+    }
+    out
 }
 
 /// Install selected skills from a GitHub repo.
@@ -576,28 +617,26 @@ pub async fn install_from_repo(
     let client = build_client()?;
     let mut installed = Vec::new();
 
+    // Fail-fast on the first install error so the user gets a real toast
+    // with the real reason. Earlier behavior (catch + tracing::warn! +
+    // continue) returned `Ok(vec![])` to the UI which surfaced as
+    // "installed 0 skills" with no clue why.
     for skill in skills {
         if skills_dir.join(&skill.id).exists() {
             installed.push(skill.id.clone());
             continue;
         }
 
-        match fetch_skill_md_at_path(&client, source, &skill.path).await {
-            Ok(raw_md) => {
-                let parsed = parse_skill_md(&raw_md, &skill.id);
-                let input = CreateSkillInput {
-                    name: skill.id.clone(),
-                    description: parsed.description,
-                    content: parsed.content,
-                    tags: vec![],
-                };
-                match crate::create_skill(skills_dir, input) {
-                    Ok(()) => installed.push(skill.id.clone()),
-                    Err(e) => tracing::warn!("[houston-skills] skip {}: {e}", skill.id),
-                }
-            }
-            Err(e) => tracing::warn!("[houston-skills] skip {}: {e}", skill.id),
-        }
+        let raw_md = fetch_skill_md_at_path(&client, source, &skill.path).await?;
+        let parsed = parse_skill_md(&raw_md, &skill.id);
+        let input = CreateSkillInput {
+            name: skill.id.clone(),
+            description: parsed.description,
+            content: parsed.content,
+            tags: vec![],
+        };
+        crate::create_skill(skills_dir, input)?;
+        installed.push(skill.id.clone());
     }
 
     Ok(installed)
@@ -842,6 +881,32 @@ mod tests {
     #[test]
     fn skill_id_from_root_skill_md() {
         assert_eq!(skill_id_from_path("SKILL.md", "my-repo"), "my-repo");
+    }
+
+    #[test]
+    fn slugify_passes_clean_slugs_through() {
+        assert_eq!(slugify("research-company"), "research-company");
+        assert_eq!(slugify("ai-sdk-2"), "ai-sdk-2");
+    }
+
+    #[test]
+    fn slugify_normalizes_invalid_chars() {
+        // Underscores → hyphens (the refero_skill case).
+        assert_eq!(slugify("refero_skill"), "refero-skill");
+        // Uppercase → lowercase.
+        assert_eq!(slugify("My-Repo"), "my-repo");
+        // Mixed garbage → collapsed dashes, trimmed.
+        assert_eq!(slugify("__Cool!Skill__"), "cool-skill");
+        assert_eq!(slugify("agent.tools"), "agent-tools");
+        // Empty / pure-garbage input still produces a valid (if generic) slug.
+        assert_eq!(slugify(""), "skill");
+        assert_eq!(slugify("___"), "skill");
+    }
+
+    #[test]
+    fn slugify_caps_at_64_chars() {
+        let long = "a".repeat(120);
+        assert_eq!(slugify(&long).len(), 64);
     }
 
     #[test]
