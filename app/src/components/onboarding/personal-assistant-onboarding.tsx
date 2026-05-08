@@ -18,7 +18,7 @@ import {
   buildAssistantInstructions,
   defaultAssistantSetup,
 } from "./personal-assistant-artifacts";
-import { missionById, type MissionId } from "./personal-assistant-missions";
+import { TUTORIAL_MISSION } from "./personal-assistant-missions";
 import {
   buildFrameLabels,
   buildMissionMeta,
@@ -30,8 +30,6 @@ interface PersonalAssistantOnboardingProps {
   toasts: Toast[];
   onDismissToast: (id: string) => void;
 }
-
-const DEFAULT_MISSION_ID = "morning-brief" as const;
 
 export function PersonalAssistantOnboarding({
   toasts,
@@ -48,14 +46,8 @@ export function PersonalAssistantOnboarding({
     t("setup:tutorial.defaults.assistantName"),
   );
   const [assistantColor, setAssistantColor] = useState("navy");
-  const [selectedMissionId, setSelectedMissionId] = useState<MissionId>(
-    DEFAULT_MISSION_ID,
-  );
 
-  const mission = missionById(selectedMissionId);
-  const missionTitle = t(
-    `setup:tutorial.missions.try.skills.${selectedMissionId}.title`,
-  );
+  const missionTitle = t("setup:tutorial.missions.try.skill.title");
 
   const missionStep = step === "welcome" ? null : (step as TutorialStep);
   const meta = missionStep ? buildMissionMeta(t, missionStep) : null;
@@ -114,7 +106,7 @@ export function PersonalAssistantOnboarding({
       const fallbackModel = model ?? "sonnet";
       await createWorkspaceAndAssistant(fallbackProvider, fallbackModel);
       analytics.track("onboarding_completed", {
-        mission: mission.id,
+        mission: TUTORIAL_MISSION.id,
         integrations_skipped: true,
         tutorial_run: false,
       });
@@ -128,7 +120,7 @@ export function PersonalAssistantOnboarding({
   // already up — no flicker of bare workspace.
   const handleTryComplete = () => {
     analytics.track("onboarding_completed", {
-      mission: mission.id,
+      mission: TUTORIAL_MISSION.id,
       integrations_skipped: false,
       tutorial_run: true,
     });
@@ -197,8 +189,6 @@ export function PersonalAssistantOnboarding({
           assistantColor={assistantColor}
           provider={provider ?? "anthropic"}
           model={model ?? "sonnet"}
-          selectedMissionId={selectedMissionId}
-          onPick={(id) => setSelectedMissionId(id)}
           onContinue={handleTryComplete}
         />
       )}

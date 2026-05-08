@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ArrowRight } from "lucide-react";
 import { ChatPanel, type FeedItem } from "@houston-ai/chat";
 import { Button, HoustonAvatar, cn, resolveAgentColor } from "@houston-ai/core";
 import {
@@ -26,7 +27,6 @@ import {
   isComposioSigninHref,
 } from "../../composio-signin-card";
 import type { Agent } from "../../../lib/types";
-import type { MissionId } from "../personal-assistant-missions";
 import type { MissionMeta } from "../mission-frame";
 import { MissionWithChatFrame } from "../mission-with-chat-frame";
 
@@ -50,27 +50,20 @@ interface TryMissionProps {
   assistantColor: string;
   provider: string;
   model: string;
-  selectedMissionId: MissionId;
-  onPick: (missionId: MissionId) => void;
   onContinue: () => void;
 }
 
-const PICKS: { id: MissionId; chipKey: string }[] = [
-  { id: "morning-brief", chipKey: "morningBrief" },
-  { id: "meeting-prep", chipKey: "meetingPrep" },
-  { id: "weekly-recap", chipKey: "weeklyRecap" },
-];
-
 /**
- * "Try a mission" — the AHA. The user picks a chip; we create a real Activity
- * Board mission via `createMission` and run the chat on the resulting
- * `activity-${id}` session key. After graduation the user lands on the board
- * and finds this conversation as a mission card they can scroll back through.
+ * "Try a mission" — the AHA. The user clicks the single chip; we create a
+ * real Activity Board mission via `createMission` and run the chat on the
+ * resulting `activity-${id}` session key. After graduation the user lands on
+ * the board and finds this conversation as a mission card they can scroll
+ * back through.
  *
  * The composer is the workspace's `ChatPanel` (queue, attachments, Composio
  * cards — all free), so once the mission is going the user can reply in the
  * normal chat. Pre-pick the right column shows a centered prompt with the
- * three chips; post-pick it switches to the live chat layout.
+ * single chip; post-pick it switches to the live chat layout.
  */
 export function TryMission({
   meta,
@@ -79,15 +72,11 @@ export function TryMission({
   assistantColor,
   provider,
   model,
-  selectedMissionId,
-  onPick,
   onContinue,
 }: TryMissionProps) {
   const { t } = useTranslation(["setup", "chat"]);
   const agentPath = agent.folderPath;
-  const missionTitle = t(
-    `setup:tutorial.missions.try.skills.${selectedMissionId}.title`,
-  );
+  const missionTitle = t("setup:tutorial.missions.try.skill.title");
 
   // The session key is null until the user picks a chip and `createMission`
   // mints the activity. Pre-pick everything that depends on it just no-ops.
@@ -234,10 +223,9 @@ export function TryMission({
   // chat lives on `activity-${id}` so it shows up as a mission card on the
   // Activity Board after graduation.
   const handlePick = useCallback(
-    async (missionId: MissionId, chipLabel: string) => {
+    async (chipLabel: string) => {
       if (pickedAny) return;
       setPickedAny(true);
-      onPick(missionId);
       try {
         const result = await createMission(
           {
@@ -259,7 +247,7 @@ export function TryMission({
         setError(e instanceof Error ? e.message : String(e));
       }
     },
-    [agent.id, agent.name, agent.color, agent.folderPath, provider, model, onPick, pickedAny],
+    [agent.id, agent.name, agent.color, agent.folderPath, provider, model, pickedAny],
   );
 
   const visibleFeed = (feedItems ?? []) as FeedItem[];
@@ -270,16 +258,8 @@ export function TryMission({
       {...frame}
       left={
         <div className="flex flex-1 flex-col gap-4">
-          <div className="rounded-xl border border-black/5 bg-secondary/40 p-4">
-            <p className="text-sm font-medium">
-              {t("setup:tutorial.missions.try.tipTitle")}
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {t("setup:tutorial.missions.try.tipBody")}
-            </p>
-          </div>
           {tutorialDone ? (
-            <div className="rounded-xl border border-[#00a240]/30 bg-[#00a240]/5 p-4">
+            <div className="card-running-glow rounded-xl p-4">
               <p className="text-sm font-medium text-foreground">
                 {t("setup:tutorial.missions.try.doneTitle")}
               </p>
@@ -288,20 +268,31 @@ export function TryMission({
               </p>
               <Button className="mt-3 rounded-full" onClick={onContinue}>
                 {t("setup:tutorial.missions.try.continueChip")}
+                <ArrowRight className="ml-1 size-4" />
               </Button>
             </div>
-          ) : pickedAny ? (
-            <div className="rounded-xl border border-black/5 bg-secondary/40 p-4">
-              <p className="text-sm font-medium">
-                {t("setup:tutorial.missions.try.workingTitle")}
-              </p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {t("setup:tutorial.missions.try.workingBody", {
-                  missionId: selectedMissionId,
-                })}
-              </p>
-            </div>
-          ) : null}
+          ) : (
+            <>
+              <div className="rounded-xl border border-black/5 bg-secondary/40 p-4">
+                <p className="text-sm font-medium">
+                  {t("setup:tutorial.missions.try.tipTitle")}
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {t("setup:tutorial.missions.try.tipBody")}
+                </p>
+              </div>
+              {pickedAny && (
+                <div className="rounded-xl border border-black/5 bg-secondary/40 p-4">
+                  <p className="text-sm font-medium">
+                    {t("setup:tutorial.missions.try.workingTitle")}
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {t("setup:tutorial.missions.try.workingBody")}
+                  </p>
+                </div>
+              )}
+            </>
+          )}
           {error && (
             <p className="rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
               {error}
@@ -354,26 +345,18 @@ export function TryMission({
               <p className="text-sm text-muted-foreground">
                 {t("setup:tutorial.missions.try.composerHint")}
               </p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {PICKS.map((pick) => (
-                  <button
-                    key={pick.id}
-                    type="button"
-                    onClick={() =>
-                      void handlePick(
-                        pick.id,
-                        t(`setup:tutorial.missions.try.chips.${pick.chipKey}`),
-                      )
-                    }
-                    disabled={pickedAny}
-                    className={cn(
-                      "h-9 rounded-full border border-black/15 bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50",
-                    )}
-                  >
-                    {t(`setup:tutorial.missions.try.chips.${pick.chipKey}`)}
-                  </button>
-                ))}
-              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  void handlePick(t("setup:tutorial.missions.try.chip"))
+                }
+                disabled={pickedAny}
+                className={cn(
+                  "h-9 rounded-full border border-black/15 bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50",
+                )}
+              >
+                {t("setup:tutorial.missions.try.chip")}
+              </button>
             </div>
           )}
         </div>

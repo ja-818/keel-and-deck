@@ -1,41 +1,34 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  buildSkill,
-  buildRoutineInput,
+  buildAssistantInstructions,
   defaultAssistantSetup,
 } from "./personal-assistant-artifacts.ts";
-import { missionById } from "./personal-assistant-missions.ts";
+import { TUTORIAL_MISSION } from "./personal-assistant-missions.ts";
 
-test("morning brief tutorial creates weekday cron", () => {
+test("tutorial mission is the single Plan-my-next-working-day skill with three integrations", () => {
+  assert.equal(TUTORIAL_MISSION.id, "plan-next-workday");
+  assert.equal(TUTORIAL_MISSION.skillName, "plan-my-next-working-day");
+  assert.deepEqual(TUTORIAL_MISSION.integrations, [
+    "gmail",
+    "googlecalendar",
+    "googlesheets",
+  ]);
+});
+
+test("assistant instructions interpolate the mission title", () => {
   const setup = defaultAssistantSetup({
     workspaceName: "Personal",
     assistantName: "Personal assistant",
     focus: "Help me plan.",
     approvalRule: "Ask first.",
   });
-  setup.routineTime = "08:30";
 
-  const routine = buildRoutineInput(
-    missionById("morning-brief"),
-    "Morning brief",
-    "Prepare the day.",
+  const instructions = buildAssistantInstructions(
     setup,
+    "Plan my next working day",
   );
 
-  assert.equal(routine.schedule, "30 8 * * 1-5");
-  assert.equal(routine.enabled, true);
-});
-
-test("tutorial skill writes current Skill frontmatter", () => {
-  const skill = buildSkill(
-    missionById("morning-brief"),
-    "Morning brief",
-    'Checks "calendar" and email.',
-  );
-
-  assert.match(skill, /name: prepare-my-morning-brief/);
-  assert.match(skill, /featured: yes/);
-  assert.match(skill, /integrations: \["gmail", "googlecalendar"\]/);
-  assert.doesNotMatch(skill, /display_name/);
+  assert.match(instructions, /# Personal assistant/);
+  assert.match(instructions, /Plan my next working day/);
 });

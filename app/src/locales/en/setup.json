@@ -35,7 +35,8 @@
     },
     "toolkits": {
       "gmail": "Gmail",
-      "googlecalendar": "Google Calendar"
+      "googlecalendar": "Google Calendar",
+      "googlesheets": "Google Sheets"
     },
     "defaults": {
       "workspaceName": "Personal",
@@ -70,35 +71,21 @@
       },
       "try": {
         "title": "Try a real mission",
-        "body": "Real chat with your assistant. Pick one of the suggestions or type a reply. If it needs Gmail or Calendar, it will ask right here in the chat.",
+        "body": "Real chat with your assistant. Click the mission to start. Your assistant will ask for Gmail, Calendar, or Sheets right here in the chat if it needs them.",
         "tipTitle": "This is the real chat",
-        "tipBody": "Same chat you'll use after the tutorial. Pick a suggestion to start, then reply naturally. Connection requests show up as cards your assistant posts in the chat.",
+        "tipBody": "Same chat you'll use after the tutorial. Click the mission to start, then reply naturally. Connection requests show up as cards your assistant posts in the chat.",
         "workingTitle": "Working on it",
         "workingBody": "Reply in the chat as you would normally. The tutorial will continue automatically once your assistant finishes.",
-        "doneTitle": "Mission complete",
-        "doneBody": "Your assistant just did real work with your real apps. Take a quick tour of the UI, then you're done.",
+        "doneTitle": "You did it. First mission complete.",
+        "doneBody": "Your assistant just did real work with your real apps. Take a quick tour of Houston, then you're free.",
         "placeholder": "Reply to your assistant...",
-        "skills": {
-          "morning-brief": {
-            "title": "Morning brief",
-            "description": "Read today's calendar and important email, then prepare a short brief."
-          },
-          "meeting-prep": {
-            "title": "Meeting prep",
-            "description": "Read your next meeting and nearby context, then prepare notes."
-          },
-          "weekly-recap": {
-            "title": "Weekly recap",
-            "description": "Summarize the week from calendar and email into a Friday recap."
-          }
+        "skill": {
+          "title": "Plan my next working day",
+          "description": "Read your Calendar and Gmail in parallel, cross-reference them for things you'd miss, and write a structured plan into a Google Sheet."
         },
-        "chips": {
-          "morningBrief": "Give me a daily briefing",
-          "meetingPrep": "Prep me for my next meeting",
-          "weeklyRecap": "Send me a weekly recap on Fridays"
-        },
-        "composerHint": "Pick a mission to start the chat.",
-        "continueChip": "Tutorial complete, go to UI"
+        "chip": "Plan my next working day",
+        "composerHint": "Click to start the mission.",
+        "continueChip": "Take the tour"
       }
     }
   }

@@ -16,25 +16,55 @@ const END = "<!-- HOUSTON_TUTORIAL_END -->";
 
 const TUTORIAL_SECTION = `## Tutorial mode (first run)
 
-This is the user's first time running you in Houston. Follow this exact pattern. Do not deviate.
+This is the user's first time running you in Houston. The user just clicked "Plan my next working day". Follow this exact pattern. Do not deviate.
 
-1. Open with a concise PLAN — what you're going to do, in plain language, in 2-3 short sentences. Cover: (a) the task in your own words, (b) the apps you'll touch and what you'll pull from each, (c) that you'll email the result at the end. Example for "Prep me for my next meeting": *"I'll prepare your next meeting prep. I'll find your next event in Calendar, pull the recent emails about it from Gmail, then write you talking points and email them to your inbox."* Don't list bullet points, don't use headings, just a tight paragraph the user can read in one breath. Then move on without waiting for confirmation.
+The mission: cross-reference the user's Google Calendar, Gmail, and Google Sheets to produce a structured plan for their next working day. The aha is that you do work no single tool can do alone, AND you surface things they would have missed.
 
-2. Then SILENTLY check Composio for those connections (use \`composio search\` / \`composio execute\` per the integrations guide). Do NOT narrate the check to the user.
+1. Open with a concise PLAN paragraph in plain language, 2-3 short sentences. Cover: (a) you'll work the next working day (tomorrow if today is Mon-Thu, Monday if today is Fri-Sun), (b) you'll spawn parallel subagents to read Calendar and Gmail at the same time, then cross-reference them, (c) you'll write the result into a Google Sheet and email them the link. Don't list bullet points, don't use headings, just a tight paragraph the user can read in one breath. Then move on without waiting for confirmation.
 
-3. If composio itself returns an authentication / not-signed-in error (the user has no Composio session at all), STOP. Post the Composio sign-in card by writing exactly: \`[Sign in to Composio](https://composio.dev/#houston_composio_signin=1)\` and add one short line ("I need you to sign into Composio first so I can use your apps."). Wait for the user, then restart from step 2. Never fabricate results when you cannot reach Composio.
+2. SILENTLY check Composio for gmail, googlecalendar, and googlesheets connections (use \`composio search\` / \`composio execute\` per the integrations guide). Do NOT narrate the check.
 
-4. If the apps are already connected, say so in one short line ("Both connected, here we go.") and continue to step 5.
+3. If composio itself returns an authentication / not-signed-in error (no Composio session at all), STOP. Post the Composio sign-in card by writing exactly: \`[Sign in to Composio](https://composio.dev/#houston_composio_signin=1)\` and add one short line ("I need you to sign into Composio first so I can use your apps."). Wait for the user, then restart from step 2. Never fabricate results when you cannot reach Composio.
+
+4. If all three apps are connected, say so in one short line ("All three connected, here we go.") and continue to step 5.
 
 4b. If any app is missing, briefly say which one(s), then post a connect card per missing app using the standard #houston_toolkit pattern (one markdown link per app). Wait for the user to come back, then retry.
 
-5. Complete the task. Reply with the actual result the user asked for (the brief / prep / recap itself), formatted clearly.
+5. Determine the target date. If today is Mon-Thu, target = tomorrow. If today is Fri/Sat/Sun, target = next Monday. Note this date as both ISO (YYYY-MM-DD) and short label "{Day} {Mon} {DD}" (e.g. "Mon May 11"). The Google Sheet title MUST be exactly "{Day} {Mon} {DD} Plan" (e.g. "Mon May 11 Plan").
 
-6. THEN send that same content as an email to the user themselves so they have it in their inbox. The user's own email address is the one connected to Gmail via Composio — look it up using a Gmail profile / current-user tool if you don't have it. Subject line should be the task title (e.g. "Your morning brief"). Body should be the same content as your chat reply, lightly formatted for email. After sending, tell the user in ONE short line that you emailed it (e.g. "Also sent it to your inbox.").
+6. Spawn two subagents IN PARALLEL using the Task tool. Both subagents must be launched in a single message with two tool uses so they actually run concurrently:
 
-7. End your final message with the literal token [TUTORIAL_COMPLETE] on its own line. The frontend uses this token to advance the tutorial. Emit it ONLY after you have delivered the result in chat AND sent the email. Never emit it before.
+   - **Calendar subagent**: read every Calendar event on the target date. For each event capture: time, title, attendees (especially external), location/meeting link, description. Return a clean structured list. If there are no events, say so explicitly.
 
-Be tight. No apologies. No "let me think about that". No narration of your process. Announce, check, post cards if needed, deliver the result, send the email, emit the token. Done.
+   - **Gmail subagent**: read the user's last 48 hours of Gmail. Return three buckets: (a) unread emails awaiting your reply, ranked by sender importance and staleness, (b) commitments the user themselves made in sent mail ("I'll send X by Friday", "I'll loop you in tomorrow", etc.), (c) any thread that mentions an event happening on the target date.
+
+7. CROSS-REFERENCE pass. Once both subagents return, look for things a human would miss. This is the magic. Examples of what to flag:
+   - "You have a 10am with Acme — they sent an updated agenda 6 hours ago you haven't opened."
+   - "Your 2pm got rescheduled by email yesterday but your calendar still says 2pm."
+   - "You promised Tom a deck by EOD tomorrow (email Apr 28) — nothing on your calendar to do it."
+   - "Sarah asked if Friday still works — it's on your calendar, you haven't confirmed."
+   Aim for 3 to 5 items. If genuinely nothing surprising, say so honestly rather than padding.
+
+8. Create a NEW Google Sheet titled exactly "{Day} {Mon} {DD} Plan". The sheet must have FOUR tabs in this order:
+
+   - **Schedule** — columns: Time | Event | Attendees | Prep needed | Email context. One row per Calendar event.
+   - **Replies needed** — columns: Priority | From | Subject | Why it matters | Suggested reply (1 line) | Days waiting. One row per email that needs a reply.
+   - **Commitments** — columns: Promised to | What | Source email | Due | Status. One row per commitment the user made.
+   - **Don't miss** — columns: Heads-up | Why I flagged it | Action. One row per cross-reference finding from step 7. THIS IS THE MAGIC TAB.
+
+   Use the googlesheets toolkit. Get the share URL of the new sheet.
+
+9. Reply in chat with:
+   - One sentence: "I built your {Day} {Mon} {DD} plan." with the sheet link inline.
+   - Three short bullets summarizing scale: how many events, how many emails need replies, how many commitments.
+   - The "Don't miss" section inlined verbatim (just the heads-ups, one per line). This is what makes the user say "wow, I didn't notice this."
+   - Format clearly. No walls of text.
+
+10. THEN send an email to the user themselves containing the same summary + sheet link. Look up the user's email via a Gmail profile / current-user tool. Subject: "Your {Day} {Mon} {DD} plan". Body: the summary you just posted in chat, lightly formatted. After sending, add ONE short line in chat ("Also sent it to your inbox.").
+
+11. End your final message with the literal token [TUTORIAL_COMPLETE] on its own line. The frontend uses this token to advance the tutorial. Emit it ONLY after you have created the sheet AND posted the chat reply AND sent the email. Never emit it before.
+
+Be tight. No apologies. No "let me think about that". No narration of your process. Announce, check connections, post cards if needed, run the parallel subagents, cross-reference, build the sheet, deliver the chat summary with the magic tab inlined, send the email, emit the token. Done.
 `;
 
 /** Append the tutorial section to CLAUDE.md if not already present. */
