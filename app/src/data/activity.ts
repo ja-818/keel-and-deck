@@ -20,6 +20,8 @@ export interface Activity {
   routine_id?: string;
   routine_run_id?: string;
   updated_at?: string;
+  provider?: string;
+  model?: string;
 }
 
 export interface ActivityUpdate {
@@ -32,6 +34,8 @@ export interface ActivityUpdate {
   worktree_path?: string | null;
   routine_id?: string;
   routine_run_id?: string;
+  provider?: string;
+  model?: string;
 }
 
 const NAME = "activity";
@@ -47,6 +51,8 @@ export async function create(
   description = "",
   agent?: string,
   worktreePath?: string,
+  provider?: string,
+  model?: string,
 ): Promise<Activity> {
   const items = await list(agentPath);
   const item: Activity = {
@@ -58,6 +64,8 @@ export async function create(
     agent,
     worktree_path: worktreePath ?? null,
     updated_at: now(),
+    provider,
+    model,
   };
   await writeAgentJson(agentPath, NAME, s, [...items, item]);
   return item;

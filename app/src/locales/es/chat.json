@@ -17,7 +17,8 @@
     "description": "Escribe un mensaje para hablar con tu asistente."
   },
   "errors": {
-    "sessionStart": "No se pudo iniciar la sesión: {{error}}"
+    "sessionStart": "No se pudo iniciar la sesión: {{error}}",
+    "modelPersistFailed": "No se pudo guardar la preferencia de modelo"
   },
   "toolRuntimeError": {
     "retryPrompt": "Intenta de nuevo."

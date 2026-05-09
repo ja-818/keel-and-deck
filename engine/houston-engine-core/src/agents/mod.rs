@@ -124,6 +124,8 @@ mod tests {
                 description: "desc".into(),
                 agent: Some("execution".into()),
                 worktree_path: None,
+                provider: None,
+                model: None,
             })
             .unwrap();
         assert_eq!(a.title, "first");
@@ -141,6 +143,51 @@ mod tests {
         assert_eq!(updated.status, "completed");
         s.delete_activity(&a.id).unwrap();
         assert!(s.list_activity().unwrap().is_empty());
+    }
+
+    #[test]
+    fn per_mission_model_isolation() {
+        let d = tmp();
+        let s = AgentStore::new(d.path());
+        s.ensure_houston_dir().unwrap();
+        let a1 = s
+            .create_activity(NewActivity {
+                title: "mission-one".into(),
+                description: String::new(),
+                provider: Some("anthropic".into()),
+                model: Some("opus".into()),
+                ..Default::default()
+            })
+            .unwrap();
+        let a2 = s
+            .create_activity(NewActivity {
+                title: "mission-two".into(),
+                description: String::new(),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(a1.provider.as_deref(), Some("anthropic"));
+        assert_eq!(a1.model.as_deref(), Some("opus"));
+        assert_eq!(a2.provider, None);
+        assert_eq!(a2.model, None);
+
+        s.update_activity(
+            &a2.id,
+            ActivityUpdate {
+                provider: Some("openai".into()),
+                model: Some("gpt-5.4".into()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        let items = s.list_activity().unwrap();
+        let r1 = items.iter().find(|a| a.id == a1.id).unwrap();
+        let r2 = items.iter().find(|a| a.id == a2.id).unwrap();
+        assert_eq!(r1.provider.as_deref(), Some("anthropic"));
+        assert_eq!(r1.model.as_deref(), Some("opus"));
+        assert_eq!(r2.provider.as_deref(), Some("openai"));
+        assert_eq!(r2.model.as_deref(), Some("gpt-5.4"));
     }
 
     #[test]

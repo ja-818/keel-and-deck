@@ -128,6 +128,8 @@ export interface Activity {
   routine_id?: string;
   routine_run_id?: string;
   updated_at?: string;
+  provider?: string;
+  model?: string;
 }
 
 export interface ActivityUpdate {
@@ -140,6 +142,8 @@ export interface ActivityUpdate {
   worktree_path?: string | null;
   routine_id?: string;
   routine_run_id?: string;
+  provider?: string;
+  model?: string;
 }
 
 export interface NewActivity {
@@ -147,6 +151,8 @@ export interface NewActivity {
   description?: string;
   agent?: string;
   worktree_path?: string;
+  provider?: string;
+  model?: string;
 }
 
 export interface Routine {

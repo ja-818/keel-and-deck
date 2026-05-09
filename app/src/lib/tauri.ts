@@ -547,7 +547,9 @@ export const tauriActivity = {
     description?: string,
     agent?: string,
     worktreePath?: string,
-  ) => activityData.create(agentPath, title, description ?? "", agent, worktreePath),
+    provider?: string,
+    model?: string,
+  ) => activityData.create(agentPath, title, description ?? "", agent, worktreePath, provider, model),
   update: (
     agentPath: string,
     activityId: string,

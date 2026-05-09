@@ -107,6 +107,8 @@ export async function createMission(
     description,
     opts.agentMode,
     opts.worktreePath,
+    opts.providerOverride,
+    opts.modelOverride,
   );
   const conversationId = item.id;
   const sessionKey = sessionKeyForActivity(conversationId);

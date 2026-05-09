@@ -8,6 +8,7 @@ export function useActivity(agentPath: string | undefined) {
     queryKey: queryKeys.activity(agentPath ?? ""),
     queryFn: () => tauriActivity.list(agentPath!),
     enabled: !!agentPath,
+    initialData: [],
   });
 }
 

@@ -132,6 +132,8 @@ impl ActivitySurface for EngineActivitySurface {
                 description: description.to_string(),
                 agent: None,
                 worktree_path: None,
+                provider: None,
+                model: None,
             },
         )
         .map_err(|e| e.to_string())?;

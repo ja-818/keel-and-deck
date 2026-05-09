@@ -37,6 +37,8 @@ pub fn create(root: &Path, input: NewActivity) -> CoreResult<Activity> {
         routine_id: None,
         routine_run_id: None,
         updated_at: Some(now),
+        provider: input.provider,
+        model: input.model,
     };
     items.push(item.clone());
     write_json(root, FILE, &items)?;
@@ -76,6 +78,12 @@ pub fn update(root: &Path, id: &str, updates: ActivityUpdate) -> CoreResult<Acti
     }
     if let Some(routine_run_id) = updates.routine_run_id {
         item.routine_run_id = Some(routine_run_id);
+    }
+    if let Some(provider) = updates.provider {
+        item.provider = Some(provider);
+    }
+    if let Some(model) = updates.model {
+        item.model = Some(model);
     }
 
     item.updated_at = Some(Utc::now().to_rfc3339());

@@ -17,7 +17,8 @@
     "description": "Type a message to talk to your assistant."
   },
   "errors": {
-    "sessionStart": "Failed to start session: {{error}}"
+    "sessionStart": "Failed to start session: {{error}}",
+    "modelPersistFailed": "Failed to save model preference"
   },
   "toolRuntimeError": {
     "retryPrompt": "Try again."

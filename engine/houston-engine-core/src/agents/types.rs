@@ -33,6 +33,10 @@ pub struct Activity {
     /// ISO-8601 timestamp — set on create and every update.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -46,6 +50,8 @@ pub struct ActivityUpdate {
     pub worktree_path: Option<Option<String>>,
     pub routine_id: Option<String>,
     pub routine_run_id: Option<String>,
+    pub provider: Option<String>,
+    pub model: Option<String>,
 }
 
 /// Fields for creating a new activity (no id — generated).
@@ -58,6 +64,10 @@ pub struct NewActivity {
     pub agent: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub worktree_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
 }
 
 // -- Routines --

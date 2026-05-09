@@ -36,13 +36,16 @@ import {
 } from "@houston-ai/chat";
 
 import { useFeedStore } from "../stores/feeds";
+import { useUIStore } from "../stores/ui";
 import { useWorkspaceStore } from "../stores/workspaces";
 import {
+  useActivity,
   useConnectedToolkits,
   useConnections,
   useSkills,
 } from "../hooks/queries";
 import {
+  tauriActivity,
   tauriAttachments,
   tauriChat,
   tauriConfig,
@@ -143,11 +146,12 @@ export function useAgentChatPanel({
   const { t } = useTranslation(["board", "chat"]);
   const { processLabels, getThinkingMessage } = useChatDisplayLabels();
   const queryClient = useQueryClient();
+  const addToast = useUIStore((s) => s.addToast);
 
   const path = agent?.folderPath ?? null;
   const agentModes = agentDef?.config.agents;
 
-  // ── Workspace / agent / chat tier model resolution ────────────────────
+  // ── Workspace / agent / activity tier model resolution ─────────────────
   const workspace = useWorkspaceStore((s) => s.current);
   const wsProvider = workspace?.provider ?? "anthropic";
   const wsModel = workspace?.model ?? getDefaultModel(wsProvider);
@@ -167,20 +171,44 @@ export function useAgentChatPanel({
       })
       .catch(() => {});
   }, [path]);
+
+  const { data: activities } = useActivity(path ?? undefined);
+  const selectedActivity = useMemo(() => {
+    if (!selectedSessionKey || !activities) return null;
+    return activities.find(
+      (a) => (a.session_key ?? `activity-${a.id}`) === selectedSessionKey,
+    ) ?? null;
+  }, [activities, selectedSessionKey]);
+  const activityProvider = selectedActivity?.provider ?? null;
+  const activityModel = selectedActivity?.model ?? null;
+  const selectedActivityId = selectedActivity?.id ?? null;
+
   const [chatProvider, setChatProvider] = useState<string | null>(null);
   const [chatModel, setChatModel] = useState<string | null>(null);
-  // Reset per-chat overrides when the agent changes; the previous agent's
-  // model choice doesn't make sense for a different agent.
   useEffect(() => {
     setChatProvider(null);
     setChatModel(null);
-  }, [path]);
-  const effectiveProvider = chatProvider ?? agentProvider ?? wsProvider;
-  const effectiveModel = chatModel ?? agentModel ?? wsModel;
-  const handleModelSelect = useCallback((prov: string, mod: string) => {
-    setChatProvider(prov);
-    setChatModel(mod);
-  }, []);
+  }, [selectedSessionKey]);
+  const effectiveProvider = chatProvider ?? activityProvider ?? agentProvider ?? wsProvider;
+  const effectiveModel = chatModel ?? activityModel ?? agentModel ?? wsModel;
+  const handleModelSelect = useCallback(
+    (prov: string, mod: string) => {
+      setChatProvider(prov);
+      setChatModel(mod);
+      if (!path || !selectedActivityId) return;
+      tauriActivity.update(path, selectedActivityId, {
+        provider: prov,
+        model: mod,
+      }).catch((err) => {
+        addToast({
+          title: t("chat:errors.modelPersistFailed"),
+          description: String(err),
+          variant: "error",
+        });
+      });
+    },
+    [path, selectedActivityId, addToast, t],
+  );
 
   // ── Composio link card support ────────────────────────────────────────
   const { data: composioStatus } = useConnections();
