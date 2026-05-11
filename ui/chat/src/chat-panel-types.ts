@@ -37,6 +37,7 @@ export interface ChatPanelProps {
   onNotice?: (message: string) => void;
   prepareAttachments?: PrepareAttachments;
   onAttachmentRejections?: (rejections: AttachmentRejection[]) => void;
+  readClipboardFiles?: () => Promise<File[]>;
   footer?: ReactNode;
   composerHeader?: ReactNode;
   queuedMessages?: QueuedChatMessage[];

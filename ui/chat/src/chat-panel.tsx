@@ -52,6 +52,7 @@ export function ChatPanel({
   onNotice,
   prepareAttachments,
   onAttachmentRejections,
+  readClipboardFiles,
   footer,
   composerHeader,
   queuedMessages,
@@ -168,6 +169,7 @@ export function ChatPanel({
           onNotice={onNotice}
           prepareAttachments={prepareAttachments}
           onAttachmentRejections={onAttachmentRejections}
+          readClipboardFiles={readClipboardFiles}
           footer={footer}
           header={composerHeader}
           queuedMessages={queuedMessages}

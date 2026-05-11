@@ -42,6 +42,7 @@ import {
   providerAuthSignalKey,
 } from "./provider-auth-feed";
 import { useAttachmentRejectionDialog } from "../attachment-rejection-dialog";
+import { readClipboardImageFile } from "../../lib/clipboard";
 
 export default function ChatTab({ agent }: TabProps) {
   const { t } = useTranslation("chat");
@@ -283,6 +284,7 @@ export default function ChatTab({ agent }: TabProps) {
         onNotice={handleNotice}
         prepareAttachments={attachmentValidation.prepareAttachments}
         onAttachmentRejections={attachmentValidation.onAttachmentRejections}
+        readClipboardFiles={readClipboardImageFile}
         queuedMessages={messageQueue.queuedMessages}
         onRemoveQueuedMessage={messageQueue.removeQueuedMessage}
         queuedLabels={queuedLabels}

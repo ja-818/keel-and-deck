@@ -1,5 +1,6 @@
 //! OS-native Tauri commands — everything else is served by the engine.
 
+pub mod clipboard;
 pub mod os;
 pub mod terminal;
 pub mod update;
