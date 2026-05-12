@@ -39,7 +39,6 @@ type UserProfile = {
 };
 type PersonProps = {
   email?: string;
-  email_domain?: string;
 };
 
 const ALLOWED_PROPS = new Set<AnalyticsProperty>([
@@ -103,8 +102,7 @@ function cleanEmail(email?: string | null): string | undefined {
 
 function personProps(profile?: UserProfile): PersonProps | undefined {
   const email = cleanEmail(profile?.email);
-  if (!email) return undefined;
-  return { email, email_domain: email.slice(email.lastIndexOf("@") + 1) };
+  return email ? { email } : undefined;
 }
 
 export function classifyAnalyticsError(message: string): string {

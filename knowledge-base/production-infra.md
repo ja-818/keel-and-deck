@@ -53,8 +53,23 @@ Create one dashboard: **Houston Growth + Reliability**. Every tile filters `is_d
 6. **Engaged users:** unique users with `mission_created` or `chat_message_received`
 7. **Reliability:** count of `session_failed` + `$exception`, broken down by `error_kind`
 8. **Company domains:** active users broken down by person property `email_domain`
+9. **Active users by app version:** unique users, event `app_active`, breakdown by super property `app_version`, interval last 30 days, sort descending. Surfaces stragglers on old builds so we know how big the "needs to update" cohort is.
 
 Do NOT use raw autocapture event lists for product decisions. If a question needs click-level data, prefer one temporary, named event and delete it after the decision.
+
+### Pulling a contact list of users on stale versions
+
+The dashboard tile shows COUNTS. To actually reach people on old versions, use PostHog **Persons** (not Insights):
+
+1. Persons → "New cohort" (or ad-hoc filter)
+2. Filter: `app_version` (super property, type **Event property**) `is not` `<latest version>` (e.g. `0.4.3`). Repeat with `is_set` to exclude any persons missing the property.
+3. Optionally also filter `email is_set` — only signed-in users have an email; anonymous installs cannot be emailed.
+4. Export the cohort as CSV. Columns of interest: `email`, `email_domain`, `app_version`, `os`.
+
+Caveats:
+- `app_version` is a SUPER property attached to events, not a person property. So filtering by it on Persons works only if PostHog has seen that person fire an event recently in that version. Long-dormant users may not show up.
+- Anonymous users (never signed in) have no `email`. They are the "can't reach by email" bucket; their count on the dashboard tile vs the exportable cohort = the unreachable delta.
+- The `is_debug != true` filter applies to the dashboard tile but not to the Persons export — add it to the cohort definition manually.
 
 ### BigQuery export (optional)
 PostHog → BigQuery plugin → target GCP project (burns credits). SQL-queryable event history forever, immune to PostHog retention limits. Useful for investor-update analytics.
