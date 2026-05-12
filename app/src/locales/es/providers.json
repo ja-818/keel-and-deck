@@ -1,28 +1,18 @@
 {
   "card": {
     "connected": "Conectado",
-    "notConnected": "Sin conexión",
-    "ariaLabelConnected": "{{name}}, Conectado",
-    "ariaLabelNotConnected": "{{name}}, Sin conexión",
-    "modelDropdownLabel": "Modelo",
-    "signOut": "Cerrar sesión",
-    "signingOut": "Cerrando sesión...",
-    "signOutError": "No se pudo cerrar sesión de {{provider}}",
-    "comingSoon": "Próximamente"
+    "comingSoon": "Próximamente",
+    "connectTitle": "Conectar {{name}}",
+    "signOutTitle": "Cerrar sesión de {{name}}"
   },
-  "setup": {
-    "headline": "Configurar {{provider}}",
-    "cliInstalled": "La herramienta {{cli}} está instalada",
-    "cliNotFound": "No se encuentra la herramienta {{cli}}",
-    "signedIn": "Sesión iniciada",
-    "notSignedIn": "Sin iniciar sesión",
-    "installHint": "Instala la herramienta {{cli}},",
-    "installGuide": "Guía de instalación",
-    "signInWith": "Iniciar sesión con {{provider}}",
-    "waiting": "Esperando el inicio de sesión en el navegador...",
-    "openBrowserAgain": "Abrir el navegador de nuevo",
-    "launchErrorTitle": "No se pudo abrir {{cli}}",
-    "installedCheckAgain": "Ya la instalé, verificar de nuevo",
-    "canContinueHint": "Puedes continuar sin conectar, pero necesitarás tener la herramienta lista antes de usar agentes."
+  "signOutConfirm": {
+    "title": "¿Cerrar sesión de {{provider}}?",
+    "description": "Houston dejará de usar {{provider}} hasta que vuelvas a iniciar sesión. Las misiones existentes pueden terminar su turno actual.",
+    "confirm": "Cerrar sesión",
+    "cancel": "Cancelar"
+  },
+  "toast": {
+    "signInFailed": "No se pudo abrir el inicio de sesión de {{provider}}",
+    "signOutFailed": "No se pudo cerrar sesión de {{provider}}"
   }
 }

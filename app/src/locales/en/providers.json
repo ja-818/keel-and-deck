@@ -1,28 +1,18 @@
 {
   "card": {
     "connected": "Connected",
-    "notConnected": "Not connected",
-    "ariaLabelConnected": "{{name}}, Connected",
-    "ariaLabelNotConnected": "{{name}}, Not connected",
-    "modelDropdownLabel": "Model",
-    "signOut": "Sign out",
-    "signingOut": "Signing out...",
-    "signOutError": "Couldn't sign out of {{provider}}",
-    "comingSoon": "Coming soon"
+    "comingSoon": "Coming soon",
+    "connectTitle": "Connect {{name}}",
+    "signOutTitle": "Sign out of {{name}}"
   },
-  "setup": {
-    "headline": "Set up {{provider}}",
-    "cliInstalled": "{{cli}} CLI installed",
-    "cliNotFound": "{{cli}} CLI not found",
-    "signedIn": "Signed in",
-    "notSignedIn": "Not signed in",
-    "installHint": "Install the {{cli}} CLI,",
-    "installGuide": "Installation guide",
-    "signInWith": "Sign in with {{provider}}",
-    "waiting": "Waiting for browser sign-in...",
-    "openBrowserAgain": "Open browser again",
-    "launchErrorTitle": "Couldn't launch {{cli}}",
-    "installedCheckAgain": "I've installed it, check again",
-    "canContinueHint": "You can continue without connecting, but you'll need the CLI set up before using agents."
+  "signOutConfirm": {
+    "title": "Sign out of {{provider}}?",
+    "description": "Houston will stop using {{provider}} until you sign in again. Existing missions can still finish their current turn.",
+    "confirm": "Sign out",
+    "cancel": "Cancel"
+  },
+  "toast": {
+    "signInFailed": "Couldn't open {{provider}} sign-in",
+    "signOutFailed": "Couldn't sign out of {{provider}}"
   }
 }
