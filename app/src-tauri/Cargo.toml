@@ -33,3 +33,16 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls", "blocking"], def
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 tracing-appender = { workspace = true }
+
+# Windows + Linux only: the OS protocol handler launches a fresh
+# `houston-app.exe` for every `houston://` URL it receives (Start-menu
+# launches go to `C:\Program Files\Houston\…`, protocol-handler launches
+# go to the 8.3 short form `C:\PROGRA~1\Houston\…`). Without
+# single-instance the second exe holds an orphan webview while the
+# primary sits on the login screen forever, never receiving the OAuth
+# callback. The `deep-link` feature makes the second-instance argv
+# auto-route into the primary's `on_open_url` handler.
+# Not needed on macOS where NSWorkspace delivers URLs to the running
+# app natively.
+[target."cfg(any(target_os = \"windows\", target_os = \"linux\"))".dependencies]
+tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }

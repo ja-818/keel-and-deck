@@ -88,6 +88,38 @@ pub fn run() {
 
     let mut builder = tauri::Builder::default();
 
+    // Single-instance plugin — MUST be registered before the deep-link
+    // plugin on Windows / Linux so its second-instance argv-forwarding
+    // is the one the deep-link plugin attaches to. Without this, every
+    // `houston://auth-callback?...` from the Google OAuth flow launches
+    // a fresh houston-app.exe (the OS protocol handler does this by
+    // design — Start-menu launches resolve to `C:\Program Files\Houston\…`
+    // and protocol-handler launches resolve to the 8.3 short form
+    // `C:\PROGRA~1\Houston\…`, both visible as separate engine spawns
+    // in `backend.log` on the bad path) while the primary instance
+    // sits on the login screen waiting for an event that never arrives.
+    //
+    // The callback below also raises the primary window so the user
+    // sees the auth state transition (browser → app) immediately.
+    //
+    // No-op on macOS — NSWorkspace delivers `houston://` URLs to the
+    // running app natively, no second instance is ever spawned.
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    {
+        builder = builder.plugin(tauri_plugin_single_instance::init(
+            |app, _argv, _cwd| {
+                tracing::info!(
+                    "[single-instance] secondary launch routed to primary"
+                );
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.unminimize();
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            },
+        ));
+    }
+
     // Sentry plugin — only if DSN was provided
     if let Some(ref client) = _sentry_client {
         builder = builder.plugin(tauri_plugin_sentry::init(client));
