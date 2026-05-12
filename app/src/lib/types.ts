@@ -13,7 +13,7 @@ export interface Workspace {
   createdAt: string;
   /** AI provider for this workspace ("anthropic" or "openai"). */
   provider?: string;
-  /** Default model for this workspace (e.g. "sonnet", "gpt-5.4"). */
+  /** Default model for this workspace (e.g. "sonnet", "gpt-5.5"). */
   model?: string;
 }
 

@@ -66,7 +66,7 @@ mod tests {
         let args = strings(build_args(
             Some("019dd59b-5e8c-7f63-a8c6-18fb825874ad"),
             Some(&dir),
-            Some("gpt-5.4"),
+            Some("gpt-5.5"),
             Some("system"),
         ));
 

@@ -17,7 +17,7 @@ use tokio::time::timeout;
 
 const SUMMARY_TIMEOUT: Duration = Duration::from_secs(12);
 const CLAUDE_TITLE_MODEL: &str = "haiku";
-const CODEX_TITLE_MODEL: &str = "gpt-5.4-mini";
+const CODEX_TITLE_MODEL: &str = "gpt-5.5-mini";
 
 pub use super::summary_text::SummarizeResult;
 

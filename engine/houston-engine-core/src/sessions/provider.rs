@@ -130,12 +130,12 @@ mod tests {
         let agent = d.path().join("ws").join("agent");
         write_json(
             &agent.join(".houston/config/config.json"),
-            r#"{"provider":"openai","model":"gpt-5.4"}"#,
+            r#"{"provider":"openai","model":"gpt-5.5"}"#,
         );
         let paths = EnginePaths::new(d.path().to_path_buf(), d.path().to_path_buf());
         let r = resolve_provider(&paths, &agent);
         assert_eq!(r.provider, Provider::OpenAI);
-        assert_eq!(r.model.as_deref(), Some("gpt-5.4"));
+        assert_eq!(r.model.as_deref(), Some("gpt-5.5"));
     }
 
     #[test]

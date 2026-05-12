@@ -158,7 +158,7 @@ pub struct ProjectConfig {
     /// AI provider for this agent ("anthropic" or "openai"). Defaults to global preference.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub provider: Option<String>,
-    /// Model override (e.g. "sonnet", "gpt-5.4"). Provider-specific.
+    /// Model override (e.g. "sonnet", "gpt-5.5"). Provider-specific.
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "claude_model")]
     pub model: Option<String>,
     /// Effort level override (e.g. "low", "medium", "high"). Provider-specific.

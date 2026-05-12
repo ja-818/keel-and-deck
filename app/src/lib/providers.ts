@@ -26,11 +26,9 @@ export const PROVIDERS: readonly ProviderInfo[] = [
     loginCommand: "codex login",
     cost: "Your ChatGPT subscription",
     models: [
-      { id: "gpt-5.4", label: "GPT-5.4", description: "Flagship. Best reasoning and tool use." },
-      { id: "gpt-5.4-mini", label: "GPT-5.4 Mini", description: "Faster and cheaper for lighter tasks." },
-      { id: "gpt-5.3-codex", label: "Codex", description: "Purpose-built for coding agents." },
+      { id: "gpt-5.5", label: "GPT-5.5", description: "Flagship. Best reasoning and tool use." },
     ],
-    defaultModel: "gpt-5.4",
+    defaultModel: "gpt-5.5",
   },
   {
     id: "anthropic",
@@ -43,7 +41,6 @@ export const PROVIDERS: readonly ProviderInfo[] = [
     models: [
       { id: "sonnet", label: "Sonnet", description: "Best balance of speed and quality." },
       { id: "opus", label: "Opus", description: "Most capable. Slower, more tokens." },
-      { id: "haiku", label: "Haiku", description: "Fastest and cheapest for simple tasks." },
     ],
     defaultModel: "sonnet",
   },
