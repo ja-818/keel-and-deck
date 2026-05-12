@@ -23,10 +23,11 @@ mod imp {
     use std::path::PathBuf;
     use std::sync::OnceLock;
 
-    /// Cache the resolved path for the process lifetime. Extraction is
-    /// idempotent + cheap-to-check on re-entry, but a OnceLock saves
-    /// the disk-stat round-trip on every claude spawn.
-    static CACHED: OnceLock<Option<PathBuf>> = OnceLock::new();
+    /// Cache the resolved path for the process lifetime. Only Some
+    /// values are cached — a failed extraction can succeed on a retry
+    /// (transient ENOSPC, antivirus quarantine, etc.) so we never
+    /// poison the cache with None.
+    static CACHED: OnceLock<PathBuf> = OnceLock::new();
 
     /// Returns the path to a usable `bash.exe`, extracting the bundled
     /// PortableGit if needed. `None` if no bundle ships in this build
@@ -34,21 +35,46 @@ mod imp {
     /// to their existing PATH probe.
     pub fn ensure_bundled_bash() -> Option<PathBuf> {
         if let Some(cached) = CACHED.get() {
-            return cached.clone();
+            return Some(cached.clone());
         }
-        let resolved = resolve();
+        let resolved = resolve()?;
         let _ = CACHED.set(resolved.clone());
-        resolved
+        Some(resolved)
+    }
+
+    /// Candidate bash.exe locations inside an extracted PortableGit.
+    /// PortableGit-64-bit ships both — `usr/bin/bash.exe` is the
+    /// msys2-canonical location and `bin/bash.exe` is a launcher that
+    /// re-execs through cmd. PortableGit-arm64 only ships
+    /// `usr/bin/bash.exe`. We try the usr path first because it's
+    /// always present and is what Claude Code actually wants
+    /// (the launcher in /bin/ is a wrapper meant for opening a
+    /// terminal, not for non-interactive execution).
+    const BASH_CANDIDATES: &[&[&str]] = &[
+        &["usr", "bin", "bash.exe"],
+        &["bin", "bash.exe"],
+    ];
+
+    fn locate_bash(target_dir: &std::path::Path) -> Option<PathBuf> {
+        BASH_CANDIDATES.iter().find_map(|parts| {
+            let mut p = target_dir.to_path_buf();
+            for s in *parts {
+                p.push(s);
+            }
+            p.is_file().then_some(p)
+        })
     }
 
     fn resolve() -> Option<PathBuf> {
         let sfx = houston_cli_bundle::bundled_git_bash_sfx()?;
         let arch = std::env::consts::ARCH;
         let target_dir = extraction_root()?.join(format!("git-bash-{arch}"));
-        let bash = target_dir.join("bin").join("bash.exe");
 
-        if bash.is_file() && marker_matches(&target_dir, &sfx) {
-            return Some(bash);
+        if let Some(bash) = locate_bash(&target_dir) {
+            if marker_matches(&target_dir, &sfx) {
+                tracing::debug!("[git-bash] cached extraction usable at {}", bash.display());
+                return Some(bash);
+            }
         }
 
         // Stale or missing — clear and re-extract. We never extract
@@ -108,14 +134,18 @@ mod imp {
             }
         }
 
-        if !bash.is_file() {
+        let Some(bash) = locate_bash(&target_dir) else {
             tracing::warn!(
-                "[git-bash] extraction reported success but {} is missing",
-                bash.display()
+                "[git-bash] extraction reported success but no bash.exe at {}/{{usr/bin,bin}}/bash.exe",
+                target_dir.display()
             );
             return None;
-        }
+        };
         write_marker(&target_dir, &sfx);
+        tracing::info!(
+            "[git-bash] resolved bash.exe at {}",
+            bash.display()
+        );
         Some(bash)
     }
 
@@ -167,5 +197,6 @@ mod imp {
         None
     }
 }
+
 
 pub use imp::ensure_bundled_bash;
