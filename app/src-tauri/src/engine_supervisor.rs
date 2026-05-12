@@ -112,7 +112,20 @@ impl EngineSubprocess {
             // MSI builds. We never need to send Ctrl+C to the child
             // ourselves; the stdin watchdog handles graceful shutdown.
             const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
-            cmd.creation_flags(CREATE_NEW_PROCESS_GROUP);
+            // CREATE_NO_WINDOW (0x08000000) prevents Windows from
+            // allocating a fresh console for the engine child.
+            // `houston-app.exe` is a GUI Tauri process with no
+            // console attached, so without this flag the engine —
+            // which compiles with Rust's default `console` PE
+            // subsystem so its tracing output stays inspectable when
+            // launched from a terminal — pops a visible cmd window
+            // every time Houston launches. Tauri's own `Sidecar`
+            // helper sets this flag for us; we don't use it
+            // (engine_supervisor speaks raw std::process::Command
+            // for the stdin-watchdog trick), so we have to set it
+            // ourselves.
+            const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+            cmd.creation_flags(CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW);
         }
 
         let mut child = cmd
