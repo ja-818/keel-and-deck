@@ -25,10 +25,26 @@ export const PROVIDERS: readonly ProviderInfo[] = [
     installUrl: "https://github.com/openai/codex",
     loginCommand: "codex login",
     cost: "Your ChatGPT subscription",
+    // `gpt-5.5-codex` is the default — it is tuned for the agent / tool-use
+    // workload Houston actually runs (the tutorial reads calendar + mail,
+    // drafts emails, edits files, etc.) and is the model the codex CLI was
+    // built around. The vanilla `gpt-5.5` stays available for users who
+    // want it for chat-style tasks where coding-tuned behavior is less
+    // helpful, but the picker (and the tutorial via `defaultModel`)
+    // start on codex.
     models: [
-      { id: "gpt-5.5", label: "GPT-5.5", description: "Flagship. Best reasoning and tool use." },
+      {
+        id: "gpt-5.5-codex",
+        label: "GPT-5.5 Codex",
+        description: "Tuned for coding and agent tool use. Best for Houston's tutorial flow.",
+      },
+      {
+        id: "gpt-5.5",
+        label: "GPT-5.5",
+        description: "Flagship general model. Best for plain chat and reasoning.",
+      },
     ],
-    defaultModel: "gpt-5.5",
+    defaultModel: "gpt-5.5-codex",
   },
   {
     id: "anthropic",

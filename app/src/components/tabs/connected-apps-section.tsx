@@ -72,7 +72,15 @@ interface AppInfo {
 }
 
 function composioAppUrl(toolkit: string): string {
-  return `https://dashboard.composio.dev/~/connect/apps/${toolkit}`;
+  // Route through Composio's marketing site with the Houston-tagged
+  // fragment instead of `dashboard.composio.dev/~/connect/apps/<toolkit>`.
+  // The bare-dashboard URL relies on `~` resolving to the user's default
+  // workspace, which was observed not to work for at least one alpha
+  // user (Composio routed them to a workspace-less page that does
+  // nothing). The marketing-site URL is the same one the tutorial chat
+  // card emits and it goes through Composio's auth → user's workspace
+  // → connect-app routing, which works reliably.
+  return `https://composio.dev/#houston_toolkit=${toolkit}`;
 }
 
 
