@@ -534,7 +534,14 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
     [handleRunInTerminal, t],
   );
 
-  const emptyBoard = (
+  // Only render an empty state when the user is actively searching and
+  // got no matches — that's contextual feedback they asked for. We
+  // intentionally do NOT show an empty state for "no missions at all",
+  // because the board flashes through that state on every app open
+  // before `useActivity` has finished its first fetch, which reads as
+  // "your data is gone." With no empty state, that window looks like a
+  // brief blank board instead of a fake "everything is gone" prompt.
+  const emptyBoard = missionSearch.hasQuery ? (
     <MissionBoardEmptyState
       isSearch={missionSearch.hasQuery}
       isSearchingText={missionSearch.isSearchingText}
@@ -551,7 +558,7 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
       onNewMission={openDefaultMission}
       onClearSearch={() => setAgentMissionSearchQuery(path, "")}
     />
-  );
+  ) : undefined;
 
   return (
     <div className="flex flex-col h-full">

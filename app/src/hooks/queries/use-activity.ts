@@ -8,7 +8,15 @@ export function useActivity(agentPath: string | undefined) {
     queryKey: queryKeys.activity(agentPath ?? ""),
     queryFn: () => tauriActivity.list(agentPath!),
     enabled: !!agentPath,
-    initialData: [],
+    // No `initialData: []` here on purpose. With it, the query is in
+    // "success with empty data" the instant a consumer mounts, so any
+    // empty-state UI gated on `items.length === 0` flashes for the
+    // 50-500ms it takes the queryFn to round-trip through the Tauri
+    // command and engine HTTP. On Windows where engine startup is
+    // slower the flash can be a full second. Returning `undefined`
+    // until the real data lands lets consumers distinguish "loading"
+    // from "loaded and genuinely empty". All call sites already guard
+    // reads with `(activities ?? []).map(...)`.
   });
 }
 

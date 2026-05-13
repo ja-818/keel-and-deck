@@ -259,7 +259,10 @@ export function Dashboard() {
     );
   }
 
-  const emptyBoard = (
+  // Only render an empty state when the user is actively searching and
+  // got no matches. See the matching comment in board-tab.tsx for why
+  // we don't show a "no missions yet" empty state.
+  const emptyBoard = missionSearch.hasQuery ? (
     <MissionBoardEmptyState
       isSearch={missionSearch.hasQuery}
       isSearchingText={missionSearch.isSearchingText}
@@ -276,7 +279,7 @@ export function Dashboard() {
       onNewMission={openNewMission}
       onClearSearch={() => setMissionSearchQuery("")}
     />
-  );
+  ) : undefined;
 
   return (
     <div className="h-full flex flex-col overflow-hidden">

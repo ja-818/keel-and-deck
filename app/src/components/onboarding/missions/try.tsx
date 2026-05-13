@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChatPanel, type FeedItem } from "@houston-ai/chat";
 import { HoustonAvatar, cn, resolveAgentColor } from "@houston-ai/core";
@@ -7,6 +7,7 @@ import {
   useConnections,
 } from "../../../hooks/queries";
 import { tauriAgent, tauriChat, tauriSystem } from "../../../lib/tauri";
+import { logger } from "../../../lib/logger";
 import { createMission } from "../../../lib/create-mission";
 import { useSessionMessageQueue } from "../../../hooks/use-session-message-queue";
 import { useQueuedMessageLabels } from "../../use-queued-message-labels";
@@ -106,18 +107,30 @@ export function TryMission({
   // Append the tutorial directive to CLAUDE.md while this mission is mounted;
   // strip on unmount. Agent picks it up at session start so the tutorial flow
   // is enforced via system prompt, not user-visible postscripts.
+  //
+  // The write is async, but the chip click that spawns the chat session is
+  // synchronous from the user's POV. If the user clicks before this write
+  // lands on disk the engine reads the un-augmented CLAUDE.md, the tutorial
+  // directive never reaches the agent, and the agent reverts to its base
+  // "look at local files, ask one missing-piece question" behavior — what
+  // a real user saw on Windows after a wipe + fresh boot (NTFS + AV scan
+  // make the race fat). We expose the prep promise via a ref so
+  // `handlePick` can await it before firing `createMission`. Already-done
+  // prep resolves instantly.
+  const tutorialPrepRef = useRef<Promise<void>>(Promise.resolve());
   useEffect(() => {
     let cancelled = false;
-    void (async () => {
+    const prep = (async () => {
       try {
         const current = await tauriAgent.readFile(agentPath, "CLAUDE.md");
         const updated = appendTutorialSection(current);
         if (cancelled || updated === current) return;
         await tauriAgent.writeFile(agentPath, "CLAUDE.md", updated);
       } catch (e) {
-        console.error("[try] could not append tutorial section:", e);
+        logger.warn(`[try] could not append tutorial section: ${e}`);
       }
     })();
+    tutorialPrepRef.current = prep;
     return () => {
       cancelled = true;
       void (async () => {
@@ -127,7 +140,7 @@ export function TryMission({
           if (stripped === current) return;
           await tauriAgent.writeFile(agentPath, "CLAUDE.md", stripped);
         } catch (e) {
-          console.error("[try] could not strip tutorial section:", e);
+          logger.warn(`[try] could not strip tutorial section: ${e}`);
         }
       })();
     };
@@ -236,6 +249,11 @@ export function TryMission({
     async (chipLabel: string) => {
       if (pickedAny) return;
       setPickedAny(true);
+      // Wait for the tutorial-section append to land on disk so the engine
+      // reads the augmented CLAUDE.md when it spawns the chat session.
+      // No-op once the mount-time prep is already done; one short await
+      // on a fast click after a fresh boot.
+      await tutorialPrepRef.current;
       try {
         const result = await createMission(
           {
@@ -252,13 +270,28 @@ export function TryMission({
             effortOverride: "medium",
           },
         );
+        // Mirror the regular composer-send path: push the chip text as
+        // the user_message into the feed the instant we have a session
+        // key. `createMission` already forwarded the same prompt to the
+        // engine — the engine does not re-emit it as a feed event, so
+        // this is not a duplicate, it is the only user-visible bubble
+        // for this turn. Without this push the ChatPanel mounts with
+        // an empty feed and `deriveStatus` skips straight past
+        // "submitted", so the pulsing-logo thinking indicator never
+        // gets a chance to render before codex starts streaming items
+        // 1-2s later. End result on Windows: a dead silent gap between
+        // chip click and "Mission in progress" that reads as a crash.
+        pushFeedItem(agent.folderPath, result.sessionKey, {
+          feed_type: "user_message",
+          data: chipLabel,
+        });
         setMissionSessionKey(result.sessionKey);
       } catch (e) {
         setPickedAny(false);
         setError(e instanceof Error ? e.message : String(e));
       }
     },
-    [agent.id, agent.name, agent.color, agent.folderPath, provider, model, pickedAny],
+    [agent.id, agent.name, agent.color, agent.folderPath, provider, model, pickedAny, pushFeedItem],
   );
 
   const visibleFeed = (feedItems ?? []) as FeedItem[];
