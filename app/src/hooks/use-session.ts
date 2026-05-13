@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Session } from "@supabase/supabase-js";
 import { supabase, isAuthConfigured } from "../lib/supabase";
+import { logger } from "../lib/logger";
 
 const SESSION_KEY = ["session"] as const;
 
@@ -16,7 +17,11 @@ export function useSession() {
 
   useEffect(() => {
     if (!isAuthConfigured()) return;
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    logger.info("[auth] onAuthStateChange listener attached");
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      logger.info(
+        `[auth] onAuthStateChange fired: ${event} (session=${session ? "present" : "null"})`,
+      );
       qc.setQueryData<Session | null>(SESSION_KEY, session ?? null);
     });
     return () => data.subscription.unsubscribe();

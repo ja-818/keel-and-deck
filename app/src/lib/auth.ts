@@ -1,8 +1,19 @@
 import { listen } from "@tauri-apps/api/event";
+import type { Session } from "@supabase/supabase-js";
 import { supabase, isAuthConfigured } from "./supabase";
+import { queryClient } from "./query-client";
 import { tauriSystem } from "./tauri";
 import { analytics } from "./analytics";
 import { logger } from "./logger";
+
+// Must match `SESSION_KEY` in `hooks/use-session.ts`. Hardcoded here
+// to avoid a hook-importing-from-hook dependency cycle. If you change
+// one, change the other.
+const SESSION_QUERY_KEY = ["session"] as const;
+
+function applySessionToCache(session: Session | null): void {
+  queryClient.setQueryData<Session | null>(SESSION_QUERY_KEY, session);
+}
 
 // HTTPS bridge instead of a raw deep link so the user lands on a polished
 // "Sign-in complete, you can close this tab" page after Google. The bridge
@@ -162,6 +173,7 @@ export function installDeepLinkListener(): () => void {
           emitAuthError(error.message);
           return;
         }
+        applySessionToCache(data.session ?? null);
         logger.info(`[auth] session established (pkce) for ${data.user?.email}`);
         return;
       }
@@ -178,6 +190,15 @@ export function installDeepLinkListener(): () => void {
           emitAuthError(error.message);
           return;
         }
+        // Push the session directly into the TanStack Query cache that
+        // `useSession` reads. Belt-and-suspenders over Supabase's
+        // `onAuthStateChange` listener, which a real Windows v0.4.14
+        // install was observed to skip for `setSession` calls 12 times
+        // in a row — every implicit-flow sign-in succeeded server-side
+        // but the auth gate in App.tsx never re-rendered. Writing the
+        // cache key directly here makes the UI transition deterministic
+        // regardless of whether the listener fires.
+        applySessionToCache(data.session ?? null);
         logger.info(
           `[auth] session established (implicit) for ${data.user?.email}`,
         );
