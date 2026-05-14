@@ -88,27 +88,37 @@ fn write(home_dir: &Path, entries: &[RegisteredPid]) -> CoreResult<()> {
 /// any prior entry for the same key (rare but possible during racy
 /// session restarts).
 pub fn register(home_dir: &Path, session_key: &str, pid: u32) -> CoreResult<()> {
-    let mut entries = read(home_dir)?;
-    entries.retain(|e| e.session_key != session_key);
-    entries.push(RegisteredPid {
-        pid,
-        session_key: session_key.to_string(),
-        spawned_at: Utc::now(),
-    });
-    write(home_dir, &entries)
+    // Process-wide lock keyed on the pid file. Without this, two
+    // parallel `sessions::start` (one per agent — Houston's core value
+    // prop) race the unlocked read-modify-write below and drop one pid
+    // on every conflict. Symptom: orphan CLI subprocesses from one of
+    // the parallel sessions silently slip past the next boot's reap
+    // and burn API quota for tens of seconds before SIGPIPE-dying.
+    crate::file_mutex::with_file_lock(&pid_file(home_dir), || {
+        let mut entries = read(home_dir)?;
+        entries.retain(|e| e.session_key != session_key);
+        entries.push(RegisteredPid {
+            pid,
+            session_key: session_key.to_string(),
+            spawned_at: Utc::now(),
+        });
+        write(home_dir, &entries)
+    })
 }
 
 /// Remove the entry for `session_key`. Called on clean session exit.
 /// No-op if the key isn't present (e.g. session ended after engine
 /// restart — its entry was already reaped).
 pub fn unregister(home_dir: &Path, session_key: &str) -> CoreResult<()> {
-    let mut entries = read(home_dir)?;
-    let before = entries.len();
-    entries.retain(|e| e.session_key != session_key);
-    if entries.len() == before {
-        return Ok(());
-    }
-    write(home_dir, &entries)
+    crate::file_mutex::with_file_lock(&pid_file(home_dir), || {
+        let mut entries = read(home_dir)?;
+        let before = entries.len();
+        entries.retain(|e| e.session_key != session_key);
+        if entries.len() == before {
+            return Ok(());
+        }
+        write(home_dir, &entries)
+    })
 }
 
 /// Kill any registered PID that's still alive, then truncate the file.
@@ -118,48 +128,56 @@ pub fn unregister(home_dir: &Path, session_key: &str) -> CoreResult<()> {
 /// Returns the count of PIDs that were alive and got SIGTERM'd.
 /// Self-resilient: errors on individual PIDs are logged and skipped.
 pub fn reap_orphans(home_dir: &Path) -> CoreResult<usize> {
-    let entries = read(home_dir)?;
-    let mut killed = 0usize;
-    for e in &entries {
-        if !crate::process_probe::is_alive(e.pid) {
-            continue;
-        }
-        // Don't kill ourselves — sanity check against a corrupt file or
-        // a same-process pid recycle. The current engine pid can't be
-        // an orphan from a prior incarnation.
-        if e.pid == std::process::id() {
-            tracing::warn!(
-                target: "runtime_pids",
-                pid = e.pid,
-                "skipping orphan reap: pid matches our own"
-            );
-            continue;
-        }
-        match terminate(e.pid) {
-            Ok(()) => {
-                killed += 1;
-                tracing::info!(
-                    target: "runtime_pids",
-                    pid = e.pid,
-                    session_key = %e.session_key,
-                    "reaped orphan CLI subprocess from prior engine instance"
-                );
+    // Hold the file lock for the whole read → terminate-each → truncate
+    // sweep. The boot-time path doesn't actually contend (we run before
+    // serving HTTP and before any session can spawn), but holding it
+    // anyway makes the function safe to call from places other than
+    // boot if we ever want to.
+    crate::file_mutex::with_file_lock(&pid_file(home_dir), || {
+        let entries = read(home_dir)?;
+        let mut killed = 0usize;
+        for e in &entries {
+            if !crate::process_probe::is_alive(e.pid) {
+                continue;
             }
-            Err(err) => {
+            // Don't kill ourselves — sanity check against a corrupt
+            // file or a same-process pid recycle. The current engine
+            // pid can't be an orphan from a prior incarnation.
+            if e.pid == std::process::id() {
                 tracing::warn!(
                     target: "runtime_pids",
                     pid = e.pid,
-                    session_key = %e.session_key,
-                    error = %err,
-                    "failed to terminate orphan CLI subprocess"
+                    "skipping orphan reap: pid matches our own"
                 );
+                continue;
+            }
+            match terminate(e.pid) {
+                Ok(()) => {
+                    killed += 1;
+                    tracing::info!(
+                        target: "runtime_pids",
+                        pid = e.pid,
+                        session_key = %e.session_key,
+                        "reaped orphan CLI subprocess from prior engine instance"
+                    );
+                }
+                Err(err) => {
+                    tracing::warn!(
+                        target: "runtime_pids",
+                        pid = e.pid,
+                        session_key = %e.session_key,
+                        error = %err,
+                        "failed to terminate orphan CLI subprocess"
+                    );
+                }
             }
         }
-    }
-    // Truncate the file regardless — we want a clean slate for this
-    // engine instance. Anything we couldn't kill is logged above.
-    write(home_dir, &[])?;
-    Ok(killed)
+        // Truncate the file regardless — we want a clean slate for
+        // this engine instance. Anything we couldn't kill is logged
+        // above.
+        write(home_dir, &[])?;
+        Ok(killed)
+    })
 }
 
 // `is_alive` lives in `crate::process_probe` so the lease reaper
@@ -267,6 +285,46 @@ mod tests {
         let listed = read(d.path()).unwrap();
         assert_eq!(listed.len(), 1);
         assert_eq!(listed[0].pid, 9999);
+    }
+
+    #[test]
+    fn concurrent_register_does_not_lose_entries() {
+        // Houston's value prop is parallel agents. Two `sessions::start`
+        // on two different agents → two `register` calls landing on the
+        // same `cli_pids.json`. Without per-file locking the unsynchronized
+        // read-modify-write loses one entry on every race, the orphan
+        // slips past next-boot reap, and API quota gets burned.
+        //
+        // We can't easily reproduce a real OS-thread race in a 50-thread
+        // test (the kernel page cache + std::fs::rename is fast enough
+        // that races are intermittent without `with_file_lock`). To make
+        // the test deterministic, we run 50 parallel registers and
+        // assert the final file has all 50 entries — the lock guarantees
+        // it, an unlocked baseline would intermittently lose entries.
+        let d = TempDir::new().unwrap();
+        let path = d.path().to_path_buf();
+        let mut handles = Vec::new();
+        for i in 0..50 {
+            let path = path.clone();
+            handles.push(std::thread::spawn(move || {
+                register(&path, &format!("session-{i}"), 1000 + i as u32).unwrap();
+            }));
+        }
+        for h in handles {
+            h.join().unwrap();
+        }
+        let listed = read(&path).unwrap();
+        assert_eq!(
+            listed.len(),
+            50,
+            "all 50 parallel registers must land — got {}",
+            listed.len()
+        );
+        // And no duplicate session_keys.
+        let mut keys: Vec<&str> = listed.iter().map(|e| e.session_key.as_str()).collect();
+        keys.sort();
+        keys.dedup();
+        assert_eq!(keys.len(), 50);
     }
 
     #[test]

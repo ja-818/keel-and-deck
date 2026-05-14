@@ -5,9 +5,10 @@
 //! pure CRUD surface.
 
 use super::status::ActivityStatus;
-use super::store::{read_json, write_json};
+use super::store::{file_path, read_json, write_json};
 use super::types::{Activity, ActivityUpdate, NewActivity};
 use crate::error::{CoreError, CoreResult};
+use crate::file_mutex::with_file_lock;
 use chrono::Utc;
 use std::path::Path;
 use uuid::Uuid;
@@ -19,6 +20,10 @@ pub fn list(root: &Path) -> CoreResult<Vec<Activity>> {
 }
 
 pub fn create(root: &Path, input: NewActivity) -> CoreResult<Activity> {
+    with_file_lock(&file_path(root, FILE), || create_locked(root, input))
+}
+
+fn create_locked(root: &Path, input: NewActivity) -> CoreResult<Activity> {
     let mut items = list(root)?;
     let now = Utc::now().to_rfc3339();
     // Every activity is bound to a session via the convention
@@ -57,6 +62,10 @@ pub fn create(root: &Path, input: NewActivity) -> CoreResult<Activity> {
 }
 
 pub fn update(root: &Path, id: &str, updates: ActivityUpdate) -> CoreResult<Activity> {
+    with_file_lock(&file_path(root, FILE), || update_locked(root, id, updates))
+}
+
+fn update_locked(root: &Path, id: &str, updates: ActivityUpdate) -> CoreResult<Activity> {
     let mut items = list(root)?;
     let item = items
         .iter_mut()
@@ -105,13 +114,15 @@ pub fn update(root: &Path, id: &str, updates: ActivityUpdate) -> CoreResult<Acti
 }
 
 pub fn delete(root: &Path, id: &str) -> CoreResult<()> {
-    let mut items = list(root)?;
-    let before = items.len();
-    items.retain(|t| t.id != id);
-    if items.len() == before {
-        return Err(CoreError::NotFound(format!("activity {id}")));
-    }
-    write_json(root, FILE, &items)?;
-    Ok(())
+    with_file_lock(&file_path(root, FILE), || {
+        let mut items = list(root)?;
+        let before = items.len();
+        items.retain(|t| t.id != id);
+        if items.len() == before {
+            return Err(CoreError::NotFound(format!("activity {id}")));
+        }
+        write_json(root, FILE, &items)?;
+        Ok(())
+    })
 }
 

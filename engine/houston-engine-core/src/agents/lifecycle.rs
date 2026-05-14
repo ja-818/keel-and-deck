@@ -22,9 +22,10 @@
 
 use super::lease::Lease;
 use super::status::ActivityStatus;
-use super::store::{read_json, write_json};
+use super::store::{file_path, read_json, write_json};
 use super::types::Activity;
 use crate::error::CoreResult;
+use crate::file_mutex::with_file_lock;
 use chrono::Utc;
 use std::path::Path;
 
@@ -42,22 +43,32 @@ fn mutate_by_session_key<F: FnOnce(&mut Activity)>(
     session_key: &str,
     mutate: F,
 ) -> CoreResult<Option<Activity>> {
-    let mut items: Vec<Activity> = read_json(root, FILE)?;
-    let implied_id = session_key.strip_prefix("activity-");
-    let Some(item) = items.iter_mut().find(|t| {
-        t.session_key.as_deref() == Some(session_key)
-            || implied_id.is_some_and(|id| t.id == id)
-    }) else {
-        return Ok(None);
-    };
-    if item.session_key.as_deref() != Some(session_key) {
-        item.session_key = Some(session_key.to_string());
-    }
-    mutate(item);
-    item.updated_at = Some(Utc::now().to_rfc3339());
-    let result = item.clone();
-    write_json(root, FILE, &items)?;
-    Ok(Some(result))
+    // Hold the per-file lock for the whole read-modify-write so the
+    // heartbeat / reaper / HTTP update handler / cancel path can't
+    // interleave. Without this, two callers reading the same prior
+    // state and writing back different mutations produce a lost-update:
+    // the later writer's full list overwrites the earlier writer's row
+    // mutation. Concrete bug it fixes: heartbeat extends a lease while
+    // the user clicks Delete on the same card; heartbeat's stale
+    // in-memory list resurrects the deleted row.
+    with_file_lock(&file_path(root, FILE), || {
+        let mut items: Vec<Activity> = read_json(root, FILE)?;
+        let implied_id = session_key.strip_prefix("activity-");
+        let Some(item) = items.iter_mut().find(|t| {
+            t.session_key.as_deref() == Some(session_key)
+                || implied_id.is_some_and(|id| t.id == id)
+        }) else {
+            return Ok(None);
+        };
+        if item.session_key.as_deref() != Some(session_key) {
+            item.session_key = Some(session_key.to_string());
+        }
+        mutate(item);
+        item.updated_at = Some(Utc::now().to_rfc3339());
+        let result = item.clone();
+        write_json(root, FILE, &items)?;
+        Ok(Some(result))
+    })
 }
 
 /// Promote the activity bound to `session_key` to `Running` with a
@@ -175,26 +186,28 @@ enum SweepAction {
 /// is returned so the caller can emit `ActivityChanged` for the agent.
 pub fn sweep_stale(root: &Path) -> CoreResult<Vec<Activity>> {
     let self_pid = std::process::id();
-    let mut items: Vec<Activity> = read_json(root, FILE)?;
-    let mut transitioned = Vec::new();
-    for item in items.iter_mut() {
-        if !item.status.is_in_flight() {
-            continue;
+    with_file_lock(&file_path(root, FILE), || {
+        let mut items: Vec<Activity> = read_json(root, FILE)?;
+        let mut transitioned = Vec::new();
+        for item in items.iter_mut() {
+            if !item.status.is_in_flight() {
+                continue;
+            }
+            if decide_sweep(item.lease.as_ref(), self_pid, crate::process_probe::is_alive)
+                != SweepAction::Interrupt
+            {
+                continue;
+            }
+            item.status = ActivityStatus::Interrupted;
+            item.lease = None;
+            item.updated_at = Some(Utc::now().to_rfc3339());
+            transitioned.push(item.clone());
         }
-        if decide_sweep(item.lease.as_ref(), self_pid, crate::process_probe::is_alive)
-            != SweepAction::Interrupt
-        {
-            continue;
+        if !transitioned.is_empty() {
+            write_json(root, FILE, &items)?;
         }
-        item.status = ActivityStatus::Interrupted;
-        item.lease = None;
-        item.updated_at = Some(Utc::now().to_rfc3339());
-        transitioned.push(item.clone());
-    }
-    if !transitioned.is_empty() {
-        write_json(root, FILE, &items)?;
-    }
-    Ok(transitioned)
+        Ok(transitioned)
+    })
 }
 
 #[cfg(test)]
