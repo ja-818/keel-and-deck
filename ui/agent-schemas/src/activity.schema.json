@@ -11,9 +11,9 @@
       "title": { "type": "string" },
       "description": { "type": "string" },
       "status": {
-        "description": "queued: created, no CLI yet. running: lease held, CLI streaming. needs_you: stream ended cleanly, awaiting user. done: closed by user. error: stream ended with error. interrupted: reaper found a stale lease, click Resume to continue.",
+        "description": "queued: created, no CLI yet. running: lease held, CLI streaming. needs_you: stream ended cleanly, awaiting user. done: closed by user. error: stream ended with error. cancelled: user clicked Stop. interrupted: reaper found a stale lease, click Resume to continue.",
         "type": "string",
-        "enum": ["queued", "running", "needs_you", "done", "error", "interrupted"]
+        "enum": ["queued", "running", "needs_you", "done", "error", "cancelled", "interrupted"]
       },
       "lease": {
         "description": "Durability ownership token. Present only on in-flight (queued/running) rows. The engine's heartbeat extends expires_at while the CLI runs; the reaper interrupts any row whose lease is past expires_at.",

@@ -19,6 +19,7 @@ export type ActivityStatus =
   | "needs_you"
   | "done"
   | "error"
+  | "cancelled"
   | "interrupted";
 
 /**
