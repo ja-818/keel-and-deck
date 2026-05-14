@@ -78,6 +78,7 @@
       "errorTitle": "Não foi possível enviar o reporte"
     }
   },
+  "version": "Versão {{version}}",
   "toasts": {
     "workspaceRenamed": "Espaço de trabalho renomeado",
     "providerSwitched": "Mudou para {{provider}} ({{model}})",

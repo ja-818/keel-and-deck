@@ -78,6 +78,7 @@
       "errorTitle": "Couldn't send report"
     }
   },
+  "version": "Version {{version}}",
   "toasts": {
     "workspaceRenamed": "Workspace renamed",
     "providerSwitched": "Switched to {{provider}} ({{model}})",

@@ -65,6 +65,11 @@ export function SettingsView() {
         items={items}
         active={activeVisible}
         onSelect={setActive}
+        footer={
+          <span className="text-xs text-muted-foreground px-2.5">
+            {t("settings:version", { version: __APP_VERSION__ })}
+          </span>
+        }
       />
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-xl px-8 py-10">
