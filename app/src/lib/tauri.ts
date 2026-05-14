@@ -416,6 +416,7 @@ export const tauriFiles = {
         name: f.name,
         extension: f.extension,
         size: f.size,
+        is_directory: f.is_directory,
       })),
     ),
   open: (agentPath: string, relativePath: string) =>
