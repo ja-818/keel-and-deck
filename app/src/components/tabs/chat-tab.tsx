@@ -18,7 +18,8 @@ import { useWorkspaceStore } from "../../stores/workspaces";
 import { useDraftStore, useDraftText, useDraftFiles } from "../../stores/drafts";
 import { isActiveSessionStatus, useSessionStatus } from "../../stores/session-status";
 import { useSessionMessageQueue } from "../../hooks/use-session-message-queue";
-import { tauriChat, tauriAttachments, tauriSystem, tauriConfig } from "../../lib/tauri";
+import { tauriChat, tauriAttachments, tauriConfig } from "../../lib/tauri";
+import { openAgentHref } from "../../lib/open-href";
 import { buildAttachmentPrompt } from "../../lib/attachment-message";
 import { useFileToolRenderer } from "../../hooks/use-file-tool-renderer";
 import { useConnectedToolkits, useConnections } from "../../hooks/queries";
@@ -147,9 +148,12 @@ export default function ChatTab({ agent }: TabProps) {
     }
   }, [sessionStatus]);
 
-  const handleOpenLink = useCallback((url: string) => {
-    tauriSystem.openUrl(url).catch(console.error);
-  }, []);
+  const handleOpenLink = useCallback(
+    (url: string) => {
+      openAgentHref(url, agentPath);
+    },
+    [agentPath],
+  );
 
   // Connection state for inline Composio connect cards. Only query
   // when the user is signed in — otherwise the CLI call will fail.

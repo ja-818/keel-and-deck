@@ -160,9 +160,16 @@ function semanticIcon(kind: SemanticUpdateKind) {
   return Lightbulb;
 }
 
+/** Last path segment, separator-agnostic. See `turn-summary-items.ts`
+ * for why `.split("/")` alone is wrong on Windows. */
+function fileNameOf(path: string): string {
+  const segments = path.split(/[\\/]/);
+  return segments[segments.length - 1] || path;
+}
+
 function itemIcon(item: TurnSummaryItem) {
   if (item.kind === "semantic") return semanticIcon(item.update);
-  const fileName = item.path.split("/").pop() ?? item.path;
+  const fileName = fileNameOf(item.path);
   const ext = fileName.includes(".")
     ? fileName.split(".").pop()?.toLowerCase()
     : undefined;
@@ -175,5 +182,5 @@ function itemLabel(item: TurnSummaryItem, t: TFunction<"chat">): string {
     if (item.update === "skills") return t("summary.skillsUpdated");
     return t("summary.learningsUpdated");
   }
-  return item.path.split("/").pop() ?? item.path;
+  return fileNameOf(item.path);
 }

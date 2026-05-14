@@ -21,7 +21,8 @@ import {
   useUpdateActivity,
 } from "../../hooks/queries";
 import { useAgentChatPanel } from "../use-agent-chat-panel";
-import { tauriActivity, tauriChat, tauriAttachments, tauriSystem, tauriWorktree, tauriShell, tauriTerminal, tauriConfig, tauriPreferences } from "../../lib/tauri";
+import { tauriActivity, tauriChat, tauriAttachments, tauriWorktree, tauriShell, tauriTerminal, tauriConfig, tauriPreferences } from "../../lib/tauri";
+import { openAgentHref } from "../../lib/open-href";
 import { createMission } from "../../lib/create-mission";
 import { formatVisibleMessageText } from "../../lib/queued-chat";
 import { buildAttachmentPrompt } from "../../lib/attachment-message";
@@ -78,9 +79,12 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
     (message: string) => addToast({ title: message }),
     [addToast],
   );
-  const handleOpenLink = useCallback((url: string) => {
-    tauriSystem.openUrl(url).catch(console.error);
-  }, []);
+  const handleOpenLink = useCallback(
+    (url: string) => {
+      openAgentHref(url, path);
+    },
+    [path],
+  );
 
   const openerRef = useRef<NewPanelOpener | null>(null);
   const emptyAutoOpenKeyRef = useRef<string | null>(null);
