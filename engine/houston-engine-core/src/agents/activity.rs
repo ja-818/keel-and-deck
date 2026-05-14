@@ -1,5 +1,10 @@
 //! CRUD operations for `.houston/activity/activity.json`.
+//!
+//! Lifecycle-y transitions (status + lease updates driven by the session
+//! runner / reaper) live in [`super::lifecycle`] so this file stays a
+//! pure CRUD surface.
 
+use super::status::ActivityStatus;
 use super::store::{read_json, write_json};
 use super::types::{Activity, ActivityUpdate, NewActivity};
 use crate::error::{CoreError, CoreResult};
@@ -17,19 +22,25 @@ pub fn create(root: &Path, input: NewActivity) -> CoreResult<Activity> {
     let mut items = list(root)?;
     let now = Utc::now().to_rfc3339();
     // Every activity is bound to a session via the convention
-    // `activity-{id}`. Storing this on the row lets
-    // `sessions::start` and `set_status_by_session_key` find the row
-    // without needing the caller to pass both IDs. Without this, any
-    // attempt to flip status from the session lifecycle silently
-    // no-ops — which is what left agents stuck on "needs_you" even
-    // while a new session was actively streaming.
+    // `activity-{id}`. Storing this on the row lets `sessions::start`
+    // and the lifecycle helpers find the row without needing the caller
+    // to pass both IDs. Without this, any attempt to flip status from
+    // the session lifecycle silently no-ops — which is what left agents
+    // stuck on "needs_you" even while a new session was actively streaming.
     let id = Uuid::new_v4().to_string();
     let session_key = format!("activity-{id}");
     let item = Activity {
         id,
         title: input.title,
         description: input.description,
-        status: "running".to_string(),
+        // Start in `Queued`, NOT `Running`. The CLI hasn't been spawned
+        // yet and no lease exists — if we said `Running` here the reaper
+        // would (correctly) see a leaseless `running` row and flip it
+        // to `Interrupted` before `sessions::start` had a chance to
+        // promote it. `Queued` is the row's honest state until the
+        // session task takes ownership.
+        status: ActivityStatus::Queued,
+        lease: None,
         claude_session_id: None,
         session_key: Some(session_key),
         agent: input.agent,
@@ -100,52 +111,7 @@ pub fn delete(root: &Path, id: &str) -> CoreResult<()> {
     if items.len() == before {
         return Err(CoreError::NotFound(format!("activity {id}")));
     }
-    write_json(root, FILE, &items)
+    write_json(root, FILE, &items)?;
+    Ok(())
 }
 
-/// Set the status of the activity bound to `session_key`. Returns
-/// `Ok(Some(activity))` if an activity was found and updated, `Ok(None)`
-/// if no activity matches the session key (e.g. ad-hoc chat session
-/// with no board item).
-///
-/// Matching order:
-///   1. Exact match on the `session_key` field.
-///   2. The "activity-{id}" convention — any older activity created
-///      before `session_key` was persisted still has its id reachable
-///      this way. Without this fallback, every legacy / onboarding row
-///      would be stuck on whatever status it booted with forever.
-///
-/// Used by `sessions::start` so any client that kicks off a session —
-/// desktop, mobile, or a third-party frontend — gets consistent
-/// "Running" state on the board without each client having to write
-/// the activity file themselves.
-pub fn set_status_by_session_key(
-    root: &Path,
-    session_key: &str,
-    status: &str,
-) -> CoreResult<Option<Activity>> {
-    let mut items = list(root)?;
-    let implied_id = session_key.strip_prefix("activity-");
-    let Some(item) = items.iter_mut().find(|t| {
-        t.session_key.as_deref() == Some(session_key)
-            || implied_id.is_some_and(|id| t.id == id)
-    }) else {
-        return Ok(None);
-    };
-    // Opportunistically heal legacy rows: if we matched via the id
-    // convention but the session_key field was empty, backfill it so
-    // future lookups hit the fast path.
-    if item.session_key.as_deref() != Some(session_key) {
-        item.session_key = Some(session_key.to_string());
-    }
-    if item.status == status {
-        let result = item.clone();
-        write_json(root, FILE, &items)?;
-        return Ok(Some(result));
-    }
-    item.status = status.to_string();
-    item.updated_at = Some(Utc::now().to_rfc3339());
-    let result = item.clone();
-    write_json(root, FILE, &items)?;
-    Ok(Some(result))
-}

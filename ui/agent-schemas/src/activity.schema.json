@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Activity",
-  "description": "List of board items for a Houston agent.",
+  "description": "List of board items for a Houston agent. Status is the engine-owned lifecycle enum; non-terminal rows carry a lease so the reaper can detect crashed runs.",
   "type": "array",
   "items": {
     "type": "object",
@@ -10,7 +10,27 @@
       "id": { "type": "string" },
       "title": { "type": "string" },
       "description": { "type": "string" },
-      "status": { "type": "string", "enum": ["running", "needs_you", "done", "error"] },
+      "status": {
+        "description": "queued: created, no CLI yet. running: lease held, CLI streaming. needs_you: stream ended cleanly, awaiting user. done: closed by user. error: stream ended with error. interrupted: reaper found a stale lease, click Resume to continue.",
+        "type": "string",
+        "enum": ["queued", "running", "needs_you", "done", "error", "interrupted"]
+      },
+      "lease": {
+        "description": "Durability ownership token. Present only on in-flight (queued/running) rows. The engine's heartbeat extends expires_at while the CLI runs; the reaper interrupts any row whose lease is past expires_at.",
+        "oneOf": [
+          { "type": "null" },
+          {
+            "type": "object",
+            "required": ["lease_id", "owner_pid", "expires_at"],
+            "properties": {
+              "lease_id": { "type": "string" },
+              "owner_pid": { "type": "integer", "minimum": 0 },
+              "expires_at": { "type": "string", "format": "date-time" }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
       "claude_session_id": { "type": ["string", "null"] },
       "session_key": { "type": "string" },
       "agent": { "type": "string" },

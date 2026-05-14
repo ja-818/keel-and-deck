@@ -33,7 +33,7 @@ use control::{
 };
 use houston_agents_conversations::session_id_tracker::SessionIdTracker;
 use houston_agents_conversations::session_pids::SessionPidMap;
-use houston_agents_conversations::session_runner::{self, PersistOptions};
+use houston_agents_conversations::session_runner::{self, DynPidRecorder, PersistOptions};
 use houston_db::Database;
 use houston_terminal_manager::{FeedItem, Provider};
 use houston_ui_events::{DynEventSink, HoustonEvent};
@@ -47,6 +47,10 @@ pub use provider::{resolve_provider, ResolvedProvider};
 pub struct SessionRuntime {
     pub session_ids: SessionIdTracker,
     pub pid_map: SessionPidMap,
+    /// Persistent record of spawned CLI PIDs. Populated by
+    /// `EngineState::new`; `None` in tests / contexts that don't have
+    /// a real home dir (the session runner treats `None` as "skip").
+    pub pid_recorder: Option<DynPidRecorder>,
     workdir_locks: WorkdirLocks,
     control: SessionControl,
     turn_locks: SessionTurnLocks,
@@ -54,6 +58,16 @@ pub struct SessionRuntime {
 }
 
 impl SessionRuntime {
+    /// Construct with a persistent `PidRecorder` attached. Production
+    /// engines should use this so spawned CLI pids end up in the
+    /// orphan-reap file; tests can stay on `default()` and skip
+    /// recording entirely.
+    pub fn with_pid_recorder(recorder: DynPidRecorder) -> Self {
+        let mut rt = Self::default();
+        rt.pid_recorder = Some(recorder);
+        rt
+    }
+
     pub(crate) async fn try_acquire_workdir(
         &self,
         working_dir: &Path,
@@ -239,19 +253,86 @@ async fn run_start(
     // calls `startSession`) gets the same behavior without duplicating
     // logic. `ActivityChanged` fans out to every WS subscriber so every
     // mounted client invalidates its activity cache.
-    match crate::agents::activity::set_status_by_session_key(&agent_dir, &session_key, "running") {
-        Ok(Some(_)) => {
-            events.emit(HoustonEvent::ActivityChanged {
-                agent_path: agent_path.clone(),
-            });
-        }
-        Ok(None) => { /* no matching activity — ad-hoc session, nothing to flip */ }
-        Err(e) => {
-            tracing::warn!(
-                "[sessions] failed to flip activity to running: {e} (session_key={session_key})"
-            );
-        }
-    }
+    // Take ownership of the matching activity row: status → Running and
+    // attach a fresh durability lease. We pass the lease to the
+    // heartbeat task spawned below; when it sees a lease_id mismatch
+    // (e.g. the reaper rotated us out, or a Resume click handed
+    // ownership to a different runner) the heartbeat stops on its own.
+    let attached =
+        match crate::agents::lifecycle::attach_lease(&agent_dir, &session_key) {
+            Ok(Some((_, lease))) => {
+                events.emit(HoustonEvent::ActivityChanged {
+                    agent_path: agent_path.clone(),
+                });
+                Some(lease)
+            }
+            Ok(None) => None, // ad-hoc session, no board row
+            Err(e) => {
+                tracing::warn!(
+                    "[sessions] failed to attach lease: {e} (session_key={session_key})"
+                );
+                None
+            }
+        };
+
+    // Background heartbeat: every HEARTBEAT_INTERVAL while the session
+    // is alive, push the lease's expires_at forward. The reaper's TTL
+    // is 6× the heartbeat so a single dropped beat is harmless. End of
+    // session signals stop via `hb_stop_tx`; the task observes via
+    // `tokio::select!` and exits cleanly.
+    //
+    // If the heartbeat panics (unexpected disk error, mutex poison, etc),
+    // tokio captures the panic in the `JoinHandle::await` result. The
+    // end-of-session code below inspects that and, on panic, forces an
+    // immediate `Interrupted` transition instead of waiting for the
+    // 30s lease TTL to expire. Without this, a panicking heartbeat
+    // would leave the user staring at "Running" for half a minute
+    // while the reaper waited for TTL.
+    let (heartbeat_task, hb_stop_tx): (
+        Option<tokio::task::JoinHandle<()>>,
+        Option<tokio::sync::oneshot::Sender<()>>,
+    ) = if let Some(lease) = attached.clone() {
+        let agent_dir_hb = agent_dir.clone();
+        let session_key_hb = session_key.clone();
+        let lease_id = lease.lease_id.clone();
+        let interval = crate::agents::lease::HEARTBEAT_INTERVAL
+            .to_std()
+            .unwrap_or(std::time::Duration::from_secs(5));
+        let (tx, rx) = tokio::sync::oneshot::channel::<()>();
+        let handle = tokio::spawn(async move {
+            let mut ticker = tokio::time::interval(interval);
+            ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+            // First tick fires immediately; skip it — we already wrote
+            // a fresh lease in attach_lease above.
+            ticker.tick().await;
+            tokio::pin!(rx);
+            loop {
+                tokio::select! {
+                    biased;
+                    _ = &mut rx => break, // session ended, graceful stop
+                    _ = ticker.tick() => {
+                        match crate::agents::lifecycle::extend_lease(
+                            &agent_dir_hb,
+                            &session_key_hb,
+                            &lease_id,
+                        ) {
+                            Ok(true) => continue,
+                            Ok(false) => break, // ownership changed
+                            Err(e) => {
+                                tracing::warn!(
+                                    "[sessions] lease heartbeat failed: {e} (session_key={session_key_hb})"
+                                );
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        (Some(handle), Some(tx))
+    } else {
+        (None, None)
+    };
 
     let db_for_file_changes = db.clone();
     let source_for_file_changes = source.clone();
@@ -275,6 +356,7 @@ async fn run_start(
         Some(sid_handle),
         persist,
         Some(rt.pid_map.clone()),
+        rt.pid_recorder.clone(),
         provider,
         model,
         effort,
@@ -348,17 +430,54 @@ async fn run_start(
         }
     }
 
+    // Signal the heartbeat to stop gracefully, then await its join
+    // handle so we can detect a panic. If the heartbeat panicked during
+    // the session, we transition the activity to `Interrupted`
+    // immediately rather than letting the reaper wait 30s for the lease
+    // TTL — and we skip the normal NeedsYou/Error end-flip below
+    // because the row is already in a non-terminal recoverable state.
+    let mut heartbeat_panicked = false;
+    if let Some(tx) = hb_stop_tx {
+        let _ = tx.send(());
+    }
+    if let Some(h) = heartbeat_task {
+        match h.await {
+            Ok(()) => {}
+            Err(je) if je.is_cancelled() => {} // shouldn't happen, but harmless
+            Err(je) if je.is_panic() => {
+                heartbeat_panicked = true;
+                tracing::error!(
+                    "[sessions] heartbeat task panicked during session_key={session_key_for_end}; \
+                     forcing Interrupted to avoid 30s lease-TTL wait"
+                );
+                let _ = crate::agents::lifecycle::clear_lease_and_set_status(
+                    &agent_dir_for_end,
+                    &session_key_for_end,
+                    crate::agents::ActivityStatus::Interrupted,
+                );
+                events_for_end.emit(HoustonEvent::ActivityChanged {
+                    agent_path: agent_path_for_end.clone(),
+                });
+            }
+            Err(_) => {}
+        }
+    }
     let next_status = match session_result {
-        Ok(result) if result.error.is_none() => "needs_you",
-        Ok(_) => "error",
+        Ok(result) if result.error.is_none() => crate::agents::ActivityStatus::NeedsYou,
+        Ok(_) => crate::agents::ActivityStatus::Error,
         Err(e) => {
             tracing::warn!(
                 "[sessions] session runner panicked for session_key={session_key_for_end}: {e}"
             );
-            "error"
+            crate::agents::ActivityStatus::Error
         }
     };
-    match crate::agents::activity::set_status_by_session_key(
+    if heartbeat_panicked {
+        // Already transitioned to Interrupted above; skip the normal flip.
+        rt.control.finish(&identity).await;
+        return Ok(());
+    }
+    match crate::agents::lifecycle::clear_lease_and_set_status(
         &agent_dir_for_end,
         &session_key_for_end,
         next_status,

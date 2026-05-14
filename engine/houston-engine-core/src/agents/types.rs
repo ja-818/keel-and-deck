@@ -3,6 +3,9 @@
 //! Relocated from `app/houston-tauri/src/agent_store/types.rs`. Wire-compatible
 //! with existing on-disk JSON.
 
+use super::lease::Lease;
+use super::routine_run_status::RoutineRunStatus;
+use super::status::ActivityStatus;
 use serde::{Deserialize, Serialize};
 
 // -- Activity --
@@ -12,7 +15,13 @@ pub struct Activity {
     pub id: String,
     pub title: String,
     pub description: String,
-    pub status: String,
+    pub status: ActivityStatus,
+    /// Durability lease held by the engine task that owns the CLI for
+    /// this activity. `None` on terminal rows and on legacy data written
+    /// before leases existed. Reaper interprets `None` on non-terminal
+    /// rows as "expired immediately" so old data heals on first sweep.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lease: Option<Lease>,
     pub claude_session_id: Option<String>,
     /// Optional override for the session key used to address this conversation.
     /// When set (e.g. by a routine run), the board uses this instead of "activity-{id}".
@@ -43,7 +52,7 @@ pub struct Activity {
 pub struct ActivityUpdate {
     pub title: Option<String>,
     pub description: Option<String>,
-    pub status: Option<String>,
+    pub status: Option<ActivityStatus>,
     pub claude_session_id: Option<Option<String>>,
     pub session_key: Option<String>,
     pub agent: Option<String>,
@@ -126,8 +135,7 @@ pub struct NewRoutine {
 pub struct RoutineRun {
     pub id: String,
     pub routine_id: String,
-    /// "running" | "silent" | "surfaced" | "error"
-    pub status: String,
+    pub status: RoutineRunStatus,
     /// Session key for chat history lookup (e.g. "routine-{routine_id}-run-{id}").
     pub session_key: String,
     /// If surfaced, the activity ID created on the board.
@@ -143,7 +151,7 @@ pub struct RoutineRun {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct RoutineRunUpdate {
-    pub status: Option<String>,
+    pub status: Option<RoutineRunStatus>,
     pub activity_id: Option<String>,
     pub summary: Option<String>,
     pub completed_at: Option<String>,

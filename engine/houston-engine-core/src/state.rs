@@ -24,11 +24,19 @@ pub struct EngineState {
 
 impl EngineState {
     pub fn new(paths: EnginePaths, events: DynEventSink, db: Database) -> Self {
+        // Build a SessionRuntime with the persistent PID recorder
+        // already wired in so every session::start logs its CLI pid to
+        // `~/.houston/runtime/cli_pids.json`. Tests constructing
+        // SessionRuntime via `Default` skip this and get a no-op
+        // recorder by virtue of the `Option<DynPidRecorder>` being None.
+        let sessions = SessionRuntime::with_pid_recorder(
+            crate::runtime_pids::recorder(paths.home().to_path_buf()),
+        );
         Self {
             paths,
             events,
             db,
-            sessions: SessionRuntime::default(),
+            sessions,
             app_system_prompt: String::new(),
             app_onboarding_prompt: String::new(),
         }
