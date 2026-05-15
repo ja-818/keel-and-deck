@@ -68,6 +68,7 @@ import type {
   UpdateProvider,
   VersionResponse,
   Workspace,
+  WorkspaceContext,
   WorktreeInfo,
 } from "./types";
 import { planAttachmentUploadBatches } from "./attachments";
@@ -183,6 +184,12 @@ export class HoustonClient {
   }
   installWorkspaceFromGithub(req: InstallFromGithub): Promise<ImportedWorkspace> {
     return this.request("POST", "/workspaces/install-from-github", req);
+  }
+  getWorkspaceContext(id: string): Promise<WorkspaceContext> {
+    return this.request("GET", `/workspaces/${this.seg(id)}/context`);
+  }
+  setWorkspaceContext(id: string, body: WorkspaceContext): Promise<WorkspaceContext> {
+    return this.request("PUT", `/workspaces/${this.seg(id)}/context`, body);
   }
 
   // ---------- workspace-scoped agents ----------

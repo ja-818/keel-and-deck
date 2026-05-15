@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Spinner } from "@houston-ai/core";
-import { User, Smartphone, Folder, Bot, Bug } from "lucide-react";
+import { User, Smartphone, Folder, Bot, Bug, FileText, UserCircle } from "lucide-react";
 import { useWorkspaceStore } from "../../stores/workspaces";
 import {
   SidebarSectionNav,
@@ -11,12 +11,18 @@ import {
 type SettingsSectionId =
   | "account"
   | "workspace"
+  | "workspaceContext"
+  | "userContext"
   | "provider"
   | "phone"
   | "reportBug";
 import { AccountSection, useAccountAvailable } from "./sections/account";
 import { ConnectPhoneSection } from "./sections/connect-phone";
 import { WorkspaceSection } from "./sections/workspace";
+import {
+  WorkspaceContextSection,
+  UserContextSection,
+} from "./sections/workspace-context";
 import { ProviderSection } from "./sections/provider";
 import { TimezoneSection } from "./sections/timezone";
 import { LanguageSection } from "./sections/language";
@@ -36,6 +42,16 @@ export function SettingsView() {
     }
     list.push(
       { id: "workspace", label: t("settings:nav.workspace"), icon: Folder },
+      {
+        id: "workspaceContext",
+        label: t("settings:nav.workspaceContext"),
+        icon: FileText,
+      },
+      {
+        id: "userContext",
+        label: t("settings:nav.userContext"),
+        icon: UserCircle,
+      },
       { id: "provider", label: t("settings:nav.provider"), icon: Bot },
       { id: "phone", label: t("settings:nav.phone"), icon: Smartphone, beta: true },
       { id: "reportBug", label: t("settings:nav.reportBug"), icon: Bug },
@@ -67,21 +83,27 @@ export function SettingsView() {
         onSelect={setActive}
       />
       <div className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-xl px-8 py-10">
-          {activeVisible === "account" && <AccountSection />}
-          {activeVisible === "workspace" && (
-            <div className="space-y-10">
-              <WorkspaceSection />
-              <LanguageSection />
-              <TimezoneSection />
-              <AppearanceSection />
-              <DangerSection />
-            </div>
-          )}
-          {activeVisible === "provider" && <ProviderSection />}
-          {activeVisible === "phone" && <ConnectPhoneSection />}
-          {activeVisible === "reportBug" && <ReportBugSection />}
-        </div>
+        {activeVisible === "workspaceContext" ? (
+          <WorkspaceContextSection />
+        ) : activeVisible === "userContext" ? (
+          <UserContextSection />
+        ) : (
+          <div className="mx-auto max-w-xl px-8 py-10">
+            {activeVisible === "account" && <AccountSection />}
+            {activeVisible === "workspace" && (
+              <div className="space-y-10">
+                <WorkspaceSection />
+                <LanguageSection />
+                <TimezoneSection />
+                <AppearanceSection />
+                <DangerSection />
+              </div>
+            )}
+            {activeVisible === "provider" && <ProviderSection />}
+            {activeVisible === "phone" && <ConnectPhoneSection />}
+            {activeVisible === "reportBug" && <ReportBugSection />}
+          </div>
+        )}
       </div>
     </div>
   );

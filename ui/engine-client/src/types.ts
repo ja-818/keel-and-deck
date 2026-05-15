@@ -84,6 +84,11 @@ export interface UpdateProvider {
   model?: string;
 }
 
+export interface WorkspaceContext {
+  workspace: string;
+  user: string;
+}
+
 // ---------- Workspace-scoped agent CRUD ----------
 
 export interface Agent {
