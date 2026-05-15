@@ -29,6 +29,13 @@ interface UIState {
   agentMissionSearchLoading: Record<string, boolean>;
   /** Whether the mission chat panel is open (hides tab bar for full-height panel) */
   missionPanelOpen: boolean;
+  /** Whether the global command palette (⌘K) is open. */
+  paletteOpen: boolean;
+  /** Whether the keyboard shortcut cheatsheet (?) is open. */
+  cheatsheetOpen: boolean;
+  /** Arrow-key kanban navigator registered by whichever board is on
+   *  screen (Mission Control or an agent's Activity tab). */
+  onBoardNavigate: ((dir: "up" | "down" | "left" | "right") => void) | null;
   jobDescriptionTarget: JobDescriptionTarget | null;
   /** Pin the first-run tutorial UI in front of the workspace shell. Set true
    * while the orchestrator is mid-flight, cleared on graduation or skip. */
@@ -50,6 +57,9 @@ interface UIState {
   setAgentMissionSearchQuery: (agentPath: string, query: string) => void;
   setAgentMissionSearchLoading: (agentPath: string, loading: boolean) => void;
   setMissionPanelOpen: (open: boolean) => void;
+  setPaletteOpen: (open: boolean) => void;
+  setCheatsheetOpen: (open: boolean) => void;
+  setOnBoardNavigate: (cb: ((dir: "up" | "down" | "left" | "right") => void) | null) => void;
   setJobDescriptionTarget: (target: JobDescriptionTarget | null) => void;
   setTutorialActive: (active: boolean) => void;
   setUiTourActive: (active: boolean) => void;
@@ -70,6 +80,9 @@ export const useUIStore = create<UIState>((set) => ({
   agentMissionSearchQueries: {},
   agentMissionSearchLoading: {},
   missionPanelOpen: false,
+  paletteOpen: false,
+  cheatsheetOpen: false,
+  onBoardNavigate: null,
   jobDescriptionTarget: null,
   tutorialActive: false,
   uiTourActive: false,
@@ -124,6 +137,9 @@ export const useUIStore = create<UIState>((set) => ({
       return { agentMissionSearchLoading: next };
     }),
   setMissionPanelOpen: (missionPanelOpen) => set({ missionPanelOpen }),
+  setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
+  setCheatsheetOpen: (cheatsheetOpen) => set({ cheatsheetOpen }),
+  setOnBoardNavigate: (onBoardNavigate) => set({ onBoardNavigate }),
   setJobDescriptionTarget: (jobDescriptionTarget) => set({ jobDescriptionTarget }),
   setTutorialActive: (tutorialActive) => set({ tutorialActive }),
   setUiTourActive: (uiTourActive) => set({ uiTourActive }),

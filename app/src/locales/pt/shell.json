@@ -175,5 +175,41 @@
   },
   "engineGate": {
     "starting": "Iniciando o motor do Houston…"
+  },
+  "palette": {
+    "title": "Paleta de comandos",
+    "description": "Vá para qualquer lugar do Houston",
+    "placeholder": "Buscar agentes, missões, ações...",
+    "empty": "Nada encontrado. Tente outra palavra.",
+    "groups": {
+      "actions": "Ações",
+      "agents": "Agentes",
+      "recentMissions": "Missões recentes"
+    },
+    "actions": {
+      "newMission": "Iniciar nova missão",
+      "missionControl": "Ir para o Centro de Missões",
+      "integrations": "Abrir Integrações",
+      "settings": "Abrir Configurações",
+      "shortcuts": "Ver atalhos do teclado"
+    }
+  },
+  "cheatsheet": {
+    "title": "Atalhos do teclado",
+    "description": "Use o Houston sem encostar no mouse.",
+    "sections": {
+      "navigation": "Navegação",
+      "cycle": "Percorrer",
+      "help": "Ajuda"
+    },
+    "rows": {
+      "palette": "Abrir paleta de comandos",
+      "missionControl": "Ir para o Centro de Missões",
+      "newMission": "Iniciar nova missão",
+      "prevAgent": "Agente anterior",
+      "nextAgent": "Próximo agente",
+      "boardNavigate": "Mover entre missões",
+      "cheatsheet": "Mostrar esta lista"
+    }
   }
 }

@@ -175,5 +175,41 @@
   },
   "engineGate": {
     "starting": "Starting Houston engine…"
+  },
+  "palette": {
+    "title": "Command palette",
+    "description": "Jump anywhere in Houston",
+    "placeholder": "Search agents, missions, actions...",
+    "empty": "Nothing matched. Try a different word.",
+    "groups": {
+      "actions": "Actions",
+      "agents": "Agents",
+      "recentMissions": "Recent missions"
+    },
+    "actions": {
+      "newMission": "Start new mission",
+      "missionControl": "Go to Mission Control",
+      "integrations": "Open Integrations",
+      "settings": "Open Settings",
+      "shortcuts": "Show keyboard shortcuts"
+    }
+  },
+  "cheatsheet": {
+    "title": "Keyboard shortcuts",
+    "description": "Run Houston without touching the mouse.",
+    "sections": {
+      "navigation": "Navigation",
+      "cycle": "Cycle",
+      "help": "Help"
+    },
+    "rows": {
+      "palette": "Open command palette",
+      "missionControl": "Go to Mission Control",
+      "newMission": "Start new mission",
+      "prevAgent": "Previous agent",
+      "nextAgent": "Next agent",
+      "boardNavigate": "Move between missions",
+      "cheatsheet": "Show this sheet"
+    }
   }
 }
