@@ -108,7 +108,7 @@ export function AiRoutineStep({
             <Switch checked={accepted} onCheckedChange={onAcceptedChange} />
           </label>
 
-          <Button onClick={onContinue} className="w-full rounded-full">
+          <Button onClick={onContinue} className="mx-auto w-fit rounded-full">
             {t("aiRoutine.continueButton")}
           </Button>
         </div>

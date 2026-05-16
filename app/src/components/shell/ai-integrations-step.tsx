@@ -1,6 +1,6 @@
 import { useMemo, useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Puzzle, Check, ExternalLink, Loader2 } from "lucide-react";
+import { ArrowLeft, Puzzle, Check, Loader2 } from "lucide-react";
 import { Button, DialogTitle } from "@houston-ai/core";
 import type { SuggestedIntegration } from "@houston-ai/engine-client";
 import {
@@ -135,7 +135,7 @@ export function AiIntegrationsStep({
             </div>
           )}
 
-          <Button onClick={onContinue} className="w-full rounded-full">
+          <Button onClick={onContinue} className="mx-auto w-fit rounded-full">
             {t("aiIntegrations.continueButton")}
           </Button>
         </div>
@@ -201,10 +201,7 @@ function IntegrationCard({
           {connecting ? (
             <Loader2 className="size-3 animate-spin" />
           ) : (
-            <>
-              {t("aiIntegrations.connect")}
-              <ExternalLink className="size-3" />
-            </>
+            t("aiIntegrations.connect")
           )}
         </button>
       )}

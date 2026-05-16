@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 import { Input } from "@houston-ai/core";
-import { Search, Sparkles } from "lucide-react";
+import { Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AgentDefinition, StoreListing } from "../../lib/types";
+import { SkillCard } from "../skill-card";
 import { AgentCard, StoreAgentCard } from "./experience-card";
 
 interface StoreStepProps {
@@ -54,6 +55,19 @@ export function StoreStep({
     [query, storeCatalog],
   );
 
+  const reorderedAgents = useMemo(() => {
+    if (!query) {
+      const result = [...filteredAgents];
+      const paIndex = result.findIndex((a) => a.config.id === "personal-assistant");
+      if (paIndex >= 0 && paIndex !== 1) {
+        const [pa] = result.splice(paIndex, 1);
+        result.splice(1, 0, pa);
+      }
+      return result;
+    }
+    return filteredAgents;
+  }, [filteredAgents, query]);
+
   const totalResults = filteredAgents.length + filteredStore.length;
 
   return (
@@ -74,30 +88,18 @@ export function StoreStep({
         data-tour-target="agentStore"
         className="flex-1 min-h-0 overflow-y-auto px-6 pb-6"
       >
-        {/* Create with AI — always visible above the catalog */}
-        {!query && (
-          <button
-            type="button"
-            onClick={onCreateWithAi}
-            className="w-full mb-4 flex items-center gap-4 rounded-2xl border border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 px-5 py-4 text-left transition-colors duration-200 group"
-          >
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 shrink-0 transition-colors group-hover:bg-primary/20">
-              <Sparkles className="w-5 h-5 text-primary" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-foreground">
-                {t("aiAssist.cardTitle")}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
-                {t("aiAssist.cardDescription")}
-              </p>
-            </div>
-          </button>
-        )}
-
-        {totalResults > 0 ? (
+        {totalResults > 0 || !query ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {filteredAgents.map((def) => (
+            {!query && (
+              <SkillCard
+                image="rocket"
+                title={t("aiAssist.cardTitle")}
+                description={t("aiAssist.cardDescription")}
+                className="min-h-[132px]"
+                onClick={onCreateWithAi}
+              />
+            )}
+            {reorderedAgents.map((def) => (
               <AgentCard
                 key={def.config.id}
                 config={def.config}

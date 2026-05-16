@@ -51,7 +51,7 @@ export function AiAssistResult({
         </section>
       </div>
 
-      <Button onClick={onContinue} className="w-full rounded-full">
+      <Button onClick={onContinue} className="mx-auto w-fit rounded-full">
         {t("aiAssist.continueButton")}
       </Button>
     </div>
