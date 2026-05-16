@@ -173,6 +173,26 @@
   "newAgent": {
     "dialogTitle": "New agent"
   },
+  "aiAssist": {
+    "cardTitle": "Create with AI",
+    "cardDescription": "Describe what you want your agent to do and we'll write the job description for you",
+    "stepTitle": "Describe your agent",
+    "descriptionLabel": "What should this agent do?",
+    "descriptionPlaceholder": "e.g. An agent that monitors my Gmail inbox, summarizes emails, and drafts replies for my review",
+    "generateButton": "Generate instructions",
+    "generatingMessage": "Writing your agent's job description...",
+    "generatedTitle": "Here's your agent's job description",
+    "generatedHelper": "Review and edit the instructions below, then continue to name your agent",
+    "nameLabel": "Agent name",
+    "namePlaceholder": "e.g. Email Inbox Manager",
+    "suggestedIntegrationsTitle": "Suggested integrations",
+    "suggestedIntegrationsHelper": "This agent would work well with these apps. You can connect them after creating the agent.",
+    "continueButton": "Continue",
+    "retryButton": "Try again",
+    "errorTitle": "Generation failed",
+    "errorDescription": "Could not generate instructions. Make sure your AI provider is connected and try again.",
+    "descriptionRequired": "Please describe what you want your agent to do"
+  },
   "engineGate": {
     "starting": "Starting Houston engine…"
   }

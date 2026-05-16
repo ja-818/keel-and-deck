@@ -173,6 +173,26 @@
   "newAgent": {
     "dialogTitle": "Nuevo agente"
   },
+  "aiAssist": {
+    "cardTitle": "Crear con IA",
+    "cardDescription": "Describe lo que quieres que haga tu agente y escribiremos la descripción del puesto por ti",
+    "stepTitle": "Describe tu agente",
+    "descriptionLabel": "¿Qué debe hacer este agente?",
+    "descriptionPlaceholder": "p. ej. Un agente que monitorea mi bandeja de Gmail, resume los correos y redacta respuestas para mi revisión",
+    "generateButton": "Generar instrucciones",
+    "generatingMessage": "Escribiendo la descripción del puesto de tu agente...",
+    "generatedTitle": "Aquí está la descripción del puesto de tu agente",
+    "generatedHelper": "Revisa y edita las instrucciones abajo, luego continúa para nombrar tu agente",
+    "nameLabel": "Nombre del agente",
+    "namePlaceholder": "p. ej. Gestor de bandeja de entrada",
+    "suggestedIntegrationsTitle": "Integraciones sugeridas",
+    "suggestedIntegrationsHelper": "Este agente funcionaría bien con estas aplicaciones. Puedes conectarlas después de crear el agente.",
+    "continueButton": "Continuar",
+    "retryButton": "Intentar de nuevo",
+    "errorTitle": "Error en la generación",
+    "errorDescription": "No se pudieron generar las instrucciones. Asegúrate de que tu proveedor de IA esté conectado e intenta de nuevo.",
+    "descriptionRequired": "Por favor describe lo que quieres que haga tu agente"
+  },
   "engineGate": {
     "starting": "Iniciando el motor de Houston…"
   }

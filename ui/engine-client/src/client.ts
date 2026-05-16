@@ -59,6 +59,7 @@ import type {
   SkillDetail,
   SkillSummary,
   StoreListing,
+  GenerateInstructionsResult,
   SummarizeOptions,
   SummarizeResult,
   TunnelStatus,
@@ -591,6 +592,17 @@ export class HoustonClient {
     return this.request("POST", "/sessions/summarize", {
       message,
       agentPath: opts.agentPath,
+      provider: opts.provider,
+      model: opts.model,
+    });
+  }
+
+  generateAgentInstructions(
+    description: string,
+    opts: { provider?: string; model?: string } = {},
+  ): Promise<GenerateInstructionsResult> {
+    return this.request("POST", "/sessions/generate-instructions", {
+      description,
       provider: opts.provider,
       model: opts.model,
     });

@@ -22,7 +22,8 @@ use axum::{
     Json, Router,
 };
 use houston_engine_core::sessions::{
-    self, history, resolve_agent_dir, resolve_provider, summarize, SessionRuntime, StartParams,
+    self, generate_instructions, history, resolve_agent_dir, resolve_provider, summarize,
+    SessionRuntime, StartParams,
 };
 use houston_engine_core::CoreError;
 use houston_terminal_manager::Provider;
@@ -48,6 +49,10 @@ pub fn router() -> Router<Arc<ServerState>> {
             get(load_history),
         )
         .route("/sessions/summarize", post(summarize_activity))
+        .route(
+            "/sessions/generate-instructions",
+            post(generate_agent_instructions),
+        )
 }
 
 #[derive(Debug, Deserialize)]
@@ -196,6 +201,34 @@ async fn summarize_activity(
     Ok(Json(
         summarize::summarize(&req.message, provider, model.as_deref()).await?,
     ))
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GenerateInstructionsRequest {
+    pub description: String,
+    #[serde(default)]
+    pub provider: Option<String>,
+    #[serde(default)]
+    pub model: Option<String>,
+}
+
+async fn generate_agent_instructions(
+    State(_st): State<Arc<ServerState>>,
+    Json(req): Json<GenerateInstructionsRequest>,
+) -> Result<Json<generate_instructions::GenerateInstructionsResult>, ApiError> {
+    let (provider, model) = if let Some(p_str) = req.provider.as_deref() {
+        let provider = p_str
+            .parse()
+            .map_err(|e: String| CoreError::BadRequest(e))?;
+        (provider, req.model)
+    } else {
+        (Provider::Anthropic, req.model)
+    };
+    let result =
+        generate_instructions::generate_instructions(&req.description, provider, model.as_deref())
+            .await?;
+    Ok(Json(result))
 }
 
 async fn cancel_session(

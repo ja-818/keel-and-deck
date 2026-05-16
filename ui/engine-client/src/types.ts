@@ -514,6 +514,12 @@ export interface SummarizeOptions {
   model?: string;
 }
 
+export interface GenerateInstructionsResult {
+  name: string;
+  instructions: string;
+  suggestedIntegrations: string[];
+}
+
 // ---------- Attachments ----------
 
 export interface AttachmentUploadRequest {

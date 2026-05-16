@@ -143,6 +143,16 @@ export const tauriAgents = {
     call<Agent>("update_agent_color", async () =>
       toAgent(await getEngine().updateAgent(workspaceId, id, { color })),
     ),
+  generateInstructions: (
+    description: string,
+    opts: { provider?: string; model?: string } = {},
+  ) =>
+    call<{ name: string; instructions: string; suggestedIntegrations: string[] }>(
+      "generate_agent_instructions",
+      () => getEngine().generateAgentInstructions(description, opts),
+      undefined,
+      { toast: false },
+    ),
 };
 
 // ─── Chat sessions ────────────────────────────────────────────────────

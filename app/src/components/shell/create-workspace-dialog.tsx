@@ -15,6 +15,7 @@ import type { StoreListing } from "../../lib/types";
 import { getDefaultModel } from "../../lib/providers";
 import { StoreStep } from "./store-step";
 import { NamingStep } from "./naming-step";
+import { AiAssistStep } from "./ai-assist-step";
 
 export function CreateAgentDialog() {
   const { t } = useTranslation("shell");
@@ -27,8 +28,9 @@ export function CreateAgentDialog() {
   const createAgent = useAgentStore((s) => s.create);
   const currentWorkspace = useWorkspaceStore((s) => s.current);
 
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | "ai-assist" | 2>(1);
   const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null);
+  const [generatedClaudeMd, setGeneratedClaudeMd] = useState<string | undefined>(undefined);
   const [name, setName] = useState("");
   const [color, setColor] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +45,7 @@ export function CreateAgentDialog() {
     if (!open) {
       setStep(1);
       setSelectedConfigId(null);
+      setGeneratedClaudeMd(undefined);
       setName("");
       setColor(undefined);
       setError(null);
@@ -61,13 +64,15 @@ export function CreateAgentDialog() {
     e.preventDefault();
     const trimmed = name.trim();
     if (!trimmed || !selectedConfigId || !currentWorkspace) return;
+    // AI-generated instructions take priority over the template's claudeMd.
+    const claudeMd = generatedClaudeMd ?? selectedDef?.config.claudeMd;
     try {
       const { agent } = await createAgent(
         currentWorkspace.id,
         trimmed,
         selectedConfigId,
         color,
-        selectedDef?.config.claudeMd,
+        claudeMd,
         selectedDef?.path,
         selectedDef?.config.agentSeeds,
         existingPath ?? undefined,
@@ -127,11 +132,28 @@ export function CreateAgentDialog() {
               storeCatalog={storeCatalog}
               onSelect={(id) => {
                 setSelectedConfigId(id);
+                setGeneratedClaudeMd(undefined);
                 setStep(2);
               }}
               onInstall={handleInstall}
+              onCreateWithAi={() => {
+                setSelectedConfigId("blank");
+                setGeneratedClaudeMd(undefined);
+                setStep("ai-assist");
+              }}
             />
           </>
+        ) : step === "ai-assist" ? (
+          <AiAssistStep
+            provider={provider}
+            model={model}
+            onBack={() => setStep(1)}
+            onContinue={(instructions, suggestedName) => {
+              setGeneratedClaudeMd(instructions);
+              if (!name.trim()) setName(suggestedName);
+              setStep(2);
+            }}
+          />
         ) : (
           <NamingStep
             selectedAgent={selectedDef}
@@ -146,7 +168,7 @@ export function CreateAgentDialog() {
             onColorChange={setColor}
             onExistingPathChange={setExistingPath}
             onProviderChange={(p, m) => { setProvider(p); setModel(m); }}
-            onBack={() => setStep(1)}
+            onBack={() => generatedClaudeMd !== undefined ? setStep("ai-assist") : setStep(1)}
             onSubmit={handleSubmit}
           />
         )}
