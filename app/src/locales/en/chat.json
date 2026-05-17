@@ -16,6 +16,25 @@
     "title": "Start a conversation",
     "description": "Type a message to talk to your assistant."
   },
+  "conversations": {
+    "title": "Missions",
+    "description": "Open a previous mission with {{name}} or start a new one.",
+    "newMission": "New mission",
+    "primaryTitle": "Main mission",
+    "back": "Back to missions",
+    "status": {
+      "running": "Running",
+      "needsYou": "Needs you",
+      "done": "Done",
+      "cancelled": "Cancelled"
+    },
+    "relative": {
+      "justNow": "just now",
+      "minutesAgo": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago"
+    }
+  },
   "errors": {
     "sessionStart": "Failed to start session: {{error}}",
     "modelPersistFailed": "Failed to save model preference"

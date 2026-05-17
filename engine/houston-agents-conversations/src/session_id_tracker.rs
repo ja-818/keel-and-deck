@@ -41,6 +41,12 @@ pub fn session_history_path(agent_dir: &Path, provider: Provider, session_key: &
         .join(format!("{session_key}.history"))
 }
 
+fn session_contract_path(agent_dir: &Path, provider: Provider, session_key: &str) -> PathBuf {
+    sessions_dir(agent_dir)
+        .join(provider.to_string())
+        .join(format!("{session_key}.contract"))
+}
+
 fn session_invalid_path(agent_dir: &Path, provider: Provider, session_key: &str) -> PathBuf {
     sessions_dir(agent_dir)
         .join(provider.to_string())
@@ -81,6 +87,8 @@ pub struct SessionIdHandle {
     sid_path: PathBuf,
     history_path: PathBuf,
     invalid_path: PathBuf,
+    contract_path: PathBuf,
+    contract: Option<String>,
 }
 
 impl SessionIdHandle {
@@ -98,6 +106,15 @@ impl SessionIdHandle {
                 error = %e,
                 "failed to persist session id"
             );
+        }
+        if let Some(contract) = &self.contract {
+            if let Err(e) = write_atomic(&self.contract_path, contract) {
+                tracing::warn!(
+                    path = %self.contract_path.display(),
+                    error = %e,
+                    "failed to persist session contract"
+                );
+            }
         }
         append_history_id(&self.history_path, &id);
     }
@@ -151,6 +168,7 @@ impl SessionIdTracker {
         agent_dir: &Path,
         session_key: &str,
         provider: Provider,
+        resume_contract: Option<&str>,
     ) -> SessionIdHandle {
         // Fast path: already in memory.
         {
@@ -164,23 +182,31 @@ impl SessionIdTracker {
         let sid_path = session_id_path(agent_dir, provider, session_key);
         let history_path = session_history_path(agent_dir, provider, session_key);
         let invalid_path = session_invalid_path(agent_dir, provider, session_key);
-        let initial = read_trimmed_file(&sid_path).or_else(|| {
-            let legacy = read_trimmed_file(&legacy_session_id_path(agent_dir, session_key))?;
-            if read_history_ids(&invalid_path)
-                .iter()
-                .any(|invalid| invalid == &legacy)
-            {
-                None
-            } else {
-                Some(legacy)
-            }
-        });
+        let contract_path = session_contract_path(agent_dir, provider, session_key);
+        let initial = if resume_contract_matches(&contract_path, resume_contract) {
+            read_trimmed_file(&sid_path).or_else(|| {
+                let legacy = read_trimmed_file(&legacy_session_id_path(agent_dir, session_key))?;
+                if read_history_ids(&invalid_path)
+                    .iter()
+                    .any(|invalid| invalid == &legacy)
+                {
+                    None
+                } else {
+                    Some(legacy)
+                }
+            })
+        } else {
+            invalidate_sid(&sid_path, &history_path, &invalid_path);
+            None
+        };
 
         let handle = SessionIdHandle {
             id: Arc::new(Mutex::new(initial)),
             sid_path,
             history_path,
             invalid_path,
+            contract_path,
+            contract: resume_contract.map(ToOwned::to_owned),
         };
 
         let mut map = self.inner.write().await;
@@ -192,6 +218,23 @@ impl SessionIdTracker {
     pub async fn remove_agent(&self, agent_key_prefix: &str) {
         let mut map = self.inner.write().await;
         map.retain(|k, _| !k.starts_with(agent_key_prefix));
+    }
+}
+
+fn resume_contract_matches(contract_path: &Path, expected: Option<&str>) -> bool {
+    match expected {
+        None => true,
+        Some(expected) => read_trimmed_file(contract_path)
+            .map(|stored| stored == expected)
+            .unwrap_or(false),
+    }
+}
+
+fn invalidate_sid(sid_path: &Path, history_path: &Path, invalid_path: &Path) {
+    if let Some(id) = read_trimmed_file(sid_path) {
+        append_history_id(history_path, &id);
+        append_history_id(invalid_path, &id);
+        let _ = fs::remove_file(sid_path);
     }
 }
 
@@ -315,7 +358,13 @@ mod tests {
 
         let tracker = SessionIdTracker::default();
         let handle = tracker
-            .get_for_session("agent:openai:chat", dir.path(), "chat", Provider::OpenAI)
+            .get_for_session(
+                "agent:openai:chat",
+                dir.path(),
+                "chat",
+                Provider::OpenAI,
+                None,
+            )
             .await;
 
         assert_eq!(handle.get().await, Some("legacy-id".to_string()));
@@ -326,7 +375,13 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let tracker = SessionIdTracker::default();
         let handle = tracker
-            .get_for_session("agent:openai:chat", dir.path(), "chat", Provider::OpenAI)
+            .get_for_session(
+                "agent:openai:chat",
+                dir.path(),
+                "chat",
+                Provider::OpenAI,
+                Some("contract-v1"),
+            )
             .await;
 
         handle.set("openai-id".to_string()).await;
@@ -334,10 +389,14 @@ mod tests {
 
         let sid =
             fs::read_to_string(session_id_path(dir.path(), Provider::OpenAI, "chat")).unwrap();
+        let contract =
+            fs::read_to_string(session_contract_path(dir.path(), Provider::OpenAI, "chat"))
+                .unwrap();
         let history =
             fs::read_to_string(session_history_path(dir.path(), Provider::OpenAI, "chat")).unwrap();
 
         assert_eq!(sid, "openai-id");
+        assert_eq!(contract, "contract-v1");
         assert_eq!(history, "openai-id\n");
         assert!(!legacy_session_id_path(dir.path(), "chat").exists());
     }
@@ -347,7 +406,13 @@ mod tests {
         let dir = TempDir::new().unwrap();
         let tracker = SessionIdTracker::default();
         let handle = tracker
-            .get_for_session("agent:openai:chat", dir.path(), "chat", Provider::OpenAI)
+            .get_for_session(
+                "agent:openai:chat",
+                dir.path(),
+                "chat",
+                Provider::OpenAI,
+                Some("contract-v1"),
+            )
             .await;
 
         handle.set("bad-id".to_string()).await;
@@ -370,7 +435,13 @@ mod tests {
 
         let tracker = SessionIdTracker::default();
         let handle = tracker
-            .get_for_session("agent:openai:chat", dir.path(), "chat", Provider::OpenAI)
+            .get_for_session(
+                "agent:openai:chat",
+                dir.path(),
+                "chat",
+                Provider::OpenAI,
+                None,
+            )
             .await;
         assert_eq!(handle.get().await, Some("legacy-id".to_string()));
 
@@ -378,7 +449,13 @@ mod tests {
 
         let restarted_tracker = SessionIdTracker::default();
         let openai_handle = restarted_tracker
-            .get_for_session("agent:openai:chat", dir.path(), "chat", Provider::OpenAI)
+            .get_for_session(
+                "agent:openai:chat",
+                dir.path(),
+                "chat",
+                Provider::OpenAI,
+                None,
+            )
             .await;
         let anthropic_handle = restarted_tracker
             .get_for_session(
@@ -386,6 +463,7 @@ mod tests {
                 dir.path(),
                 "chat",
                 Provider::Anthropic,
+                None,
             )
             .await;
 
@@ -424,5 +502,35 @@ mod tests {
                 "codex-old".to_string(),
             ]
         );
+    }
+
+    #[tokio::test]
+    async fn contract_mismatch_invalidates_stored_resume_id() {
+        let dir = TempDir::new().unwrap();
+        write_file(
+            &session_id_path(dir.path(), Provider::OpenAI, "chat"),
+            "old-openai-id\n",
+        );
+        write_file(
+            &session_contract_path(dir.path(), Provider::OpenAI, "chat"),
+            "old-contract\n",
+        );
+
+        let tracker = SessionIdTracker::default();
+        let handle = tracker
+            .get_for_session(
+                "agent:openai:chat",
+                dir.path(),
+                "chat",
+                Provider::OpenAI,
+                Some("new-contract"),
+            )
+            .await;
+
+        assert_eq!(handle.get().await, None);
+        assert!(!session_id_path(dir.path(), Provider::OpenAI, "chat").exists());
+        let invalid =
+            fs::read_to_string(session_invalid_path(dir.path(), Provider::OpenAI, "chat")).unwrap();
+        assert_eq!(invalid, "old-openai-id\n");
     }
 }

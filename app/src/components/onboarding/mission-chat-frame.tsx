@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cn } from "@houston-ai/core";
+import { Button, cn } from "@houston-ai/core";
 import { HoustonLogo } from "../shell/experience-card";
 import type { MissionMeta } from "./mission-frame";
 
@@ -21,7 +21,7 @@ interface MissionChatFrameProps {
  * accompanying `MissionIntroModal` rendered on first mount.
  *
  * Header is intentionally minimal — brand left, mission counter + progress
- * dots middle, skip link right. No mission title or up-next hint here;
+ * dots middle, skip button right. No mission title or up-next hint here;
  * those belong to the intro modal so the chat owns the rest of the
  * viewport.
  */
@@ -47,13 +47,15 @@ export function MissionChatFrame({
             </span>
             <ProgressDots index={meta.index} total={meta.total} />
           </div>
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             onClick={onSkip}
-            className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            className="rounded-full px-4"
           >
             {skipLabel}
-          </button>
+          </Button>
         </div>
       </header>
       <main className="mx-auto flex w-full max-w-3xl min-h-0 flex-1 flex-col px-6 py-4">

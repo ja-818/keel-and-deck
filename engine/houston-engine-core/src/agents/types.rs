@@ -30,6 +30,12 @@ pub struct Activity {
     /// If this activity was created by a routine run, the source run ID.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub routine_run_id: Option<String>,
+    /// Parent agent that launched this delegated activity.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub orchestration_parent_agent_path: Option<String>,
+    /// Parent session that launched this delegated activity.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub orchestration_parent_session_key: Option<String>,
     /// ISO-8601 timestamp — set on create and every update.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub updated_at: Option<String>,
@@ -50,6 +56,8 @@ pub struct ActivityUpdate {
     pub worktree_path: Option<Option<String>>,
     pub routine_id: Option<String>,
     pub routine_run_id: Option<String>,
+    pub orchestration_parent_agent_path: Option<String>,
+    pub orchestration_parent_session_key: Option<String>,
     pub provider: Option<String>,
     pub model: Option<String>,
 }
@@ -68,6 +76,10 @@ pub struct NewActivity {
     pub provider: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub orchestration_parent_agent_path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub orchestration_parent_session_key: Option<String>,
 }
 
 // -- Routines --
@@ -167,10 +179,18 @@ pub struct ProjectConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub provider: Option<String>,
     /// Model override (e.g. "sonnet", "gpt-5.5"). Provider-specific.
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "claude_model")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "claude_model"
+    )]
     pub model: Option<String>,
     /// Effort level override (e.g. "low", "medium", "high"). Provider-specific.
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "claude_effort")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "claude_effort"
+    )]
     pub effort: Option<String>,
     /// Extra fields from the frontend (worktreeMode, devCommand, etc.)
     #[serde(flatten)]

@@ -20,6 +20,8 @@ use houston_db::Database;
 use houston_ui_events::DynEventSink;
 use std::path::Path;
 
+const ROUTINE_RESUME_CONTRACT: &str = "2026-05-15-beginner-orchestration-v1";
+
 /// Dispatcher that spawns a real session via `houston-agents-conversations`
 /// and waits for completion.
 pub struct EngineRoutineDispatcher {
@@ -51,8 +53,15 @@ impl RoutineDispatcher for EngineRoutineDispatcher {
                 error: Some(format!("seed failed: {e}")),
             };
         }
-        let agent_context =
-            agent_prompt::build_agent_context(ctx.working_dir, None, None);
+        let connected = houston_composio::cli::list_connected_toolkits().await;
+        let workspace_root = ctx.working_dir.parent();
+        let agent_context = agent_prompt::build_agent_context(
+            ctx.working_dir,
+            None,
+            None,
+            workspace_root,
+            &connected,
+        );
         let system_prompt = if self.app_system_prompt.is_empty() {
             agent_context
         } else {
@@ -74,6 +83,7 @@ impl RoutineDispatcher for EngineRoutineDispatcher {
                 ctx.working_dir,
                 &ctx.run.session_key,
                 resolved.provider,
+                Some(ROUTINE_RESUME_CONTRACT),
             )
             .await;
         let resume_id = sid_handle.get().await;
@@ -97,6 +107,7 @@ impl RoutineDispatcher for EngineRoutineDispatcher {
             resolved.provider,
             resolved.model,
             None,
+            houston_terminal_manager::NativeDelegationPolicy::Block,
         );
 
         match join_handle.await {
@@ -135,6 +146,8 @@ impl ActivitySurface for EngineActivitySurface {
                 worktree_path: None,
                 provider: None,
                 model: None,
+                orchestration_parent_agent_path: None,
+                orchestration_parent_session_key: None,
             },
         )
         .map_err(|e| e.to_string())?;

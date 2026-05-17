@@ -6,7 +6,7 @@ interface DraftEntry {
 }
 
 interface DraftsState {
-  /** Drafts keyed by session key (e.g. "chat-agentId", "activity-123", "new-conversation") */
+  /** Drafts keyed by conversation scope (agent path + session key). */
   drafts: Record<string, DraftEntry>;
   setDraftText: (key: string, text: string) => void;
   setDraftFiles: (key: string, files: File[]) => void;

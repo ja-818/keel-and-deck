@@ -161,9 +161,7 @@ pub async fn launch_login(provider: Provider) -> CoreResult<()> {
         Ok(Ok(status)) => {
             // Exited cleanly within 3s — unusual but possible if the CLI
             // already had a cached session or printed a "done" message.
-            tracing::info!(
-                "[houston:provider] {cli_name} login completed in <3s: {status}"
-            );
+            tracing::info!("[houston:provider] {cli_name} login completed in <3s: {status}");
             Ok(())
         }
         Ok(Err(e)) => {
@@ -171,9 +169,7 @@ pub async fn launch_login(provider: Provider) -> CoreResult<()> {
                 "[houston:provider] {cli_name} login wait failed at {}: {e}",
                 path.display()
             );
-            Err(CoreError::Internal(format!(
-                "{cli_name} login wait: {e}"
-            )))
+            Err(CoreError::Internal(format!("{cli_name} login wait: {e}")))
         }
         Err(_) => {
             // Still running after 3s — detach and let the OAuth flow
@@ -200,12 +196,12 @@ pub async fn launch_login(provider: Provider) -> CoreResult<()> {
                             );
                         }
                     }
-                    Ok(Err(e)) => tracing::warn!(
-                        "[houston:provider] {cli_name} login wait failed: {e}"
-                    ),
-                    Err(_) => tracing::warn!(
-                        "[houston:provider] {cli_name} login timed out after 120s"
-                    ),
+                    Ok(Err(e)) => {
+                        tracing::warn!("[houston:provider] {cli_name} login wait failed: {e}")
+                    }
+                    Err(_) => {
+                        tracing::warn!("[houston:provider] {cli_name} login timed out after 120s")
+                    }
                 }
             });
             Ok(())
@@ -253,7 +249,11 @@ pub async fn launch_logout(provider: Provider) -> CoreResult<()> {
             );
             Err(CoreError::Internal(format!(
                 "{cli_name} logout failed: {}",
-                if stderr.is_empty() { "no stderr".into() } else { stderr }
+                if stderr.is_empty() {
+                    "no stderr".into()
+                } else {
+                    stderr
+                }
             )))
         }
         Ok(Err(e)) => {
@@ -261,7 +261,9 @@ pub async fn launch_logout(provider: Provider) -> CoreResult<()> {
                 "[houston:provider] {cli_name} logout failed at {}: {e}",
                 path.display()
             );
-            Err(CoreError::Internal(format!("{cli_name} logout failed: {e}")))
+            Err(CoreError::Internal(format!(
+                "{cli_name} logout failed: {e}"
+            )))
         }
         Err(_) => {
             tracing::warn!("[houston:provider] {cli_name} logout timed out after 10s");
@@ -527,12 +529,8 @@ mod tests {
 
     #[test]
     fn logout_command_errors_when_cli_missing() {
-        let err = build_logout_command(
-            Provider::OpenAI,
-            None,
-            OsString::from("/not/on/path"),
-        )
-        .unwrap_err();
+        let err = build_logout_command(Provider::OpenAI, None, OsString::from("/not/on/path"))
+            .unwrap_err();
         assert!(matches!(err, CoreError::BadRequest(_)));
     }
 }

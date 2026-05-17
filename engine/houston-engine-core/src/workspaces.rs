@@ -104,7 +104,10 @@ pub fn create(root: &Path, req: CreateWorkspace) -> CoreResult<Workspace> {
 
 pub fn rename(root: &Path, id: &str, req: RenameWorkspace) -> CoreResult<Workspace> {
     let mut workspaces = read_all(root)?;
-    if workspaces.iter().any(|w| w.name == req.new_name && w.id != id) {
+    if workspaces
+        .iter()
+        .any(|w| w.name == req.new_name && w.id != id)
+    {
         return Err(CoreError::Conflict(format!(
             "workspace named {:?} already exists",
             req.new_name
@@ -202,16 +205,47 @@ mod tests {
     #[test]
     fn create_duplicate_conflicts() {
         let d = tmp();
-        create(d.path(), CreateWorkspace { name: "a".into(), provider: None, model: None }).unwrap();
-        let err = create(d.path(), CreateWorkspace { name: "a".into(), provider: None, model: None }).unwrap_err();
+        create(
+            d.path(),
+            CreateWorkspace {
+                name: "a".into(),
+                provider: None,
+                model: None,
+            },
+        )
+        .unwrap();
+        let err = create(
+            d.path(),
+            CreateWorkspace {
+                name: "a".into(),
+                provider: None,
+                model: None,
+            },
+        )
+        .unwrap_err();
         assert!(matches!(err, CoreError::Conflict(_)));
     }
 
     #[test]
     fn rename_and_delete() {
         let d = tmp();
-        let ws = create(d.path(), CreateWorkspace { name: "a".into(), provider: None, model: None }).unwrap();
-        let renamed = rename(d.path(), &ws.id, RenameWorkspace { new_name: "b".into() }).unwrap();
+        let ws = create(
+            d.path(),
+            CreateWorkspace {
+                name: "a".into(),
+                provider: None,
+                model: None,
+            },
+        )
+        .unwrap();
+        let renamed = rename(
+            d.path(),
+            &ws.id,
+            RenameWorkspace {
+                new_name: "b".into(),
+            },
+        )
+        .unwrap();
         assert_eq!(renamed.name, "b");
         delete(d.path(), &ws.id).unwrap();
         assert!(list(d.path()).unwrap().is_empty());

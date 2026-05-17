@@ -31,6 +31,10 @@ pub struct ServerConfig {
     /// Product-layer onboarding prompt supplied by the app via
     /// `HOUSTON_APP_ONBOARDING_PROMPT`. Appended on first-run sessions.
     pub app_onboarding_prompt: String,
+    /// Product-layer beginner prompt supplied by the app via
+    /// `HOUSTON_APP_BEGINNER_SYSTEM_PROMPT`. Used when the user preference
+    /// `experience_level` is `beginner`.
+    pub app_beginner_system_prompt: String,
     /// Houston relay base URL. Always populated — defaults to
     /// [`DEFAULT_RELAY_URL`], overridable via `HOUSTON_TUNNEL_URL`.
     /// The per-tunnel bearer is allocated from the relay on first boot
@@ -45,7 +49,9 @@ impl ServerConfig {
             .and_then(|s| s.parse().ok())
             .unwrap_or_else(|| "127.0.0.1:0".parse().unwrap());
 
-        if bind.ip().is_unspecified() && std::env::var("HOUSTON_BIND_ALL").ok().as_deref() != Some("1") {
+        if bind.ip().is_unspecified()
+            && std::env::var("HOUSTON_BIND_ALL").ok().as_deref() != Some("1")
+        {
             panic!("Refusing to bind 0.0.0.0 without HOUSTON_BIND_ALL=1");
         }
 
@@ -84,6 +90,8 @@ impl ServerConfig {
             });
 
         let app_system_prompt = std::env::var("HOUSTON_APP_SYSTEM_PROMPT").unwrap_or_default();
+        let app_beginner_system_prompt =
+            std::env::var("HOUSTON_APP_BEGINNER_SYSTEM_PROMPT").unwrap_or_default();
         let app_onboarding_prompt =
             std::env::var("HOUSTON_APP_ONBOARDING_PROMPT").unwrap_or_default();
 
@@ -98,6 +106,7 @@ impl ServerConfig {
             home_dir,
             docs_dir,
             app_system_prompt,
+            app_beginner_system_prompt,
             app_onboarding_prompt,
             tunnel_url,
         }

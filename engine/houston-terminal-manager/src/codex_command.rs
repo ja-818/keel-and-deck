@@ -1,6 +1,8 @@
 use std::ffi::OsString;
 use std::path::Path;
 
+use crate::types::NativeDelegationPolicy;
+
 /// Build `codex exec` args with exec-level flags before the optional
 /// `resume` subcommand. Older Codex CLIs reject global flags placed after
 /// `resume <id>`.
@@ -10,6 +12,7 @@ pub(crate) fn build_args(
     model: Option<&str>,
     effort: Option<&str>,
     system_prompt: Option<&str>,
+    native_delegation_policy: NativeDelegationPolicy,
 ) -> Vec<OsString> {
     let mut args = vec![
         OsString::from("exec"),
@@ -17,6 +20,10 @@ pub(crate) fn build_args(
         OsString::from("--dangerously-bypass-approvals-and-sandbox"),
         OsString::from("--skip-git-repo-check"),
     ];
+    if native_delegation_policy.blocks() {
+        args.push(OsString::from("--disable"));
+        args.push(OsString::from("multi_agent"));
+    }
 
     if let Some(sp) = system_prompt {
         let json_val = serde_json::to_string(sp).unwrap_or_else(|_| format!("\"{sp}\""));
@@ -77,6 +84,7 @@ mod tests {
             Some("gpt-5.5"),
             Some("medium"),
             Some("system"),
+            NativeDelegationPolicy::Block,
         ));
 
         let resume_pos = args.iter().position(|arg| arg == "resume").unwrap();
@@ -91,7 +99,14 @@ mod tests {
 
     #[test]
     fn fresh_args_read_prompt_from_stdin() {
-        let args = strings(build_args(None, None, None, None, None));
+        let args = strings(build_args(
+            None,
+            None,
+            None,
+            None,
+            None,
+            NativeDelegationPolicy::Block,
+        ));
 
         assert_eq!(args.last().map(String::as_str), Some("-"));
         assert!(!args.iter().any(|arg| arg == "resume"));
@@ -99,13 +114,50 @@ mod tests {
 
     #[test]
     fn effort_emits_model_reasoning_effort_override() {
-        let args = strings(build_args(None, None, None, Some("medium"), None));
+        let args = strings(build_args(
+            None,
+            None,
+            None,
+            Some("medium"),
+            None,
+            NativeDelegationPolicy::Block,
+        ));
         let pos = args
             .iter()
             .position(|arg| arg == "model_reasoning_effort=\"medium\"")
             .expect("effort override should be present");
         // Override must arrive as a `-c key=value` pair.
         assert_eq!(args[pos - 1], "-c");
+    }
+
+    #[test]
+    fn codex_multi_agent_feature_is_disabled_when_policy_blocks() {
+        let args = strings(build_args(
+            None,
+            None,
+            None,
+            None,
+            None,
+            NativeDelegationPolicy::Block,
+        ));
+        let pos = args
+            .iter()
+            .position(|arg| arg == "multi_agent")
+            .expect("multi_agent feature flag should be present");
+        assert_eq!(args[pos - 1], "--disable");
+    }
+
+    #[test]
+    fn codex_multi_agent_feature_is_allowed_when_policy_allows() {
+        let args = strings(build_args(
+            None,
+            None,
+            None,
+            None,
+            None,
+            NativeDelegationPolicy::Allow,
+        ));
+        assert!(!args.iter().any(|arg| arg == "multi_agent"));
     }
 
     #[test]

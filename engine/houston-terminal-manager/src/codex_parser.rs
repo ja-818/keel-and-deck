@@ -4,7 +4,8 @@
 //! so the rest of the stack (session_runner, frontend) is provider-agnostic.
 
 use super::auth_error::{is_auth_retry_noise, AUTH_RETRY_MARKER};
-use super::types::{FeedItem, ToolRuntimeErrorKind};
+use super::native_delegation;
+use super::types::{FeedItem, NativeDelegationPolicy, Provider, ToolRuntimeErrorKind};
 use crate::provider_error::is_codex_model_unsupported_chatgpt_error;
 use serde::Deserialize;
 
@@ -75,6 +76,8 @@ pub struct CodexError {
 pub struct CodexAccumulator {
     text_buffer: String,
     thinking_buffer: String,
+    native_delegation_violation: Option<String>,
+    native_delegation_policy: NativeDelegationPolicy,
     /// True between `turn.started` and the first event that takes over the
     /// reasoning slot (real reasoning item, agent_message, command_execution,
     /// etc.). Codex 0.130's `--json` output emits NO events during the
@@ -89,8 +92,28 @@ pub struct CodexAccumulator {
 }
 
 impl CodexAccumulator {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(native_delegation_policy: NativeDelegationPolicy) -> Self {
+        Self {
+            native_delegation_policy,
+            ..Self::default()
+        }
+    }
+
+    pub fn take_native_delegation_violation(&mut self) -> Option<String> {
+        self.native_delegation_violation.take()
+    }
+
+    fn native_delegation_error(&mut self, name: &str) -> FeedItem {
+        let details = native_delegation::violation_details(Provider::OpenAI, name);
+        self.native_delegation_violation = Some(details.clone());
+        FeedItem::ToolRuntimeError {
+            kind: super::types::ToolRuntimeErrorKind::ProviderProcess,
+            details,
+        }
+    }
+
+    fn blocks_native_delegation(&self) -> bool {
+        self.native_delegation_policy.blocks()
     }
 }
 
@@ -252,6 +275,11 @@ fn parse_item_streaming(event: &CodexEvent, acc: &mut CodexAccumulator) -> Vec<F
     let Some(item) = &event.item else {
         return vec![];
     };
+    if acc.blocks_native_delegation()
+        && native_delegation::is_blocked_codex_item_type(&item.item_type)
+    {
+        return vec![acc.native_delegation_error(&item.item_type)];
+    }
 
     match item.item_type.as_str() {
         "agent_message" => {
@@ -315,6 +343,11 @@ fn parse_item_completed(event: &CodexEvent, acc: &mut CodexAccumulator) -> Vec<F
     let Some(item) = &event.item else {
         return vec![];
     };
+    if acc.blocks_native_delegation()
+        && native_delegation::is_blocked_codex_item_type(&item.item_type)
+    {
+        return vec![acc.native_delegation_error(&item.item_type)];
+    }
 
     match item.item_type.as_str() {
         "agent_message" => {
@@ -404,9 +437,10 @@ fn describe_file_changes(item: &CodexItem) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::NativeDelegationPolicy;
 
     fn acc() -> CodexAccumulator {
-        CodexAccumulator::new()
+        CodexAccumulator::new(NativeDelegationPolicy::Block)
     }
 
     #[test]
@@ -462,7 +496,9 @@ mod tests {
         let _ = parse_codex_event(r#"{"type":"turn.started"}"#, &mut a);
         let items = parse_codex_event(r#"{"type":"turn.completed"}"#, &mut a);
         assert!(
-            items.iter().any(|i| matches!(i, FeedItem::Thinking(t) if t.is_empty())),
+            items
+                .iter()
+                .any(|i| matches!(i, FeedItem::Thinking(t) if t.is_empty())),
             "expected an empty Thinking() to close the placeholder, got {items:?}"
         );
     }
@@ -630,6 +666,32 @@ mod tests {
             FeedItem::ToolCall { name, .. } => assert_eq!(name, "github::list_issues"),
             other => panic!("expected ToolCall, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn blocks_native_delegation_item_type() {
+        let mut a = acc();
+        let line = r#"{"type":"item.started","item":{"id":"item_6","type":"agent","status":"in_progress"}}"#;
+        let items = parse_codex_event(line, &mut a);
+        assert_eq!(items.len(), 1);
+        match &items[0] {
+            FeedItem::ToolRuntimeError { details, .. } => {
+                assert!(details.contains("Provider-native delegation is disabled"));
+            }
+            other => panic!("expected ToolRuntimeError, got {other:?}"),
+        }
+        assert!(a.take_native_delegation_violation().is_some());
+    }
+
+    #[test]
+    fn allows_native_delegation_item_type_when_policy_allows() {
+        let mut a = CodexAccumulator::new(NativeDelegationPolicy::Allow);
+        let line = r#"{"type":"item.started","item":{"id":"agent_1","type":"agent","status":"in_progress"}}"#;
+
+        let items = parse_codex_event(line, &mut a);
+
+        assert!(items.is_empty());
+        assert!(a.take_native_delegation_violation().is_none());
     }
 
     #[test]

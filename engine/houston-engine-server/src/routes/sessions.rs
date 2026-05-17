@@ -14,6 +14,7 @@
 //! subscription, which is safe because the caller already has the
 //! session_key echoed back from this response).
 
+use crate::app_prompts::{selected_app_system_prompt, selected_native_delegation_policy};
 use crate::routes::error::ApiError;
 use crate::state::ServerState;
 use axum::{
@@ -31,10 +32,7 @@ use std::sync::Arc;
 
 pub fn router() -> Router<Arc<ServerState>> {
     Router::new()
-        .route(
-            "/agents/:agent_path/sessions",
-            post(start_session),
-        )
+        .route("/agents/:agent_path/sessions", post(start_session))
         .route(
             "/agents/:agent_path/sessions/onboarding",
             post(start_onboarding),
@@ -62,6 +60,11 @@ pub struct StartRequest {
     pub system_prompt: Option<String>,
     #[serde(default)]
     pub source: Option<String>,
+    /// Whether the prompt should be persisted/rendered as a user chat bubble.
+    /// Internal continuation turns use `false` so the provider receives the
+    /// instruction without making it look like the user typed it.
+    #[serde(default = "default_visible_user_message")]
+    pub visible_user_message: bool,
     /// Working-directory override. Defaults to `agent_dir`.
     #[serde(default)]
     pub working_dir: Option<String>,
@@ -78,6 +81,10 @@ pub struct StartRequest {
     /// in `~/.codex/config.toml`.
     #[serde(default)]
     pub effort: Option<String>,
+}
+
+fn default_visible_user_message() -> bool {
+    true
 }
 
 #[derive(Debug, Serialize)]
@@ -99,25 +106,33 @@ async fn start_session(
         .unwrap_or_else(|| agent_dir.clone());
 
     // Override > agent config > workspace > default.
-    let ResolvedProviderChoice { provider, model } =
-        resolve_provider_with_overrides(&st, &agent_dir, req.provider.as_deref(), req.model.clone())?;
+    let ResolvedProviderChoice { provider, model } = resolve_provider_with_overrides(
+        &st,
+        &agent_dir,
+        req.provider.as_deref(),
+        req.model.clone(),
+    )?;
 
+    let native_delegation_policy = selected_native_delegation_policy(&st.engine).await;
     let params = StartParams {
         agent_dir,
         working_dir,
         session_key: req.session_key.clone(),
         prompt: req.prompt,
+        visible_user_message: req.visible_user_message,
         system_prompt: req.system_prompt,
         source: req.source,
         provider,
         model,
+        native_delegation_policy,
         effort: req.effort,
     };
 
     let rt = SessionRuntime::clone(&st.engine.sessions);
     let sink = st.engine.events.clone();
     let db = st.engine.db.clone();
-    let key = sessions::start(&rt, sink, db, &st.engine.app_system_prompt, params).await?;
+    let app_system_prompt = selected_app_system_prompt(&st.engine).await;
+    let key = sessions::start(&rt, sink, db, &app_system_prompt, params).await?;
 
     Ok(Json(StartResponse { session_key: key }))
 }
@@ -217,6 +232,7 @@ async fn cancel_session(
     let cancelled = sessions::cancel(
         &st.engine.sessions,
         &st.engine.events,
+        &st.engine.db,
         &agent_path_str,
         &session_key,
     )

@@ -36,12 +36,15 @@ import {
 } from "@houston-ai/chat";
 
 import { useFeedStore } from "../stores/feeds";
+import { useAgentStore } from "../stores/agents";
 import { useUIStore } from "../stores/ui";
 import { useWorkspaceStore } from "../stores/workspaces";
 import {
   useActivity,
+  useAllConversations,
   useConnectedToolkits,
   useConnections,
+  useOrchestrationStatus,
   useSkills,
 } from "../hooks/queries";
 import {
@@ -59,8 +62,12 @@ import { humanizeSkillName } from "../lib/humanize-skill-name";
 import { useFileToolRenderer } from "../hooks/use-file-tool-renderer";
 import {
   ComposioLinkCard,
-  parseComposioToolkitFromHref,
 } from "./composio-link-card";
+import {
+  latestAssistantComposioToolkits,
+  parseComposioToolkitFromHref,
+} from "../lib/composio-links";
+import { DispatchActions } from "./dispatch-actions";
 import {
   ComposioSigninCard,
   isComposioSigninHref,
@@ -83,6 +90,9 @@ import { ToolRuntimeErrorCard } from "./shell/tool-runtime-error-card";
 import { isToolRuntimeErrorMessage } from "./tool-runtime-feed";
 import { useChatDisplayLabels } from "./use-chat-display-labels";
 import {
+  extractDispatchLinks,
+} from "../lib/dispatch-links";
+import {
   filterProviderAuthFeedItems,
   isProviderAuthMessage,
   providerAuthSignalKey,
@@ -91,6 +101,8 @@ import {
 import type { AIBoardProps } from "@houston-ai/board";
 import type { ChatMessage, ChatPanelProps, FeedItem } from "@houston-ai/chat";
 import type { Agent, AgentDefinition, SkillSummary } from "../lib/types";
+
+const EMPTY_FEED_ITEMS: FeedItem[] = [];
 
 interface UseAgentChatPanelArgs {
   /** The agent the panel is currently scoped to. Null disables features. */
@@ -122,6 +134,7 @@ interface AgentChatPanelProps {
   processLabels: ChatPanelProps["processLabels"];
   getThinkingMessage: ChatPanelProps["getThinkingMessage"];
   renderTurnSummary: ChatPanelProps["renderTurnSummary"];
+  transformContent: ChatPanelProps["transformContent"];
   renderSystemMessage: AIBoardProps["renderSystemMessage"];
   mapFeedItems: AIBoardProps["mapFeedItems"];
   afterMessages: AIBoardProps["afterMessages"];
@@ -144,15 +157,38 @@ export function useAgentChatPanel({
   onSelectSession,
 }: UseAgentChatPanelArgs): AgentChatPanelProps {
   const { t } = useTranslation(["board", "chat"]);
+  const { t: tIntegrations } = useTranslation("integrations");
   const { processLabels, getThinkingMessage } = useChatDisplayLabels();
   const queryClient = useQueryClient();
   const addToast = useUIStore((s) => s.addToast);
 
   const path = agent?.folderPath ?? null;
   const agentModes = agentDef?.config.agents;
+  const feedItems = useFeedStore((s) => {
+    if (!path || !selectedSessionKey) return EMPTY_FEED_ITEMS;
+    return s.items[path]?.[selectedSessionKey] ?? EMPTY_FEED_ITEMS;
+  });
+  const pushFeedItem = useFeedStore((s) => s.pushFeedItem);
 
   // ── Workspace / agent / activity tier model resolution ─────────────────
   const workspace = useWorkspaceStore((s) => s.current);
+  const workspaceId = workspace?.id ?? null;
+  const agents = useAgentStore((s) => s.agents);
+  const agentPaths = useMemo(() => agents.map((item) => item.folderPath), [agents]);
+  const { data: allConversations } = useAllConversations(agentPaths);
+  const { data: orchestrationStatus } = useOrchestrationStatus(
+    path ?? undefined,
+    selectedSessionKey ?? undefined,
+  );
+  const delegatedCount = useMemo(
+    () =>
+      (allConversations ?? []).filter(
+        (conversation) =>
+          conversation.orchestration_parent_agent_path === path &&
+          conversation.orchestration_parent_session_key === selectedSessionKey,
+      ).length,
+    [allConversations, path, selectedSessionKey],
+  );
   const wsProvider = workspace?.provider ?? "anthropic";
   const wsModel = workspace?.model ?? getDefaultModel(wsProvider);
   const [agentProvider, setAgentProvider] = useState<string | null>(null);
@@ -218,22 +254,130 @@ export function useAgentChatPanel({
     () => new Set(connectedList ?? []),
     [connectedList],
   );
+  const latestComposioToolkits = useMemo(
+    () => latestAssistantComposioToolkits(feedItems),
+    [feedItems],
+  );
+  const pendingComposioRef = useRef<Set<string>>(new Set());
+  const continuedComposioRef = useRef<string | null>(null);
+  const handleComposioConnectStarted = useCallback((toolkit: string) => {
+    pendingComposioRef.current.add(toolkit);
+    continuedComposioRef.current = null;
+  }, []);
+  const sendComposioContinuation = useCallback(
+    (text: string) => {
+      if (!path || !selectedSessionKey) return;
+      tauriChat
+        .send(path, text, selectedSessionKey, {
+          providerOverride: chatProvider ?? undefined,
+          modelOverride: chatModel ?? undefined,
+          visibleUserMessage: false,
+        })
+        .catch((err) => {
+          addToast({
+            title: t("chat:errors.sessionStart", { error: String(err) }),
+            variant: "error",
+          });
+        });
+    },
+    [
+      addToast,
+      chatModel,
+      chatProvider,
+      path,
+      selectedSessionKey,
+      t,
+    ],
+  );
+  const handleComposioSignInComplete = useCallback(() => {
+    sendComposioContinuation(tIntegrations("continueAfterComposioSignIn"));
+  }, [sendComposioContinuation, tIntegrations]);
+  useEffect(() => {
+    if (!path || !selectedSessionKey) return;
+    if (latestComposioToolkits.length === 0) return;
+    const pending = pendingComposioRef.current;
+    if (!latestComposioToolkits.some((toolkit) => pending.has(toolkit))) return;
+    if (!latestComposioToolkits.every((toolkit) => connectedSet.has(toolkit))) return;
+
+    const key = latestComposioToolkits.slice().sort().join(",");
+    if (continuedComposioRef.current === key) return;
+    continuedComposioRef.current = key;
+    pending.clear();
+    const text = tIntegrations("continueAfterConnected", { toolkits: key });
+    sendComposioContinuation(text);
+  }, [
+    connectedSet,
+    latestComposioToolkits,
+    path,
+    sendComposioContinuation,
+    selectedSessionKey,
+    tIntegrations,
+  ]);
   const renderLink = useCallback(
     ({ href, onOpen }: { href: string; onOpen: () => void }) => {
       if (isComposioSigninHref(href)) {
-        return <ComposioSigninCard />;
+        return <ComposioSigninCard onSignInComplete={handleComposioSignInComplete} />;
       }
       const toolkit = parseComposioToolkitFromHref(href);
-      if (!toolkit) return undefined;
-      return (
-        <ComposioLinkCard
-          toolkit={toolkit}
-          isConnected={connectedSet.has(toolkit)}
-          onOpen={onOpen}
-        />
-      );
+      if (toolkit) {
+        return (
+          <ComposioLinkCard
+            toolkit={toolkit}
+            isConnected={connectedSet.has(toolkit)}
+            onOpen={onOpen}
+            onConnectStarted={handleComposioConnectStarted}
+          />
+        );
+      }
+      return undefined;
     },
-    [connectedSet],
+    [
+      connectedSet,
+      handleComposioConnectStarted,
+      handleComposioSignInComplete,
+      path,
+      selectedSessionKey,
+      workspaceId,
+    ],
+  );
+  const transformContent = useCallback(
+    (
+      content: string,
+      meta: { isLatestAssistantMessage: boolean; messageKey: string },
+    ) => {
+      if (!path || !selectedSessionKey) return { content };
+      const dispatch = extractDispatchLinks(content);
+      return {
+        content: dispatch.content,
+        extra: (
+          <DispatchActions
+            dispatch={dispatch}
+            workspaceId={workspaceId}
+            parentAgentPath={path}
+            parentSessionKey={selectedSessionKey}
+            orchestration={orchestrationStatus}
+            delegatedCount={delegatedCount}
+            allowAutoRun={meta.isLatestAssistantMessage}
+            dispatchMessageKey={meta.messageKey}
+            onRejectCreate={(text) => {
+              void tauriChat.send(path, text, selectedSessionKey, {
+                providerOverride: chatProvider ?? undefined,
+                modelOverride: chatModel ?? undefined,
+              });
+            }}
+          />
+        ),
+      };
+    },
+    [
+      chatModel,
+      chatProvider,
+      delegatedCount,
+      orchestrationStatus,
+      path,
+      selectedSessionKey,
+      workspaceId,
+    ],
   );
 
   // ── File-tool rendering (per-agent path) ──────────────────────────────
@@ -265,7 +409,6 @@ export function useAgentChatPanel({
     onSelectSessionRef.current = onSelectSession;
   }, [onSelectSession]);
 
-  const pushFeedItem = useFeedStore((s) => s.pushFeedItem);
   const attachmentLabels = useMemo<UserAttachmentMessageLabels>(
     () => ({
       attachmentCount: (count) => t("attachmentMessage.count", { count }),
@@ -589,6 +732,7 @@ export function useAgentChatPanel({
     processLabels,
     getThinkingMessage,
     renderTurnSummary,
+    transformContent,
     renderSystemMessage,
     mapFeedItems,
     afterMessages,

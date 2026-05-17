@@ -88,6 +88,7 @@ export interface Agent {
   folderPath: string;      // ~/.houston/workspaces/{WorkspaceName}/{AgentName}/
   configId: string;      // Points to an AgentConfig
   color?: string;        // User-chosen color for avatar
+  temporary: boolean;
   createdAt: string;
   lastOpenedAt?: string;
 }

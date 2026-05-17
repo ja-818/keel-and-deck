@@ -48,5 +48,43 @@
     "alreadyConnected": "Já conectado",
     "connected": "Conectado",
     "connect": "Conectar"
+  },
+  "connectedToast": "{{app}} conectado",
+  "continueAfterConnected": "{{toolkits}} conectado. Continue agora a solicitação original.",
+  "continueAfterComposioSignIn": "Login no Composio concluído. Continue agora a solicitação original.",
+  "connecting": "Conectando...",
+  "verify": "Verificar",
+  "verifying": "Verificando",
+  "verifiedToast": "{{name}} conectado",
+  "notVerified": "Ainda não está conectado. Termine a aprovação no navegador e verifique novamente.",
+  "retry": "Tentar de novo",
+  "allConnected": "Todos os seus apps estão conectados",
+  "dispatch": {
+    "suggestionTitle": "Posso criar {{count}} agentes especializados para isto",
+    "tokenNote": "Criar agentes usa tokens extras mas é mais rápido e produz melhores resultados.",
+    "accept": "Criar agentes",
+    "reject": "Não, faça você",
+    "rejectPrompt": "Não, cuide você de toda a solicitação. Complete tudo de forma sequencial sem criar agentes especializados.",
+    "creating": "Criando agentes…",
+    "created": "Agentes criados e executando",
+    "preparingAgents": "Preparando o plano de agentes…",
+    "preparingAdjustment": "Preparando o ajuste…",
+    "preparingSave": "Preparando opções de salvamento…",
+    "agentsWorking": "Agentes trabalhando, {{done}}/{{total}} prontos",
+    "waitingForAgents": "Esperando os agentes atuais terminarem…",
+    "adjusting": "Atualizando agentes especializados…",
+    "error": "Erro ao criar agentes. Tente novamente."
+  },
+  "saveAgents": {
+    "title": "Salvar ou atualizar estes agentes?",
+    "body": "Mantenha os agentes selecionados para usar depois. Se um já existir, o Houston o atualiza em vez de criar duplicado.",
+    "accept": "Salvar selecionados",
+    "reject": "Agora não",
+    "saving": "Salvando agentes…",
+    "saved": "Agentes salvos",
+    "savedDetail": "Eles já estão disponíveis no seu espaço de trabalho.",
+    "savedConversation": "Pronto. Os agentes foram salvos ou atualizados no seu espaço de trabalho. Posso ajudar com o que vier a seguir.",
+    "skipped": "Nenhum agente foi salvo.",
+    "error": "Erro ao salvar agentes. Tente novamente."
   }
 }

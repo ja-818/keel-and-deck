@@ -9,9 +9,11 @@ export interface ToastItem {
 }
 
 export type JobDescriptionTarget = "instructions" | "skills" | "learnings";
+export type ExperienceLevel = "beginner" | "professional";
 
 interface UIState {
   viewMode: string;
+  experienceLevel: ExperienceLevel;
   assistantPanelOpen: boolean;
   activityPanelId: string | null;
   claudeAvailable: boolean | null;
@@ -36,6 +38,12 @@ interface UIState {
   /** Arrow-key kanban navigator registered by whichever board is on
    *  screen (Mission Control or an agent's Activity tab). */
   onBoardNavigate: ((dir: "up" | "down" | "left" | "right") => void) | null;
+  /** Agent path for the mission transcript currently visible in the workspace. */
+  activeMissionAgentPath: string | null;
+  /** Session key for the mission transcript currently visible in the workspace. */
+  activeMissionSessionKey: string | null;
+  /** Per-mission drawer dismissal state for the beginner active-agents panel. */
+  activeAgentsDrawerClosed: Record<string, true>;
   jobDescriptionTarget: JobDescriptionTarget | null;
   /** Pin the first-run tutorial UI in front of the workspace shell. Set true
    * while the orchestrator is mid-flight, cleared on graduation or skip. */
@@ -49,6 +57,7 @@ interface UIState {
   /** Whether the "From a friend" import wizard is open. */
   importFromFriendOpen: boolean;
   setViewMode: (mode: string) => void;
+  setExperienceLevel: (level: ExperienceLevel) => void;
   setAssistantPanelOpen: (open: boolean) => void;
   setActivityPanelId: (id: string | null) => void;
   setClaudeAvailable: (available: boolean | null) => void;
@@ -64,6 +73,8 @@ interface UIState {
   setPaletteOpen: (open: boolean) => void;
   setCheatsheetOpen: (open: boolean) => void;
   setOnBoardNavigate: (cb: ((dir: "up" | "down" | "left" | "right") => void) | null) => void;
+  setActiveMissionContext: (agentPath: string | null, sessionKey: string | null) => void;
+  setActiveAgentsDrawerOpen: (open: boolean) => void;
   setJobDescriptionTarget: (target: JobDescriptionTarget | null) => void;
   setTutorialActive: (active: boolean) => void;
   setUiTourActive: (active: boolean) => void;
@@ -73,8 +84,13 @@ interface UIState {
 
 let toastCounter = 0;
 
+export function missionContextKey(agentPath: string, sessionKey: string): string {
+  return `${agentPath}::${sessionKey}`;
+}
+
 export const useUIStore = create<UIState>((set) => ({
   viewMode: "chat",
+  experienceLevel: "professional",
   assistantPanelOpen: false,
   activityPanelId: null,
   claudeAvailable: null,
@@ -89,6 +105,9 @@ export const useUIStore = create<UIState>((set) => ({
   paletteOpen: false,
   cheatsheetOpen: false,
   onBoardNavigate: null,
+  activeMissionAgentPath: null,
+  activeMissionSessionKey: null,
+  activeAgentsDrawerClosed: {},
   jobDescriptionTarget: null,
   tutorialActive: false,
   uiTourActive: false,
@@ -96,6 +115,7 @@ export const useUIStore = create<UIState>((set) => ({
   importFromFriendOpen: false,
 
   setViewMode: (viewMode) => set({ viewMode }),
+  setExperienceLevel: (experienceLevel) => set({ experienceLevel }),
   setAssistantPanelOpen: (assistantPanelOpen) => set({ assistantPanelOpen }),
   setActivityPanelId: (activityPanelId) => set({ activityPanelId }),
   setClaudeAvailable: (claudeAvailable) => set({ claudeAvailable }),
@@ -148,6 +168,26 @@ export const useUIStore = create<UIState>((set) => ({
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
   setCheatsheetOpen: (cheatsheetOpen) => set({ cheatsheetOpen }),
   setOnBoardNavigate: (onBoardNavigate) => set({ onBoardNavigate }),
+  setActiveMissionContext: (activeMissionAgentPath, activeMissionSessionKey) =>
+    set((s) => {
+      if (
+        s.activeMissionAgentPath === activeMissionAgentPath &&
+        s.activeMissionSessionKey === activeMissionSessionKey
+      ) {
+        return s;
+      }
+      return { activeMissionAgentPath, activeMissionSessionKey };
+    }),
+  setActiveAgentsDrawerOpen: (open) =>
+    set((s) => {
+      const { activeMissionAgentPath, activeMissionSessionKey } = s;
+      if (!activeMissionAgentPath || !activeMissionSessionKey) return s;
+      const key = missionContextKey(activeMissionAgentPath, activeMissionSessionKey);
+      const next = { ...s.activeAgentsDrawerClosed };
+      if (open) delete next[key];
+      else next[key] = true;
+      return { activeAgentsDrawerClosed: next };
+    }),
   setJobDescriptionTarget: (jobDescriptionTarget) => set({ jobDescriptionTarget }),
   setTutorialActive: (tutorialActive) => set({ tutorialActive }),
   setUiTourActive: (uiTourActive) => set({ uiTourActive }),

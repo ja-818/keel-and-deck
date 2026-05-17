@@ -17,6 +17,23 @@ pub const TIMEZONE_KEY: &str = "timezone";
 /// this value is surfaced verbatim to whichever frontend is consuming it.
 pub const LOCALE_KEY: &str = "locale";
 
+/// Preference key for the user's experience level ("beginner" or "professional").
+/// Determines which system prompt sections are included when building prompts.
+pub const EXPERIENCE_LEVEL_KEY: &str = "experience_level";
+
+/// Resolve the user's effective experience level. Returns `"professional"` if unset.
+pub async fn experience_level(db: &Database) -> String {
+    match get(db, EXPERIENCE_LEVEL_KEY)
+        .await
+        .ok()
+        .flatten()
+        .as_deref()
+    {
+        Some("beginner") => "beginner".to_string(),
+        _ => "professional".to_string(),
+    }
+}
+
 pub async fn get(db: &Database, key: &str) -> CoreResult<Option<String>> {
     db.get_preference(key)
         .await
@@ -84,10 +101,7 @@ pub async fn get_legal_acceptance(db: &Database) -> CoreResult<Option<LegalAccep
 }
 
 /// Persist the user's disclaimer acceptance.
-pub async fn set_legal_acceptance(
-    db: &Database,
-    acceptance: &LegalAcceptance,
-) -> CoreResult<()> {
+pub async fn set_legal_acceptance(db: &Database, acceptance: &LegalAcceptance) -> CoreResult<()> {
     let encoded = serde_json::to_string(acceptance)
         .map_err(|e| CoreError::Internal(format!("legal_acceptance encode: {e}")))?;
     set(db, LEGAL_ACCEPTANCE_KEY, &encoded).await

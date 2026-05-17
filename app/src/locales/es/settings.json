@@ -82,6 +82,13 @@
     "confirmDescription": "Esto eliminará de forma permanente este espacio de trabajo y todos sus agentes. No se puede deshacer.",
     "confirmLabel": "Eliminar"
   },
+  "experience": {
+    "title": "Experiencia",
+    "beginner": "Principiante",
+    "beginnerDesc": "Interfaz simplificada con sugerencias guiadas",
+    "professional": "Profesional",
+    "professionalDesc": "Acceso completo a todas las funciones"
+  },
   "reportBug": {
     "title": "Reportar bug",
     "intro": "Cuéntanos qué salió mal. Enviaremos tu mensaje junto con los registros de tu última actividad para ver qué pasó.",

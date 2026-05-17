@@ -82,6 +82,13 @@
     "confirmDescription": "This will permanently delete this workspace and all its agents. This cannot be undone.",
     "confirmLabel": "Delete"
   },
+  "experience": {
+    "title": "Experience",
+    "beginner": "Beginner",
+    "beginnerDesc": "Simplified interface with guided suggestions",
+    "professional": "Professional",
+    "professionalDesc": "Full access to all features"
+  },
   "reportBug": {
     "title": "Report bug",
     "intro": "Tell us what went wrong. We'll send your message along with the logs from your last activity so we can see what happened.",

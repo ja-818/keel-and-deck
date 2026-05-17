@@ -47,6 +47,9 @@ export default defineConfig(({ mode }) => {
       __HOUSTON_AUTH_STORAGE_SCOPE__: JSON.stringify(authStorageScope),
     },
     clearScreen: false,
+    resolve: {
+      dedupe: ["react", "react-dom"],
+    },
     // Exclude workspace packages from Vite's dep pre-bundling so live edits
     // are picked up immediately without stale cache issues.
     optimizeDeps: {

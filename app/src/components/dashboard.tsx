@@ -13,6 +13,10 @@ import { Plus } from "lucide-react";
 import { useAgentStore } from "../stores/agents";
 import { useAgentCatalogStore } from "../stores/agent-catalog";
 import { useUIStore } from "../stores/ui";
+import {
+  getConversationScopeKey,
+  parseConversationScopeKey,
+} from "../lib/conversation-scope";
 import { tauriChat } from "../lib/tauri";
 import { useMissionControl } from "./use-mission-control";
 import { useSessionMessageQueue } from "../hooks/use-session-message-queue";
@@ -28,6 +32,7 @@ import { AgentPanelAvatar } from "./shell/agent-panel-avatar";
 import { MissionControlToolbar } from "./mission-control-toolbar";
 import { MissionBoardEmptyState } from "./mission-board-empty-state";
 import { useMissionSearch } from "./use-mission-search";
+import { useSessionStatusStore } from "../stores/session-status";
 import { buildMissionBoardColumns } from "./mission-board-columns";
 import { navigateBoard } from "../lib/board-navigate";
 
@@ -121,12 +126,19 @@ export function Dashboard() {
   }, []);
 
   const handleStopSession = useCallback(
-    (sessionKey: string) => {
-      const activityId = sessionKey.replace("activity-", "");
-      const item = mc.items.find((i) => i.id === activityId);
+    (conversationKey: string) => {
+      const item = mc.items.find((i) => i.id === conversationKey);
       const agentPath = item?.metadata?.agentPath as string | undefined;
-      if (!agentPath) return;
-      tauriChat.stop(agentPath, sessionKey).catch(console.error);
+      const sessionKey = item?.metadata?.realSessionKey as string | undefined;
+      if (!agentPath || !sessionKey) return;
+      tauriChat
+        .stop(agentPath, sessionKey)
+        .then((res) => {
+          if (res.cancelled) {
+            useSessionStatusStore.getState().setStatus(agentPath, sessionKey, "completed");
+          }
+        })
+        .catch(console.error);
     },
     [mc.items],
   );
@@ -216,11 +228,19 @@ export function Dashboard() {
   }, [selectedItem, pendingAgent, agents]);
   const activeAgentDef = activeAgent ? getAgentDef(activeAgent.configId) ?? null : null;
   const selectedSessionKey = selectedItem
-    ? (selectedItem.metadata?.sessionKey as string | undefined) ?? `activity-${selectedItem.id}`
+    ? ((selectedItem.metadata?.realSessionKey as string | undefined) ?? null)
     : null;
+  const selectedConversationKey = selectedItem?.id ?? null;
   const onActionCreated = useCallback(
-    (id: string) => mc.setSelectedId(id),
-    [mc],
+    (id: string) => {
+      if (parseConversationScopeKey(id)) {
+        mc.setSelectedId(id);
+        return;
+      }
+      if (!activeAgent) return;
+      mc.setSelectedId(getConversationScopeKey(activeAgent.folderPath, `activity-${id}`));
+    },
+    [activeAgent, mc],
   );
   const panel = useAgentChatPanel({
     agent: activeAgent,
@@ -230,15 +250,15 @@ export function Dashboard() {
   });
   const attachmentValidation = useAttachmentRejectionDialog();
   const selectedAgentPath = selectedItem?.metadata?.agentPath as string | undefined;
-  const selectedSessionActive = selectedSessionKey
-    ? (mc.loading[selectedSessionKey] ?? false)
+  const selectedSessionActive = selectedConversationKey
+    ? (mc.loading[selectedConversationKey] ?? false)
     : false;
   const sendSelectedNow = useCallback(
     async (text: string, files: File[]) => {
-      if (!selectedSessionKey) return;
-      await mc.handleSendMessage(selectedSessionKey, text, files);
+      if (!selectedConversationKey) return;
+      await mc.handleSendMessage(selectedConversationKey, text, files);
     },
-    [mc.handleSendMessage, selectedSessionKey],
+    [mc.handleSendMessage, selectedConversationKey],
   );
   const messageQueue = useSessionMessageQueue({
     agentPath: selectedAgentPath ?? null,
@@ -247,28 +267,40 @@ export function Dashboard() {
     sendNow: sendSelectedNow,
   });
   const handleSendMessage = useCallback(
-    async (sessionKey: string, text: string, files: File[]) => {
-      if (sessionKey === selectedSessionKey) {
+    async (conversationKey: string, text: string, files: File[]) => {
+      if (conversationKey === selectedConversationKey) {
         await messageQueue.sendOrQueue(text, files);
         return;
       }
-      await mc.handleSendMessage(sessionKey, text, files);
+      await mc.handleSendMessage(conversationKey, text, files);
     },
-    [mc.handleSendMessage, selectedSessionKey, messageQueue.sendOrQueue],
+    [mc.handleSendMessage, selectedConversationKey, messageQueue.sendOrQueue],
   );
   const handleComposerSubmit = useCallback<NonNullable<typeof panel.onComposerSubmit>>(
     async (ctx) => {
-      if (ctx.sessionKey && ctx.sessionKey === selectedSessionKey && selectedSessionActive) {
+      if (
+        ctx.sessionKey &&
+        ctx.sessionKey === selectedConversationKey &&
+        selectedSessionActive
+      ) {
         messageQueue.queueMessage(ctx.text, ctx.files);
         return true;
       }
       return (await panel.onComposerSubmit?.(ctx)) ?? false;
     },
-    [selectedSessionKey, selectedSessionActive, messageQueue.queueMessage, panel.onComposerSubmit],
+    [
+      selectedConversationKey,
+      selectedSessionActive,
+      messageQueue.queueMessage,
+      panel.onComposerSubmit,
+    ],
   );
   const queuedMessages = useMemo(
-    () => selectedSessionKey ? { [selectedSessionKey]: messageQueue.queuedMessages } : {},
-    [selectedSessionKey, messageQueue.queuedMessages],
+    () =>
+      selectedConversationKey
+        ? { [selectedConversationKey]: messageQueue.queuedMessages }
+        : {},
+    [selectedConversationKey, messageQueue.queuedMessages],
   );
 
   if (agents.length === 0) {
@@ -340,6 +372,7 @@ export function Dashboard() {
           onApprove={mc.handleApprove}
           onRename={mc.handleRename}
           onSendMessage={handleSendMessage}
+          sessionKeyFor={(id) => id}
           queuedMessages={queuedMessages}
           onRemoveQueuedMessage={(_, id) => messageQueue.removeQueuedMessage(id)}
           queuedLabels={queuedLabels}
@@ -379,6 +412,7 @@ export function Dashboard() {
           processLabels={panel.processLabels}
           getThinkingMessage={panel.getThinkingMessage}
           renderTurnSummary={panel.renderTurnSummary}
+          transformContent={panel.transformContent}
           renderLink={panel.renderLink}
         />
       </div>

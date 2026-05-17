@@ -1,4 +1,8 @@
 import { create } from "zustand";
+import {
+  getConversationScopeKey,
+  parseConversationScopeKey,
+} from "../lib/conversation-scope";
 
 export type SessionRunStatus = "starting" | "running" | "completed" | "error";
 
@@ -7,8 +11,17 @@ interface SessionStatusState {
   setStatus: (agentPath: string, sessionKey: string, status: SessionRunStatus) => void;
 }
 
+export interface SessionStatusKeyParts {
+  agentPath: string;
+  sessionKey: string;
+}
+
 export function getSessionStatusKey(agentPath: string, sessionKey: string) {
-  return `${agentPath}\u0000${sessionKey}`;
+  return getConversationScopeKey(agentPath, sessionKey);
+}
+
+export function parseSessionStatusKey(key: string): SessionStatusKeyParts | null {
+  return parseConversationScopeKey(key);
 }
 
 export const useSessionStatusStore = create<SessionStatusState>((set) => ({

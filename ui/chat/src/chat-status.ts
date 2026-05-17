@@ -5,14 +5,10 @@ export function deriveStatus(items: FeedItem[], isLoading: boolean): ChatStatus 
   const last = items[items.length - 1];
   if (
     last?.feed_type === "assistant_text_streaming" ||
-    last?.feed_type === "thinking_streaming" ||
-    last?.feed_type === "thinking" ||
-    last?.feed_type === "tool_call" ||
-    last?.feed_type === "tool_result"
+    last?.feed_type === "thinking_streaming"
   ) {
     return "streaming";
   }
-  if (last?.feed_type === "user_message") return "submitted";
   if (isLoading) return items.length === 0 ? "submitted" : "streaming";
   return "ready";
 }

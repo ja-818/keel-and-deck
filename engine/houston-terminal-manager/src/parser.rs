@@ -1,6 +1,10 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use super::types::{AssistantMessage, ClaudeEvent, ContentBlock, FeedItem, UserMessage};
+use super::native_delegation;
+use super::types::{
+    AssistantMessage, ClaudeEvent, ContentBlock, FeedItem, NativeDelegationPolicy, Provider,
+    UserMessage,
+};
 
 /// Accumulates stream_event fragments across multiple lines.
 /// Text deltas are accumulated into a running buffer and emitted progressively.
@@ -9,6 +13,11 @@ use super::types::{AssistantMessage, ClaudeEvent, ContentBlock, FeedItem, UserMe
 pub struct StreamAccumulator {
     /// In-progress tool_use blocks keyed by content block index.
     tools: HashMap<u64, InProgressTool>,
+    /// Provider-native delegation tool result IDs blocked in this turn.
+    blocked_tool_ids: HashSet<String>,
+    /// Fatal policy violation captured while parsing provider output.
+    native_delegation_violation: Option<String>,
+    native_delegation_policy: NativeDelegationPolicy,
     /// Accumulated text across all text content blocks.
     text_buffer: String,
     /// Accumulated thinking across all thinking content blocks.
@@ -22,8 +31,28 @@ struct InProgressTool {
 }
 
 impl StreamAccumulator {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(native_delegation_policy: NativeDelegationPolicy) -> Self {
+        Self {
+            native_delegation_policy,
+            ..Self::default()
+        }
+    }
+
+    pub fn take_native_delegation_violation(&mut self) -> Option<String> {
+        self.native_delegation_violation.take()
+    }
+
+    fn native_delegation_error(&mut self, name: &str) -> FeedItem {
+        let details = native_delegation::violation_details(Provider::Anthropic, name);
+        self.native_delegation_violation = Some(details.clone());
+        FeedItem::ToolRuntimeError {
+            kind: super::types::ToolRuntimeErrorKind::ProviderProcess,
+            details,
+        }
+    }
+
+    fn blocks_native_delegation(&self) -> bool {
+        self.native_delegation_policy.blocks()
     }
 
     /// Handle a stream event, returning any completed FeedItems.
@@ -37,9 +66,22 @@ impl StreamAccumulator {
         match inner.event_type.as_str() {
             "content_block_start" => {
                 if let Some(ContentBlock::ToolUse {
-                    name: Some(name), ..
+                    id,
+                    name: Some(name),
+                    ..
                 }) = inner.content_block
                 {
+                    if self.blocks_native_delegation()
+                        && native_delegation::is_blocked_tool_name(&name)
+                    {
+                        if let Some(tool_id) = id {
+                            self.blocked_tool_ids.insert(tool_id);
+                        }
+                        tracing::error!(
+                            "[houston:parser] blocked provider-native delegation tool: {name}"
+                        );
+                        return vec![self.native_delegation_error(&name)];
+                    }
                     // Emit an immediate ToolCall so the UI shows activity right away.
                     // A second ToolCall with full input comes on content_block_stop.
                     let item = FeedItem::ToolCall {
@@ -140,7 +182,23 @@ pub fn parse_event(line: &str, acc: &mut StreamAccumulator) -> Vec<FeedItem> {
     };
 
     match event {
-        ClaudeEvent::System { .. } => vec![],
+        ClaudeEvent::System { subtype, extra, .. } => {
+            if let Some(subtype) = subtype.as_deref() {
+                if acc.blocks_native_delegation()
+                    && native_delegation::is_claude_task_system_subtype(subtype)
+                    && extra
+                        .get("tool_use_id")
+                        .and_then(|value| value.as_str())
+                        .is_some_and(|id| acc.blocked_tool_ids.contains(id))
+                {
+                    tracing::error!(
+                        "[houston:parser] blocked provider-native delegation system event: {subtype}"
+                    );
+                    return vec![acc.native_delegation_error(subtype)];
+                }
+            }
+            vec![]
+        }
         ClaudeEvent::Assistant {
             subtype, message, ..
         } => {
@@ -151,9 +209,9 @@ pub fn parse_event(line: &str, acc: &mut StreamAccumulator) -> Vec<FeedItem> {
                 acc.text_buffer.clear();
                 acc.thinking_buffer.clear();
             }
-            parse_assistant_event(subtype.as_deref(), message)
+            parse_assistant_event(subtype.as_deref(), message, acc)
         }
-        ClaudeEvent::User { message, .. } => parse_user_event(message),
+        ClaudeEvent::User { message, .. } => parse_user_event(message, acc),
         ClaudeEvent::Result {
             subtype,
             result,
@@ -182,6 +240,7 @@ pub fn parse_event(line: &str, acc: &mut StreamAccumulator) -> Vec<FeedItem> {
 fn parse_assistant_event(
     subtype: Option<&str>,
     message: Option<AssistantMessage>,
+    acc: &mut StreamAccumulator,
 ) -> Vec<FeedItem> {
     let is_partial = subtype == Some("partial");
     let Some(msg) = message else {
@@ -215,8 +274,18 @@ fn parse_assistant_event(
                 }
             }
             ContentBlock::ToolUse { name, input, .. } => {
+                let tool_name = name.unwrap_or_else(|| "unknown".into());
+                if acc.blocks_native_delegation()
+                    && native_delegation::is_blocked_tool_name(&tool_name)
+                {
+                    tracing::error!(
+                        "[houston:parser] blocked provider-native delegation tool: {tool_name}"
+                    );
+                    items.push(acc.native_delegation_error(&tool_name));
+                    continue;
+                }
                 items.push(FeedItem::ToolCall {
-                    name: name.unwrap_or_else(|| "unknown".into()),
+                    name: tool_name,
                     input: input.unwrap_or(serde_json::Value::Null),
                 });
             }
@@ -244,7 +313,7 @@ fn parse_assistant_event(
 /// In the Anthropic API, tool results are user-role messages. Claude CLI's
 /// stream-json format emits these as `{"type":"user","message":{...}}`.
 /// We extract ToolResult items so consumers can detect MCP tool completions.
-fn parse_user_event(message: Option<UserMessage>) -> Vec<FeedItem> {
+fn parse_user_event(message: Option<UserMessage>, acc: &mut StreamAccumulator) -> Vec<FeedItem> {
     let Some(msg) = message else {
         return vec![];
     };
@@ -261,9 +330,18 @@ fn parse_user_event(message: Option<UserMessage>) -> Vec<FeedItem> {
     let mut items = Vec::new();
     for block in blocks {
         if let ContentBlock::ToolResult {
-            content, is_error, ..
+            tool_use_id,
+            content,
+            is_error,
+            ..
         } = block
         {
+            if tool_use_id
+                .as_ref()
+                .is_some_and(|id| acc.blocked_tool_ids.remove(id))
+            {
+                continue;
+            }
             let text = match content {
                 Some(serde_json::Value::String(s)) => s,
                 Some(v) => serde_json::to_string_pretty(&v).unwrap_or_default(),
@@ -292,9 +370,10 @@ pub fn extract_session_id(line: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::NativeDelegationPolicy;
 
     fn acc() -> StreamAccumulator {
-        StreamAccumulator::new()
+        StreamAccumulator::new(NativeDelegationPolicy::Block)
     }
 
     #[test]
@@ -339,6 +418,77 @@ mod tests {
             FeedItem::ToolCall { name, .. } => assert_eq!(name, "Read"),
             other => panic!("expected ToolCall, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn blocks_provider_native_delegation_tool_use() {
+        let line = r#"{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t1","name":"Agent","input":{"prompt":"delegate"}}]}}"#;
+        let mut a = acc();
+        let items = parse_event(line, &mut a);
+        assert_eq!(items.len(), 1);
+        match &items[0] {
+            FeedItem::ToolRuntimeError { details, .. } => {
+                assert!(details.contains("Provider-native delegation is disabled"));
+            }
+            other => panic!("expected ToolRuntimeError, got {other:?}"),
+        }
+        assert!(a.take_native_delegation_violation().is_some());
+    }
+
+    #[test]
+    fn allows_provider_native_delegation_tool_use_when_policy_allows() {
+        let mut a = StreamAccumulator::new(NativeDelegationPolicy::Allow);
+        let line = r#"{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_1","name":"Task","input":{"prompt":"delegate"}}]}}"#;
+
+        let items = parse_event(line, &mut a);
+
+        assert!(matches!(
+            items.as_slice(),
+            [FeedItem::ToolCall { name, .. }] if name == "Task"
+        ));
+        assert!(a.take_native_delegation_violation().is_none());
+    }
+
+    #[test]
+    fn blocks_streaming_provider_native_delegation_tool_and_suppresses_result() {
+        let mut a = acc();
+        let start = r#"{"type":"stream_event","event":{"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"toolu_1","name":"Task","input":{}}}}"#;
+        let items = parse_event(start, &mut a);
+        assert_eq!(items.len(), 1);
+        assert!(matches!(&items[0], FeedItem::ToolRuntimeError { .. }));
+
+        let result = r#"{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_1","content":"native delegation result","is_error":false}]}}"#;
+        assert!(parse_event(result, &mut a).is_empty());
+    }
+
+    #[test]
+    fn ignores_standalone_claude_task_system_event_without_blocked_tool() {
+        let line = r#"{"type":"system","subtype":"task_started","task_id":"a686ea714acecc130","tool_use_id":"call_00_idDUd"}"#;
+        let mut a = acc();
+        let items = parse_event(line, &mut a);
+        assert!(items.is_empty());
+        assert!(a.take_native_delegation_violation().is_none());
+    }
+
+    #[test]
+    fn blocks_claude_task_system_event_for_blocked_tool_id() {
+        let mut a = acc();
+        let start = r#"{"type":"stream_event","event":{"type":"content_block_start","index":1,"content_block":{"type":"tool_use","id":"toolu_1","name":"Task","input":{}}}}"#;
+        assert!(matches!(
+            parse_event(start, &mut a).as_slice(),
+            [FeedItem::ToolRuntimeError { .. }]
+        ));
+        let line = r#"{"type":"system","subtype":"task_started","task_id":"a686ea714acecc130","tool_use_id":"toolu_1"}"#;
+        let items = parse_event(line, &mut a);
+        assert_eq!(items.len(), 1);
+        match &items[0] {
+            FeedItem::ToolRuntimeError { details, .. } => {
+                assert!(details.contains("Provider-native delegation is disabled"));
+                assert!(details.contains("task_started"));
+            }
+            other => panic!("expected ToolRuntimeError, got {other:?}"),
+        }
+        assert!(a.take_native_delegation_violation().is_some());
     }
 
     #[test]

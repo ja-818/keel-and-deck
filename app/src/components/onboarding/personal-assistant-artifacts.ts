@@ -21,12 +21,17 @@ export function defaultAssistantSetup(labels: {
 }
 
 export function buildAssistantInstructions(setup: AssistantSetup, missionTitle: string): string {
+  const mainJob =
+    setup.focus === "orchestrator"
+      ? "You are my main assistant who coordinates other agents. Help me manage tasks across my agents and keep everything running smoothly."
+      : setup.focus.trim();
+
   return `# ${setup.assistantName}
 
 You are my Personal assistant in Houston.
 
 ## Main job
-${setup.focus.trim()}
+${mainJob}
 
 ## First workflow
 Set up and run: ${missionTitle}.

@@ -8,7 +8,9 @@ use crate::session_pids::SessionPidMap;
 use houston_db::Database;
 use houston_terminal_manager::auth_error::{is_auth_error, is_auth_retry_marker};
 use houston_terminal_manager::provider_auth::{probe_claude_auth_status, ProviderAuthState};
-use houston_terminal_manager::{FeedItem, Provider, SessionManager, SessionStatus, SessionUpdate};
+use houston_terminal_manager::{
+    FeedItem, NativeDelegationPolicy, Provider, SessionManager, SessionStatus, SessionUpdate,
+};
 use houston_ui_events::{DynEventSink, HoustonEvent};
 use std::path::{Path, PathBuf};
 
@@ -78,6 +80,7 @@ pub fn spawn_and_monitor(
     provider: Provider,
     model: Option<String>,
     effort: Option<String>,
+    native_delegation_policy: NativeDelegationPolicy,
 ) -> tokio::task::JoinHandle<SessionResult> {
     // Ensure the user's shell PATH is resolved before spawning.
     // OnceLock inside init() makes this a no-op after the first call.
@@ -97,6 +100,7 @@ pub fn spawn_and_monitor(
         None,  // mcp_config
         false, // disable_builtin_tools
         false, // disable_all_tools
+        native_delegation_policy,
     );
 
     let sink = sink;

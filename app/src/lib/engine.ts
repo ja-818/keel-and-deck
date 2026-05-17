@@ -152,12 +152,7 @@ listen<{ baseUrl: string; token: string }>(
   (ev) => {
     applyConfig(ev.payload);
     if (_ws) {
-      try {
-        _ws.disconnect();
-      } catch {
-        /* ignore */
-      }
-      _ws = null;
+      _ws.replaceClient(getEngine());
     }
   },
 ).catch(() => {

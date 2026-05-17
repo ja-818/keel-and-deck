@@ -36,6 +36,8 @@ pub fn create(root: &Path, input: NewActivity) -> CoreResult<Activity> {
         worktree_path: input.worktree_path,
         routine_id: None,
         routine_run_id: None,
+        orchestration_parent_agent_path: input.orchestration_parent_agent_path,
+        orchestration_parent_session_key: input.orchestration_parent_session_key,
         updated_at: Some(now),
         provider: input.provider,
         model: input.model,
@@ -78,6 +80,12 @@ pub fn update(root: &Path, id: &str, updates: ActivityUpdate) -> CoreResult<Acti
     }
     if let Some(routine_run_id) = updates.routine_run_id {
         item.routine_run_id = Some(routine_run_id);
+    }
+    if let Some(parent_agent_path) = updates.orchestration_parent_agent_path {
+        item.orchestration_parent_agent_path = Some(parent_agent_path);
+    }
+    if let Some(parent_session_key) = updates.orchestration_parent_session_key {
+        item.orchestration_parent_session_key = Some(parent_session_key);
     }
     if let Some(provider) = updates.provider {
         item.provider = Some(provider);
@@ -127,8 +135,7 @@ pub fn set_status_by_session_key(
     let mut items = list(root)?;
     let implied_id = session_key.strip_prefix("activity-");
     let Some(item) = items.iter_mut().find(|t| {
-        t.session_key.as_deref() == Some(session_key)
-            || implied_id.is_some_and(|id| t.id == id)
+        t.session_key.as_deref() == Some(session_key) || implied_id.is_some_and(|id| t.id == id)
     }) else {
         return Ok(None);
     };
@@ -144,6 +151,31 @@ pub fn set_status_by_session_key(
         return Ok(Some(result));
     }
     item.status = status.to_string();
+    item.updated_at = Some(Utc::now().to_rfc3339());
+    let result = item.clone();
+    write_json(root, FILE, &items)?;
+    Ok(Some(result))
+}
+
+/// Like [`set_status_by_session_key`] but writes the description field.
+/// Used by the dispatch system to persist the sub-agent's response text
+/// so the caller can read it back.
+pub fn set_description_by_session_key(
+    root: &Path,
+    session_key: &str,
+    description: &str,
+) -> CoreResult<Option<Activity>> {
+    let mut items = list(root)?;
+    let implied_id = session_key.strip_prefix("activity-");
+    let Some(item) = items.iter_mut().find(|t| {
+        t.session_key.as_deref() == Some(session_key) || implied_id.is_some_and(|id| t.id == id)
+    }) else {
+        return Ok(None);
+    };
+    if item.session_key.as_deref() != Some(session_key) {
+        item.session_key = Some(session_key.to_string());
+    }
+    item.description = description.to_string();
     item.updated_at = Some(Utc::now().to_rfc3339());
     let result = item.clone();
     write_json(root, FILE, &items)?;

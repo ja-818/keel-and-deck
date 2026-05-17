@@ -1,7 +1,9 @@
 use super::codex_parser;
 use super::parser;
 use super::stderr_filter::{stderr_feed_item, StderrState};
-use super::types::{FeedItem, Provider, ToolRuntimeErrorKind};
+use super::types::{
+    FeedItem, NativeDelegationPolicy, Provider, SessionStatus, ToolRuntimeErrorKind,
+};
 use crate::auth_error::is_auth_error;
 use crate::provider_error::is_malformed_provider_json_error;
 use crate::session_update::SessionUpdate;
@@ -23,6 +25,7 @@ pub struct StdoutReadReport {
     /// card, so `handle_failed_exit` must NOT also emit the generic
     /// `ProviderProcess` card on top of it.
     pub saw_model_unsupported_error: bool,
+    pub native_delegation_attempt: bool,
 }
 
 /// Read all stderr lines, emitting only user-actionable feed items.
@@ -53,20 +56,22 @@ pub async fn read_stdout_events(
     stdout: tokio::process::ChildStdout,
     tx: mpsc::UnboundedSender<SessionUpdate>,
     provider: Provider,
+    native_delegation_policy: NativeDelegationPolicy,
 ) -> StdoutReadReport {
     match provider {
-        Provider::Anthropic => read_claude_stdout(stdout, tx).await,
-        Provider::OpenAI => read_codex_stdout(stdout, tx).await,
+        Provider::Anthropic => read_claude_stdout(stdout, tx, native_delegation_policy).await,
+        Provider::OpenAI => read_codex_stdout(stdout, tx, native_delegation_policy).await,
     }
 }
 
 async fn read_claude_stdout(
     stdout: tokio::process::ChildStdout,
     tx: mpsc::UnboundedSender<SessionUpdate>,
+    native_delegation_policy: NativeDelegationPolicy,
 ) -> StdoutReadReport {
     let reader = BufReader::new(stdout);
     let mut lines = reader.lines();
-    let mut acc = parser::StreamAccumulator::new();
+    let mut acc = parser::StreamAccumulator::new(native_delegation_policy);
     let mut line_count = 0u64;
     let mut item_count = 0u64;
     let mut report = StdoutReadReport::default();
@@ -86,6 +91,14 @@ async fn read_claude_stdout(
         let items = parser::parse_event(&line, &mut acc);
         mark_auth_error(&items, &mut report);
         item_count += log_and_send(&tx, items);
+        if let Some(details) = acc.take_native_delegation_violation() {
+            tracing::error!("[houston:stdout:claude] fatal provider policy violation: {details}");
+            report.native_delegation_attempt = true;
+            let _ = tx.send(SessionUpdate::Status(SessionStatus::Error(
+                crate::native_delegation::NATIVE_DELEGATION_BLOCKED_MESSAGE.to_string(),
+            )));
+            break;
+        }
     }
     tracing::debug!(
         "[houston:stdout:claude] stream ended. {line_count} lines, {item_count} feed items"
@@ -96,10 +109,11 @@ async fn read_claude_stdout(
 async fn read_codex_stdout(
     stdout: tokio::process::ChildStdout,
     tx: mpsc::UnboundedSender<SessionUpdate>,
+    native_delegation_policy: NativeDelegationPolicy,
 ) -> StdoutReadReport {
     let reader = BufReader::new(stdout);
     let mut lines = reader.lines();
-    let mut acc = codex_parser::CodexAccumulator::new();
+    let mut acc = codex_parser::CodexAccumulator::new(native_delegation_policy);
     let mut line_count = 0u64;
     let mut item_count = 0u64;
     let mut report = StdoutReadReport::default();
@@ -115,6 +129,14 @@ async fn read_codex_stdout(
         mark_auth_error(&items, &mut report);
         mark_model_unsupported(&items, &mut report);
         item_count += log_and_send(&tx, items);
+        if let Some(details) = acc.take_native_delegation_violation() {
+            tracing::error!("[houston:stdout:codex] fatal provider policy violation: {details}");
+            report.native_delegation_attempt = true;
+            let _ = tx.send(SessionUpdate::Status(SessionStatus::Error(
+                crate::native_delegation::NATIVE_DELEGATION_BLOCKED_MESSAGE.to_string(),
+            )));
+            break;
+        }
     }
     tracing::debug!(
         "[houston:stdout:codex] stream ended. {line_count} lines, {item_count} feed items"
@@ -213,7 +235,7 @@ mod tests {
     #[test]
     fn mark_auth_error_flags_claude_result_error_via_parser() {
         let line = r#"{"type":"result","subtype":"error","is_error":true,"result":"Claude Code is not authenticated. Run claude auth login"}"#;
-        let mut acc = parser::StreamAccumulator::new();
+        let mut acc = parser::StreamAccumulator::new(NativeDelegationPolicy::Block);
         let items = parser::parse_event(line, &mut acc);
         let mut report = StdoutReadReport::default();
         mark_auth_error(&items, &mut report);

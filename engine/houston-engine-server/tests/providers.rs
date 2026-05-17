@@ -13,6 +13,7 @@ async fn spawn() -> (SocketAddr, String) {
         home_dir: std::env::temp_dir(),
         docs_dir: std::env::temp_dir(),
         app_system_prompt: String::new(),
+        app_beginner_system_prompt: String::new(),
         app_onboarding_prompt: String::new(),
         tunnel_url: "http://test.invalid".into(),
     };

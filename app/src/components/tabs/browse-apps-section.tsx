@@ -1,7 +1,8 @@
 import { useState, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { Search, Loader2, Plus, ChevronDown } from "lucide-react";
+import { Search, Loader2, ChevronDown } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@houston-ai/core";
 import { tauriConnections, tauriSystem } from "../../lib/tauri";
 import { useComposioRefetchOnReturn } from "../../hooks/use-composio-refetch-on-return";
 
@@ -16,7 +17,7 @@ export function BrowseAppsSection({ connectedToolkits }: BrowseAppsSectionProps)
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [visible, setVisible] = useState(PAGE_SIZE);
-  const [connecting, setConnecting] = useState<string | null>(null);
+  const [waitingForConnection, setWaitingForConnection] = useState<Set<string>>(new Set());
   const markWaitingForAuth = useComposioRefetchOnReturn();
 
   const { data: apiApps } = useQuery({
@@ -35,6 +36,10 @@ export function BrowseAppsSection({ connectedToolkits }: BrowseAppsSectionProps)
       categories: a.categories ?? [],
     }));
   }, [apiApps]);
+
+  const allConnected = useMemo(() => {
+    return catalog.length > 0 && catalog.every((app) => connectedToolkits.has(app.toolkit));
+  }, [catalog, connectedToolkits]);
 
   const categories = useMemo(() => {
     const counts = new Map<string, number>();
@@ -74,15 +79,17 @@ export function BrowseAppsSection({ connectedToolkits }: BrowseAppsSectionProps)
 
   const handleConnect = useCallback(
     async (toolkit: string) => {
-      setConnecting(toolkit);
+      setWaitingForConnection((prev) => new Set(prev).add(toolkit));
       try {
         const { redirect_url } = await tauriConnections.connectApp(toolkit);
         tauriSystem.openUrl(redirect_url);
         markWaitingForAuth(toolkit);
       } catch {
-        // Error already shown via invoke toast
-      } finally {
-        setConnecting(null);
+        setWaitingForConnection((prev) => {
+          const next = new Set(prev);
+          next.delete(toolkit);
+          return next;
+        });
       }
     },
     [markWaitingForAuth],
@@ -134,19 +141,27 @@ export function BrowseAppsSection({ connectedToolkits }: BrowseAppsSectionProps)
       </div>
 
       {/* Grid */}
-      {available.length === 0 && (
+      {allConnected && available.length === 0 ? (
+        <div className="flex flex-col items-center py-8">
+          <Empty className="border-0">
+            <EmptyHeader>
+              <EmptyTitle>{t("allConnected")}</EmptyTitle>
+              <EmptyDescription>{t("browse.noResults")}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </div>
+      ) : available.length === 0 ? (
         <p className="text-sm text-muted-foreground py-4 text-center">
           {t("browse.noResults")}
         </p>
-      )}
-      {available.length > 0 && (
+      ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {visibleApps.map((app) => (
               <AppCard
                 key={app.toolkit}
                 app={app}
-                connecting={connecting === app.toolkit}
+                isWaiting={waitingForConnection.has(app.toolkit)}
                 onConnect={handleConnect}
               />
             ))}
@@ -177,11 +192,11 @@ interface AppInfo {
 
 function AppCard({
   app,
-  connecting,
+  isWaiting,
   onConnect,
 }: {
   app: AppInfo;
-  connecting: boolean;
+  isWaiting: boolean;
   onConnect: (toolkit: string) => void;
 }) {
   const { t } = useTranslation("integrations");
@@ -189,13 +204,7 @@ function AppCard({
   const initial = app.name.charAt(0).toUpperCase();
 
   return (
-    <button
-      type="button"
-      onClick={() => onConnect(app.toolkit)}
-      disabled={connecting}
-      title={t("browse.connectTitle", { name: app.name })}
-      className="group w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl bg-secondary hover:bg-black/[0.05] transition-colors disabled:opacity-60 disabled:cursor-wait focus-visible:outline-none focus-visible:bg-black/[0.05]"
-    >
+    <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-secondary min-w-0">
       {!imgError ? (
         <img
           src={app.logoUrl}
@@ -218,12 +227,19 @@ function AppCard({
           {app.description}
         </p>
       </div>
-      {connecting ? (
+      {isWaiting ? (
         <Loader2 className="size-3.5 animate-spin text-muted-foreground shrink-0" />
       ) : (
-        <Plus className="size-3.5 text-muted-foreground/60 shrink-0 group-hover:text-muted-foreground transition-colors" />
+        <button
+          type="button"
+          onClick={() => onConnect(app.toolkit)}
+          title={t("browse.connectTitle", { name: app.name })}
+          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-foreground text-background text-xs font-medium hover:opacity-90 transition-opacity shrink-0"
+        >
+          {t("linkCard.connect")}
+        </button>
       )}
-    </button>
+    </div>
   );
 }
 

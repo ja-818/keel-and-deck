@@ -211,5 +211,25 @@
       "boardNavigate": "Move between missions",
       "cheatsheet": "Show this sheet"
     }
+  },
+  "beginner": {
+    "emptyTitle": "Start with a suggestion",
+    "emptyDescription": "Choose one of the suggestions below to get started, or type anything in the chat.",
+    "suggestion1": "Plan my day",
+    "suggestion2": "Summarize my inbox",
+    "suggestion3": "Draft a reply",
+    "activeAgents": "Active agents",
+    "activeAgentsCount": "{{count}} agents",
+    "showActiveAgents": "Show active agents",
+    "hideActiveAgents": "Hide active agents",
+    "statusWaiting": "Waiting",
+    "statusRunning": "Running",
+    "statusDone": "Finished",
+    "statusNeedsYou": "Needs you",
+    "statusBlocked": "Blocked",
+    "statusCancelled": "Cancelled",
+    "statusError": "Error",
+    "toggleToPro": "Professional mode",
+    "toggleToBeginner": "Beginner mode"
   }
 }

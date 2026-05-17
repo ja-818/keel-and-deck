@@ -1,4 +1,4 @@
-use super::types::{Provider, SessionStatus};
+use super::types::{NativeDelegationPolicy, Provider, SessionStatus};
 use crate::claude_runner::spawn_claude;
 use crate::cli_process::{run_cli_process, CliRunOutcome};
 use crate::codex_command;
@@ -32,6 +32,7 @@ impl SessionManager {
         disable_builtin_tools: bool,
         // When true, disables ALL tools (--allowedTools ""). Use for pure conversation.
         disable_all_tools: bool,
+        native_delegation_policy: NativeDelegationPolicy,
     ) -> (mpsc::UnboundedReceiver<SessionUpdate>, SessionHandle) {
         let (tx, rx) = mpsc::unbounded_channel();
 
@@ -51,6 +52,7 @@ impl SessionManager {
                         mcp_config,
                         disable_builtin_tools,
                         disable_all_tools,
+                        native_delegation_policy,
                     )
                     .await;
                 }
@@ -63,6 +65,7 @@ impl SessionManager {
                         model,
                         effort,
                         system_prompt,
+                        native_delegation_policy,
                     )
                     .await;
                 }
@@ -91,10 +94,9 @@ async fn spawn_codex(
     model: Option<String>,
     effort: Option<String>,
     system_prompt: Option<String>,
+    native_delegation_policy: NativeDelegationPolicy,
 ) {
-    let effort = Some(
-        effort.unwrap_or_else(|| DEFAULT_CODEX_REASONING_EFFORT.to_string()),
-    );
+    let effort = Some(effort.unwrap_or_else(|| DEFAULT_CODEX_REASONING_EFFORT.to_string()));
     tracing::info!(
         "[houston:session] spawning codex exec --json (resume={:?}, model={:?}, effort={:?})",
         resume_session_id,
@@ -118,9 +120,17 @@ async fn spawn_codex(
         model.as_deref(),
         effort.as_deref(),
         system_prompt.as_deref(),
+        native_delegation_policy,
     );
 
-    let outcome = run_cli_process(tx, &mut cmd, &prompt, Provider::OpenAI).await;
+    let outcome = run_cli_process(
+        tx,
+        &mut cmd,
+        &prompt,
+        Provider::OpenAI,
+        native_delegation_policy,
+    )
+    .await;
     if outcome == CliRunOutcome::CodexResumeMissing && resume_session_id.is_some() {
         tracing::warn!(
             "[houston:session] codex resume rollout missing; retrying with fresh thread"
@@ -132,8 +142,16 @@ async fn spawn_codex(
             model.as_deref(),
             effort.as_deref(),
             system_prompt.as_deref(),
+            native_delegation_policy,
         );
-        run_cli_process(tx, &mut fresh_cmd, &prompt, Provider::OpenAI).await;
+        run_cli_process(
+            tx,
+            &mut fresh_cmd,
+            &prompt,
+            Provider::OpenAI,
+            native_delegation_policy,
+        )
+        .await;
     }
 }
 
@@ -143,6 +161,7 @@ fn build_codex_command(
     model: Option<&str>,
     effort: Option<&str>,
     system_prompt: Option<&str>,
+    native_delegation_policy: NativeDelegationPolicy,
 ) -> Command {
     // Always prefer the bundled codex over whatever happens to be on the
     // user's PATH. The user's PATH might point at a stale `nvm` codex that
@@ -162,6 +181,7 @@ fn build_codex_command(
         model,
         effort,
         system_prompt,
+        native_delegation_policy,
     ));
     if let Some(dir) = working_dir {
         cmd.current_dir(dir);

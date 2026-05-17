@@ -123,6 +123,14 @@ pub fn seed_agent(dir: &Path) -> Result<(), String> {
     fs::create_dir_all(&modes_dir)
         .map_err(|e| format!("Failed to create .houston/prompts/modes: {e}"))?;
 
+    // Pre-create dispatch directories so the assistant can write
+    // delegation files without creating the directory tree first.
+    let dispatch_dir = dir.join(".houston/dispatch");
+    fs::create_dir_all(dispatch_dir.join("pending"))
+        .map_err(|e| format!("Failed to create .houston/dispatch/pending: {e}"))?;
+    fs::create_dir_all(dispatch_dir.join("done"))
+        .map_err(|e| format!("Failed to create .houston/dispatch/done: {e}"))?;
+
     if let Err(e) = houston_agent_files::migrate_agent_data(dir) {
         tracing::warn!("[agent] migration failed for {}: {e}", dir.display());
     }
@@ -141,6 +149,8 @@ pub fn build_agent_context(
     dir: &Path,
     working_dir_override: Option<&Path>,
     mode: Option<&str>,
+    workspace_root: Option<&Path>,
+    connected_toolkits: &[String],
 ) -> String {
     let mut parts: Vec<String> = Vec::new();
     let prompts_dir = dir.join(".houston/prompts");
@@ -190,22 +200,19 @@ pub fn build_agent_context(
 
     let integrations_path = dir.join(".houston/integrations.json");
     if let Ok(content) = fs::read_to_string(&integrations_path) {
-        let names: Vec<String> =
-            serde_json::from_str::<Vec<serde_json::Value>>(&content)
-                .ok()
-                .map(|arr| {
-                    arr.iter()
-                        .filter_map(|v| {
-                            v.get("toolkit").and_then(|t| t.as_str()).map(String::from)
-                        })
-                        .collect()
-                })
-                .or_else(|| {
-                    serde_json::from_str::<serde_json::Map<String, serde_json::Value>>(&content)
-                        .ok()
-                        .map(|map| map.keys().cloned().collect())
-                })
-                .unwrap_or_default();
+        let names: Vec<String> = serde_json::from_str::<Vec<serde_json::Value>>(&content)
+            .ok()
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.get("toolkit").and_then(|t| t.as_str()).map(String::from))
+                    .collect()
+            })
+            .or_else(|| {
+                serde_json::from_str::<serde_json::Map<String, serde_json::Value>>(&content)
+                    .ok()
+                    .map(|map| map.keys().cloned().collect())
+            })
+            .unwrap_or_default();
 
         if !names.is_empty() {
             parts.push(format!(
@@ -214,6 +221,47 @@ pub fn build_agent_context(
                  Prefer these when the task involves their services.",
                 names.join(", ")
             ));
+        }
+    }
+
+    if !connected_toolkits.is_empty() {
+        parts.push(format!(
+            "# Connected Apps (ready to use)\n\n{}",
+            connected_toolkits
+                .iter()
+                .map(|t| format!("- {t}"))
+                .collect::<Vec<_>>()
+                .join("\n")
+        ));
+    }
+
+    if let Some(root) = workspace_root {
+        if root.exists() {
+            let mut agents: Vec<String> = Vec::new();
+            if let Ok(entries) = fs::read_dir(root) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.is_dir() {
+                        let claude_path = path.join("CLAUDE.md");
+                        if claude_path.exists() {
+                            let dir_name = entry.file_name();
+                            let name = fs::read_to_string(&claude_path)
+                                .ok()
+                                .and_then(|content| {
+                                    content
+                                        .lines()
+                                        .find(|l| l.starts_with("# "))
+                                        .map(|l| l.trim_start_matches("# ").trim().to_string())
+                                })
+                                .unwrap_or_else(|| dir_name.to_string_lossy().to_string());
+                            agents.push(format!("- {name}: {}/.houston/activity/", path.display()));
+                        }
+                    }
+                }
+            }
+            if !agents.is_empty() {
+                parts.push(format!("# Workspace Agents\n\n{}", agents.join("\n")));
+            }
         }
     }
 
@@ -230,7 +278,10 @@ mod tests {
         let d = TempDir::new().unwrap();
         seed_file(d.path(), "CLAUDE.md", "first").unwrap();
         seed_file(d.path(), "CLAUDE.md", "second").unwrap();
-        assert_eq!(fs::read_to_string(d.path().join("CLAUDE.md")).unwrap(), "first");
+        assert_eq!(
+            fs::read_to_string(d.path().join("CLAUDE.md")).unwrap(),
+            "first"
+        );
     }
 
     #[cfg(unix)]
@@ -275,7 +326,7 @@ mod tests {
         )
         .unwrap();
 
-        let out = build_agent_context(d.path(), None, None);
+        let out = build_agent_context(d.path(), None, None, None, &[]);
 
         assert!(out.contains("# Persistent Learnings - Frozen Snapshot"));
         assert!(out.contains("User calls this contact Mr. Perkins."));
@@ -293,7 +344,7 @@ mod tests {
         let agent_dir = ws.path().join("juan-agent");
         fs::create_dir_all(&agent_dir).unwrap();
 
-        let out = build_agent_context(&agent_dir, None, None);
+        let out = build_agent_context(&agent_dir, None, None, None, &[]);
 
         assert!(out.contains("# Workspace Context"));
         assert!(out.contains("Acme Corp, B2B fintech."));
@@ -305,7 +356,7 @@ mod tests {
     fn build_agent_context_skips_workspace_section_when_no_workspace_marker() {
         let d = TempDir::new().unwrap();
         // No `.houston/` in parent => not a workspace child.
-        let out = build_agent_context(d.path(), None, None);
+        let out = build_agent_context(d.path(), None, None, None, &[]);
         assert!(!out.contains("# Workspace Context"));
         assert!(!out.contains("# User Context"));
     }

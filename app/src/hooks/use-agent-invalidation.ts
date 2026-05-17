@@ -1,8 +1,14 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import type { HoustonEvent } from "@houston-ai/core";
 import { queryKeys } from "../lib/query-keys";
 import { subscribeHoustonEvents } from "../lib/events";
+import { useUIStore } from "../stores/ui";
+import {
+  normalizeToolkitSlug,
+  normalizeToolkitSlugs,
+} from "../lib/composio-toolkits";
 
 /**
  * Maps agent-change events from Rust (both Tauri command emissions
@@ -12,6 +18,9 @@ import { subscribeHoustonEvents } from "../lib/events";
  */
 export function useAgentInvalidation() {
   const qc = useQueryClient();
+
+  const { t } = useTranslation("integrations");
+  const addToast = useUIStore((s) => s.addToast);
 
   useEffect(() => {
     const unlisten = subscribeHoustonEvents((p: HoustonEvent) => {
@@ -62,9 +71,24 @@ export function useAgentInvalidation() {
           break;
         // Engine-side watcher saw a toolkit land in the consumer
         // connections list — flip every visible Composio card.
-        case "ComposioConnectionAdded":
+        case "ComposioConnectionAdded": {
+          const toolkit = normalizeToolkitSlug(p.data.toolkit);
+          qc.setQueryData<string[]>(queryKeys.connectedToolkits(), (current) =>
+            normalizeToolkitSlugs([...(current ?? []), toolkit]),
+          );
           qc.invalidateQueries({ queryKey: queryKeys.connectedToolkits() });
+          // Resolve app name from cached composioApps.
+          const apps = qc.getQueryData<Array<{ toolkit: string; name: string }>>(
+            queryKeys.composioApps(),
+          );
+          const appName =
+            apps?.find((a) => a.toolkit === p.data.toolkit)?.name ?? p.data.toolkit;
+          addToast({
+            title: t("connectedToast", { app: appName }),
+            variant: "success",
+          });
           break;
+        }
       }
     });
 

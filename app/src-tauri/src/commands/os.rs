@@ -83,7 +83,11 @@ if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
     {
         // Linux: zenity is the lowest-common-denominator GTK picker.
         let output = Command::new("zenity")
-            .args(["--file-selection", "--directory", "--title=Select your project directory"])
+            .args([
+                "--file-selection",
+                "--directory",
+                "--title=Select your project directory",
+            ])
             .output()
             .await
             .map_err(|e| format!("Failed to open folder picker (install zenity): {e}"))?;
@@ -149,8 +153,7 @@ pub async fn open_file(agent_path: String, relative_path: String) -> Result<(), 
     if !full.exists() {
         return Err(format!("File does not exist: {}", full.display()));
     }
-    spawn_default_open(&full.to_string_lossy())
-        .map_err(|e| format!("Failed to open file: {e}"))
+    spawn_default_open(&full.to_string_lossy()).map_err(|e| format!("Failed to open file: {e}"))
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -166,8 +169,7 @@ pub async fn reveal_file(agent_path: String, relative_path: String) -> Result<()
 #[tauri::command(rename_all = "snake_case")]
 pub async fn reveal_agent(agent_path: String) -> Result<(), String> {
     let root = expand(&agent_path);
-    spawn_default_open(&root.to_string_lossy())
-        .map_err(|e| format!("Failed to open folder: {e}"))
+    spawn_default_open(&root.to_string_lossy()).map_err(|e| format!("Failed to open folder: {e}"))
 }
 
 /// Open the OS file manager with the given path selected (Finder reveal /

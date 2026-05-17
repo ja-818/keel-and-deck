@@ -74,6 +74,9 @@ importers:
       ajv:
         specifier: ^8.17.1
         version: 8.18.0
+      framer-motion:
+        specifier: ^12.38.0
+        version: 12.38.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       i18next:
         specifier: ^26.0.6
         version: 26.0.6(typescript@6.0.2)

@@ -48,5 +48,43 @@
     "alreadyConnected": "Ya está conectado",
     "connected": "Conectado",
     "connect": "Conectar"
+  },
+  "connectedToast": "{{app}} conectado",
+  "continueAfterConnected": "{{toolkits}} conectado. Continúa ahora con la solicitud original.",
+  "continueAfterComposioSignIn": "Inicio de sesión en Composio completo. Continúa ahora con la solicitud original.",
+  "connecting": "Conectando...",
+  "verify": "Verificar",
+  "verifying": "Verificando",
+  "verifiedToast": "{{name}} conectado",
+  "notVerified": "Aún no está conectado. Termina la aprobación en el navegador y vuelve a verificar.",
+  "retry": "Intentar de nuevo",
+  "allConnected": "Todas tus apps están conectadas",
+  "dispatch": {
+    "suggestionTitle": "Puedo crear {{count}} agentes especializados para esto",
+    "tokenNote": "Crear agentes usa tokens extra pero es más rápido y produce mejores resultados.",
+    "accept": "Crear agentes",
+    "reject": "No, hazlo tú",
+    "rejectPrompt": "No, encárgate tú de toda la solicitud. Complétala de forma secuencial sin crear agentes especializados.",
+    "creating": "Creando agentes…",
+    "created": "Agentes creados y ejecutándose",
+    "preparingAgents": "Preparando el plan de agentes…",
+    "preparingAdjustment": "Preparando el ajuste…",
+    "preparingSave": "Preparando opciones de guardado…",
+    "agentsWorking": "Agentes trabajando, {{done}}/{{total}} listos",
+    "waitingForAgents": "Esperando a que terminen los agentes actuales…",
+    "adjusting": "Actualizando agentes especializados…",
+    "error": "Error al crear agentes. Intenta de nuevo."
+  },
+  "saveAgents": {
+    "title": "¿Guardar o actualizar estos agentes?",
+    "body": "Conserva los agentes seleccionados para usarlos después. Si uno ya existe, Houston lo actualiza en lugar de crear un duplicado.",
+    "accept": "Guardar seleccionados",
+    "reject": "Ahora no",
+    "saving": "Guardando agentes…",
+    "saved": "Agentes guardados",
+    "savedDetail": "Ya están disponibles en tu espacio de trabajo.",
+    "savedConversation": "Listo. Los agentes quedaron guardados o actualizados en tu espacio de trabajo. Te puedo ayudar con lo que siga.",
+    "skipped": "No se guardó ningún agente.",
+    "error": "Error al guardar agentes. Intenta de nuevo."
   }
 }

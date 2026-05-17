@@ -18,11 +18,18 @@ const COMPOSIO_LOGO =
  * Reflects live `useConnections()` state — flips to a green "Connected"
  * pill the moment auth completes.
  */
-export function ComposioSigninCard() {
+interface ComposioSigninCardProps {
+  onSignInComplete?: () => void;
+}
+
+export function ComposioSigninCard({ onSignInComplete }: ComposioSigninCardProps) {
   const { t } = useTranslation("chat");
   const { data: status } = useConnections();
   const reset = useResetConnections();
-  const auth = useComposioAuth(() => reset());
+  const auth = useComposioAuth(async () => {
+    await reset();
+    onSignInComplete?.();
+  });
   const isSignedIn = status?.status === "ok";
 
   const handleSignIn = useCallback(() => {

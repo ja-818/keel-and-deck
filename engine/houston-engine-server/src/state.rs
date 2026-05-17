@@ -71,7 +71,8 @@ impl ServerState {
             .with_app_prompts(
                 config.app_system_prompt.clone(),
                 config.app_onboarding_prompt.clone(),
-            );
+            )
+            .with_beginner_prompt(config.app_beginner_system_prompt.clone());
 
         let mobile_access = MobileAccessStore::new(db);
         let tunnel_runtime = tunnel_identity.map(TunnelRuntimeState::new);

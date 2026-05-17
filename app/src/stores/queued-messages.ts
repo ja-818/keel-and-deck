@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { getSessionStatusKey } from "./session-status";
+import { getConversationScopeKey } from "../lib/conversation-scope";
 
 export interface QueuedChatMessage {
   id: string;
@@ -30,7 +30,7 @@ export const useQueuedMessageStore = create<QueuedMessageState>((set, get) => ({
 
   enqueue: (agentPath, sessionKey, text, files) =>
     set((state) => {
-      const key = getSessionStatusKey(agentPath, sessionKey);
+      const key = getConversationScopeKey(agentPath, sessionKey);
       const item: QueuedChatMessage = {
         id: createQueueId(),
         text,
@@ -47,7 +47,7 @@ export const useQueuedMessageStore = create<QueuedMessageState>((set, get) => ({
 
   remove: (agentPath, sessionKey, id) =>
     set((state) => {
-      const key = getSessionStatusKey(agentPath, sessionKey);
+      const key = getConversationScopeKey(agentPath, sessionKey);
       const next = (state.queues[key] ?? []).filter((item) => item.id !== id);
       if (next.length > 0) {
         return { queues: { ...state.queues, [key]: next } };
@@ -57,7 +57,7 @@ export const useQueuedMessageStore = create<QueuedMessageState>((set, get) => ({
     }),
 
   takeAll: (agentPath, sessionKey) => {
-    const key = getSessionStatusKey(agentPath, sessionKey);
+    const key = getConversationScopeKey(agentPath, sessionKey);
     const items = get().queues[key] ?? [];
     set((state) => {
       const { [key]: _removed, ...rest } = state.queues;
@@ -68,7 +68,7 @@ export const useQueuedMessageStore = create<QueuedMessageState>((set, get) => ({
 
   clear: (agentPath, sessionKey) =>
     set((state) => {
-      const key = getSessionStatusKey(agentPath, sessionKey);
+      const key = getConversationScopeKey(agentPath, sessionKey);
       const { [key]: _removed, ...rest } = state.queues;
       return { queues: rest };
     }),
@@ -77,6 +77,6 @@ export const useQueuedMessageStore = create<QueuedMessageState>((set, get) => ({
 export function useQueuedMessages(agentPath: string | null, sessionKey: string | null) {
   return useQueuedMessageStore((state) => {
     if (!agentPath || !sessionKey) return EMPTY_QUEUE;
-    return state.queues[getSessionStatusKey(agentPath, sessionKey)] ?? EMPTY_QUEUE;
+    return state.queues[getConversationScopeKey(agentPath, sessionKey)] ?? EMPTY_QUEUE;
   });
 }

@@ -38,11 +38,11 @@ The mission: cross-reference the user's mail and calendar to produce a tight str
 
 4. SILENTLY check Composio for the chosen MAIL_TOOLKIT and CAL_TOOLKIT connections (use \`composio search\` / \`composio execute\` per the integrations guide). Do NOT narrate the check.
 
-5. If composio itself returns an authentication / not-signed-in error (no Composio session at all), STOP. Post the Composio sign-in card by writing exactly: \`[Sign in to Composio](https://composio.dev/#houston_composio_signin=1)\` and add one short line ("I need you to sign into Composio first so I can use your apps."). Wait for the user, then restart from step 4. Never fabricate results when you cannot reach Composio.
+5. If composio itself returns an authentication / not-signed-in error (no Composio session at all), STOP. Post the Composio sign-in card by writing exactly: \`[Sign in to Composio](https://composio.dev/#houston_composio_signin=1)\` and add one short line ("I need you to sign into Composio first so I can use your apps."). Do not ask the user to manually confirm. Houston will prompt you to continue after sign-in completes; then restart from step 4. Never fabricate results when you cannot reach Composio.
 
 6. If both apps are connected, continue directly to step 7 with NO acknowledgement line ("Both connected, here we go." and similar are wasted tokens — skip them).
 
-6b. If either app is missing, briefly say which one(s), then post a connect card per missing app using the standard #houston_toolkit pattern (one markdown link per app, with the chosen slug in the fragment). Wait for the user to come back, then retry.
+6b. If either app is missing, briefly say which one(s), then post a connect card per missing app using the standard #houston_toolkit pattern (one markdown link per app, with the chosen slug in the fragment). Do not ask the user to manually confirm. Houston will prompt you to continue after the apps connect; then retry.
 
 7. Determine the target date. If today is Mon-Thu, target = tomorrow. If today is Fri/Sat/Sun, target = next Monday. Note this date as both ISO (YYYY-MM-DD) and short label "{Day} {Mon} {DD}" (e.g. "Mon May 11").
 

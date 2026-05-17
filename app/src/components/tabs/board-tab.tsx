@@ -24,6 +24,10 @@ import { useAgentChatPanel } from "../use-agent-chat-panel";
 import { tauriActivity, tauriChat, tauriAttachments, tauriWorktree, tauriShell, tauriTerminal, tauriConfig, tauriPreferences } from "../../lib/tauri";
 import { openAgentHref } from "../../lib/open-href";
 import { createMission } from "../../lib/create-mission";
+import {
+  getConversationScopeKey,
+  parseConversationScopeKey,
+} from "../../lib/conversation-scope";
 import { formatVisibleMessageText } from "../../lib/queued-chat";
 import { buildAttachmentPrompt } from "../../lib/attachment-message";
 import { queryKeys } from "../../lib/query-keys";
@@ -74,6 +78,7 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
   const setAgentMissionSearchQuery = useUIStore((s) => s.setAgentMissionSearchQuery);
   const setAgentMissionSearchLoading = useUIStore((s) => s.setAgentMissionSearchLoading);
   const setMissionPanelOpen = useUIStore((s) => s.setMissionPanelOpen);
+  const setActiveMissionContext = useUIStore((s) => s.setActiveMissionContext);
   const missionPanelOpen = useUIStore((s) => s.missionPanelOpen);
   const addToast = useUIStore((s) => s.addToast);
   const attachmentValidation = useAttachmentRejectionDialog();
@@ -149,6 +154,12 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
     return item?.session_key ?? `activity-${selectedId}`;
   }, [selectedId, rawItems]);
 
+  useEffect(() => {
+    if (selectedSessionKey) {
+      setActiveMissionContext(path, selectedSessionKey);
+    }
+  }, [path, selectedSessionKey, setActiveMissionContext]);
+
   // All the per-agent panel features (skill cards, selected Skill, model
   // selector, Skills button, tool/link renderers) come from this hook
   // so the cross-agent Mission Control view can reuse them.
@@ -172,15 +183,20 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
   const boardDrafts = useMemo(() => {
     const out: Record<string, string> = {};
     for (const [k, v] of Object.entries(rawDrafts)) {
-      if (v.text) out[k] = v.text;
+      if (!v.text) continue;
+      const parsed = parseConversationScopeKey(k);
+      if (!parsed || parsed.agentPath !== path) continue;
+      out[parsed.sessionKey] = v.text;
     }
     return out;
-  }, [rawDrafts]);
+  }, [path, rawDrafts]);
   const handleDraftChange = useCallback(
     (sessionKey: string, text: string) => {
-      useDraftStore.getState().setDraftText(sessionKey, text);
+      useDraftStore
+        .getState()
+        .setDraftText(getConversationScopeKey(path, sessionKey), text);
     },
-    [],
+    [path],
   );
   const pushFeedItem = useFeedStore((s) => s.pushFeedItem);
   const setFeed = useFeedStore((s) => s.setFeed);
@@ -428,7 +444,14 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
 
   const handleStopSession = useCallback(
     (sessionKey: string) => {
-      tauriChat.stop(path, sessionKey).catch(console.error);
+      tauriChat
+        .stop(path, sessionKey)
+        .then((res) => {
+          if (res.cancelled) {
+            useSessionStatusStore.getState().setStatus(path, sessionKey, "completed");
+          }
+        })
+        .catch(console.error);
     },
     [path],
   );
@@ -659,6 +682,7 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
           processLabels={panel.processLabels}
           getThinkingMessage={panel.getThinkingMessage}
           renderTurnSummary={panel.renderTurnSummary}
+          transformContent={panel.transformContent}
           renderLink={panel.renderLink}
         />
       </div>

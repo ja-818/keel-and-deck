@@ -82,6 +82,13 @@
     "confirmDescription": "Isso exclui este espaço de trabalho e todos os seus agentes de forma permanente. Não dá para desfazer.",
     "confirmLabel": "Excluir"
   },
+  "experience": {
+    "title": "Experiencia",
+    "beginner": "Iniciante",
+    "beginnerDesc": "Interface simplificada com sugestoes guiadas",
+    "professional": "Profissional",
+    "professionalDesc": "Acesso completo a todos os recursos"
+  },
   "reportBug": {
     "title": "Reportar bug",
     "intro": "Conte para a gente o que deu errado. Vamos enviar sua mensagem junto com os logs da sua última atividade para entender o que aconteceu.",

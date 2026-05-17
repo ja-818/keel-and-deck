@@ -25,6 +25,9 @@ import type {
 import type {
   ComposioAppEntry as EngineComposioAppEntry,
   ComposioStatus as EngineComposioStatus,
+  OrchestrationAgentIntent as EngineOrchestrationAgentIntent,
+  OrchestrationCreateAndRunResult as EngineOrchestrationCreateAndRunResult,
+  OrchestrationManifest as EngineOrchestrationManifest,
   ProviderAuthState,
   ProviderStatus as EngineProviderStatus,
 } from "@houston-ai/engine-client";
@@ -111,6 +114,7 @@ function toAgent(a: import("@houston-ai/engine-client").Agent): Agent {
     folderPath: a.folderPath,
     configId: a.configId,
     color: a.color,
+    temporary: a.temporary,
     createdAt: a.createdAt,
     lastOpenedAt: a.lastOpenedAt,
   };
@@ -172,6 +176,7 @@ export const tauriChat = {
       providerOverride?: string;
       modelOverride?: string;
       effortOverride?: string;
+      visibleUserMessage?: boolean;
     },
   ) =>
     call<string>("send_message", async () => {
@@ -179,6 +184,7 @@ export const tauriChat = {
         sessionKey,
         prompt,
         source: "desktop",
+        visibleUserMessage: opts?.visibleUserMessage,
         workingDir: opts?.workingDirOverride,
         provider: opts?.providerOverride,
         model: opts?.modelOverride,
@@ -191,9 +197,9 @@ export const tauriChat = {
       await getEngine().startOnboarding(agentPath, sessionKey);
     }),
   stop: (agentPath: string, sessionKey: string) =>
-    call<void>("stop_session", async () => {
-      await getEngine().cancelSession(agentPath, sessionKey);
-    }),
+    call<{ cancelled: boolean }>("stop_session", () =>
+      getEngine().cancelSession(agentPath, sessionKey),
+    ),
   loadHistory: (agentPath: string, sessionKey: string) =>
     call<Array<{ feed_type: string; data: unknown }>>("load_chat_history", () =>
       getEngine().loadChatHistory(agentPath, sessionKey),
@@ -467,7 +473,7 @@ export const tauriStore = {
 
 // ─── Conversations ────────────────────────────────────────────────────
 
-interface RawConversation {
+export interface RawConversation {
   id: string;
   title: string;
   description?: string;
@@ -477,6 +483,8 @@ interface RawConversation {
   updated_at?: string;
   agent_path: string;
   agent_name: string;
+  orchestration_parent_agent_path?: string;
+  orchestration_parent_session_key?: string;
 }
 
 export const tauriConversations = {
@@ -503,6 +511,8 @@ function conversationToRaw(
     updated_at: c.updated_at,
     agent_path: c.agent_path,
     agent_name: c.agent_name,
+    orchestration_parent_agent_path: c.orchestration_parent_agent_path,
+    orchestration_parent_session_key: c.orchestration_parent_session_key,
   };
 }
 
@@ -629,6 +639,115 @@ export const tauriPreferences = {
     call<string | null>("get_preference", () => getEngine().getPreference(key)),
   set: (key: string, value: string) =>
     call<void>("set_preference", () => getEngine().setPreference(key, value)),
+};
+
+// ─── Orchestration ───────────────────────────────────────────────────
+
+export interface OrchestrationAgentIntent extends EngineOrchestrationAgentIntent {}
+
+export interface OrchestrationCreatedAgent {
+  id: string;
+  nodeId: string;
+  name: string;
+  agentPath: string;
+  sessionKey: string;
+  dependsOn: string[];
+  status: string;
+}
+
+export interface OrchestrationCreateAndRunResult {
+  agents: OrchestrationCreatedAgent[];
+}
+
+export const tauriOrchestration = {
+  createAndRun: (
+    workspaceId: string,
+    parentAgentPath: string,
+    parentSessionKey: string,
+    agents: OrchestrationAgentIntent[],
+  ) =>
+    call<OrchestrationCreateAndRunResult>(
+      "orchestration_create_and_run",
+      async () => {
+        const result: EngineOrchestrationCreateAndRunResult =
+          await getEngine().orchestrationCreateAndRun({
+            workspaceId,
+            parentAgentPath,
+            parentSessionKey,
+            agents,
+          });
+        return {
+          agents: result.agents.map((agent) => ({
+            id: agent.id,
+            nodeId: agent.nodeId,
+            name: agent.name,
+            agentPath: agent.agentPath,
+            sessionKey: agent.sessionKey,
+            dependsOn: agent.dependsOn,
+            status: agent.status,
+          })),
+        };
+      },
+    ),
+  adjustAndRun: (
+    workspaceId: string,
+    parentAgentPath: string,
+    parentSessionKey: string,
+    adjustment: string,
+    targetNodeIds: string[],
+    actionId?: string,
+  ) =>
+    call<OrchestrationCreateAndRunResult>(
+      "orchestration_adjust_and_run",
+      async () => {
+        const result: EngineOrchestrationCreateAndRunResult =
+          await getEngine().orchestrationAdjustAndRun({
+            workspaceId,
+            parentAgentPath,
+            parentSessionKey,
+            adjustment,
+            targetNodeIds,
+            actionId,
+          });
+        return {
+          agents: result.agents.map((agent) => ({
+            id: agent.id,
+            nodeId: agent.nodeId,
+            name: agent.name,
+            agentPath: agent.agentPath,
+            sessionKey: agent.sessionKey,
+            dependsOn: agent.dependsOn,
+            status: agent.status,
+          })),
+        };
+      },
+    ),
+  status: (parentAgentPath: string, parentSessionKey: string) =>
+    call<EngineOrchestrationManifest | null>("orchestration_status", () =>
+      getEngine().orchestrationStatus({
+        parentAgentPath,
+        parentSessionKey,
+      }),
+    ),
+  saveAgents: (
+    workspaceId: string,
+    agentPaths: string[],
+    options?: {
+      parentAgentPath?: string;
+      parentSessionKey?: string;
+      actionId?: string;
+    },
+  ) =>
+    call<{ agents: Agent[] }>("orchestration_save_agents", async () => {
+      const result = await getEngine().orchestrationSaveAgents({
+        workspaceId,
+        parentAgentPath: options?.parentAgentPath,
+        parentSessionKey: options?.parentSessionKey,
+        agentPaths,
+        actionId: options?.actionId,
+      });
+      return { agents: result.agents.map(toAgent) };
+    }),
 };
 
 // ─── Providers ────────────────────────────────────────────────────────

@@ -78,6 +78,8 @@ export interface AIBoardProps {
   toolLabels?: ToolsAndCardsProps["toolLabels"]
   /** Render prop for an end-of-turn summary (e.g., list of edited files). Forwarded to ChatPanel. */
   renderTurnSummary?: import("@houston-ai/chat").ChatPanelProps["renderTurnSummary"]
+  /** Transform assistant markdown before rendering. Forwarded to ChatPanel. */
+  transformContent?: import("@houston-ai/chat").ChatPanelProps["transformContent"]
   /** Custom renderer for system messages. Forwarded to ChatPanel. */
   renderSystemMessage?: import("@houston-ai/chat").ChatPanelProps["renderSystemMessage"]
   /** Map active feed items before rendering. */
@@ -191,6 +193,7 @@ export function AIBoard({
   getThinkingMessage,
   toolLabels,
   renderTurnSummary,
+  transformContent,
   renderSystemMessage,
   mapFeedItems,
   afterMessages,
@@ -454,6 +457,7 @@ export function AIBoard({
           getThinkingMessage={getThinkingMessage}
           toolLabels={toolLabels}
           renderTurnSummary={renderTurnSummary}
+          transformContent={transformContent}
           renderSystemMessage={renderSystemMessage}
           renderUserMessage={renderUserMessage}
           afterMessages={renderedAfterMessages}

@@ -5,6 +5,7 @@ import { Check, ExternalLink, Loader2, RefreshCw } from "lucide-react";
 import { useComposioApps } from "../hooks/queries";
 import { useComposioConnectionWatcher } from "../hooks/use-composio-connection-watcher";
 import { useComposioRefetchOnReturn } from "../hooks/use-composio-refetch-on-return";
+import { parseComposioToolkitFromHref } from "../lib/composio-links";
 import {
   normalizeToolkitSlug,
   normalizeToolkitSlugs,
@@ -15,10 +16,9 @@ import { useUIStore } from "../stores/ui";
 /**
  * After clicking Connect, the user goes to the browser to authorize.
  * This is how long we leave the spinner up before flipping to a
- * manual "I've connected" button. Short enough that a stuck card
- * recovers quickly; long enough to cover the typical OAuth round-trip
- * + Composio backend propagation when the engine-side watcher catches
- * the event for us.
+ * manual verify button. Short enough that a stuck card recovers
+ * quickly; long enough to cover the normal browser round-trip while
+ * the engine-side watcher keeps polling in the background.
  */
 const OPENING_GRACE_MS = 6_000;
 
@@ -38,6 +38,7 @@ interface ComposioLinkCardProps {
    * system browser.
    */
   onOpen: () => void;
+  onConnectStarted?: (toolkit: string) => void;
 }
 
 /**
@@ -47,35 +48,36 @@ interface ComposioLinkCardProps {
  * live connection state:
  *
  *   - Connected → green "Connected" pill, click is a no-op
- *   - Not connected → "Connect" button that opens the OAuth URL and,
- *     when the Houston window regains focus (user returned from the
- *     browser), invalidates the probe query so the card flips to
- *     Connected. OAuth flows vary from 5s to 60s+ so a fixed timeout
- *     would always be wrong — focus-driven invalidation updates
- *     precisely when the user looks at the card.
+ *   - Not connected → "Connect" button that opens the OAuth URL,
+ *     then offers manual verification if the push update has not
+ *     landed after the short grace window.
  */
 export function ComposioLinkCard({
   toolkit,
   isConnected,
   onOpen,
+  onConnectStarted,
 }: ComposioLinkCardProps) {
-  const { t } = useTranslation("chat");
+  const { t } = useTranslation("integrations");
   const [phase, setPhase] = useState<Phase>("idle");
+  const [confirmedConnected, setConfirmedConnected] = useState(false);
   const graceTimer = useRef<number | null>(null);
   const qc = useQueryClient();
   const addToast = useUIStore((s) => s.addToast);
-  const { data: apiApps } = useComposioApps();
   const markWaitingForAuth = useComposioRefetchOnReturn();
+  const { data: apiApps } = useComposioApps();
+  const connected = isConnected || confirmedConnected;
   // Ambient freshness: while the card shows "not connected", keep the
   // connectedToolkits query honest so the card flips the instant a
   // connection lands via any path (this Connect, Integrations tab,
   // another agent, CLI, stale cache from a prior session).
-  useComposioConnectionWatcher(isConnected);
+  useComposioConnectionWatcher(connected);
 
   // Once the probe comes back connected, drop any local intermediate
   // state — the parent owns the visual now.
   useEffect(() => {
     if (isConnected) {
+      setConfirmedConnected(true);
       setPhase("idle");
       if (graceTimer.current !== null) {
         window.clearTimeout(graceTimer.current);
@@ -108,7 +110,7 @@ export function ComposioLinkCard({
     return {
       toolkit,
       name: toolkit,
-      description: t("composio.integration"),
+      description: t("linkCard.integration"),
       logoUrl: fallbackLogo(toolkit),
     };
   })();
@@ -116,26 +118,17 @@ export function ComposioLinkCard({
   const handleConnect = useCallback(() => {
     setPhase("opening");
     markWaitingForAuth(toolkit);
+    onConnectStarted?.(toolkit);
     onOpen();
-    // After the grace window, hand control to the user. The engine
-    // watcher and the ambient connection watcher are both still
-    // running; if a connection lands while we're in `verify` state,
-    // the parent's `isConnected` will flip and the effect above
-    // resets the phase.
     if (graceTimer.current !== null) window.clearTimeout(graceTimer.current);
     graceTimer.current = window.setTimeout(() => {
       setPhase((p) => (p === "opening" ? "verify" : p));
       graceTimer.current = null;
     }, OPENING_GRACE_MS);
-  }, [onOpen, markWaitingForAuth, toolkit]);
+  }, [onOpen, markWaitingForAuth, onConnectStarted, toolkit]);
 
   const handleVerify = useCallback(async () => {
     setPhase("verifying");
-    // Hard refresh: cancel anything in flight so a stale "[]" can't
-    // race past us, force the registered query to refetch, then read
-    // the freshly-written cache. We don't trust the cached
-    // `isConnected` prop here — the user explicitly asked us to
-    // re-check.
     await qc.cancelQueries({ queryKey: queryKeys.connectedToolkits() });
     await qc.refetchQueries({
       queryKey: queryKeys.connectedToolkits(),
@@ -145,29 +138,28 @@ export function ComposioLinkCard({
     const fresh = normalizeToolkitSlugs(
       qc.getQueryData<string[]>(queryKeys.connectedToolkits()) ?? [],
     );
-    const connected = fresh.includes(target);
-    if (connected) {
+    if (fresh.includes(target)) {
+      setConfirmedConnected(true);
       addToast({
-        title: t("composio.verifiedToast", { name: app.name }),
+        title: t("verifiedToast", { name: app.name }),
         variant: "success",
       });
-      // Parent's isConnected will flip on the next render; effect
-      // above resets phase to idle.
-    } else {
-      addToast({
-        title: t("composio.notVerified"),
-        variant: "info",
-      });
-      setPhase("verify");
+      setPhase("idle");
+      return;
     }
-  }, [qc, toolkit, addToast, t, app.name]);
+    addToast({
+      title: t("notVerified"),
+      variant: "info",
+    });
+    setPhase("verify");
+  }, [addToast, app.name, qc, t, toolkit]);
 
   const renderRightSlot = () => {
-    if (isConnected) {
+    if (connected) {
       return (
         <span className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium shrink-0">
           <Check className="size-3" />
-          {t("composio.connected")}
+          {t("linkCard.connected")}
         </span>
       );
     }
@@ -179,6 +171,7 @@ export function ComposioLinkCard({
           className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full border border-border bg-foreground text-background text-xs font-medium opacity-50 shrink-0"
         >
           <Loader2 className="size-3 animate-spin" />
+          {t("connecting")}
         </button>
       );
     }
@@ -193,12 +186,12 @@ export function ComposioLinkCard({
           {phase === "verifying" ? (
             <>
               <Loader2 className="size-3 animate-spin" />
-              {t("composio.verifying")}
+              {t("verifying")}
             </>
           ) : (
             <>
               <RefreshCw className="size-3" />
-              {t("composio.verify")}
+              {t("verify")}
             </>
           )}
         </button>
@@ -210,7 +203,7 @@ export function ComposioLinkCard({
         onClick={handleConnect}
         className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full border border-border bg-foreground text-background text-xs font-medium hover:opacity-90 transition-opacity duration-200 shrink-0"
       >
-        {t("composio.connect")}
+        {t("linkCard.connect")}
         <ExternalLink className="size-3" />
       </button>
     );
@@ -225,7 +218,7 @@ export function ComposioLinkCard({
             {app.name}
           </span>
           <span className="text-[11px] text-muted-foreground truncate">
-            {isConnected ? t("composio.alreadyConnected") : app.description}
+            {connected ? t("linkCard.alreadyConnected") : app.description}
           </span>
         </span>
         {renderRightSlot()}
@@ -256,23 +249,7 @@ function AppLogo({ app }: { app: { name: string; logoUrl: string } }) {
   );
 }
 
-/**
- * Parse a Composio redirect URL for the `#houston_toolkit=<slug>`
- * fragment that agents append per the system prompt. Returns the slug
- * or `null` if the URL doesn't carry one.
- */
-export function parseComposioToolkitFromHref(href: string): string | null {
-  try {
-    const url = new URL(href);
-    const hash = url.hash.startsWith("#") ? url.hash.slice(1) : url.hash;
-    if (!hash) return null;
-    const params = new URLSearchParams(hash);
-    const slug = params.get("houston_toolkit");
-    return slug && slug.length > 0 ? slug : null;
-  } catch {
-    return null;
-  }
-}
+export { parseComposioToolkitFromHref };
 
 function fallbackLogo(toolkit: string): string {
   return `https://www.google.com/s2/favicons?domain=${toolkit}.com&sz=128`;
