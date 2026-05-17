@@ -222,6 +222,31 @@ The final system prompt is `<product_prompt>\n\n---\n\n<agent_context>`, built i
 **Product layer (owned by the embedding app, not the engine).**
 Lives in `app/src-tauri/src/houston_prompt/` for the Houston desktop app. Covers the app-context dictionary, concise user voice, the silent interaction loop (classify request, check info, check integrations, decide approval, execute, consider memory), Skills/memory guidance, Routines guidance, and Composio guidance. Passed to the engine at boot via env vars `HOUSTON_APP_SYSTEM_PROMPT` + `HOUSTON_APP_ONBOARDING_PROMPT` — the engine keeps them as opaque strings. Callers can also override per-session via the `systemPrompt` field on `startSession`.
 
+Beginner mode adds a second product-layer prompt, `HOUSTON_APP_BEGINNER_SYSTEM_PROMPT`. The desktop app persists the user preference in engine preferences under `experience_level`. Session-start and orchestration routes read that preference at request time:
+- `professional` or missing beginner prompt → standard `app_system_prompt`
+- `beginner` + beginner prompt present → `app_beginner_system_prompt`
+
+This matters because beginner mode can instruct the parent assistant to propose delegation, emit the `create-agents` link UI, and later summarize delegated work in plain language. The engine still stays prompt-agnostic apart from carrying the selected opaque product prompt string into the session runtime.
+
+The desktop UI consumes those product-layer delegation links before markdown rendering. The assistant emits `[suggest_agents](https://houston.ai/_/create-agents#intents=<json>)`, `[adjust_agents](https://houston.ai/_/adjust-agents#intent=<json>)`, and `[save_agents](https://houston.ai/_/save-agents#agents=<json>)` as transport markers, not user-facing links. Their hash payload is encoded JSON and can contain literal markdown delimiters such as `)` because `encodeURIComponent` does not escape every punctuation character. Keep extraction parser-based and validate the decoded payload before removing the marker; do not replace it with a regex that stops at the first `)`, or the UI will leak encoded JSON and Streamdown may render a blocked-link warning.
+
+Houston-owned delegation must stay distinct from provider-native child-agent features in beginner mode. If a provider exposes tools like `Agent`, `Task`, `TaskCreate`, `TaskUpdate`, or `SendMessage`, beginner sessions block them so the only sub-agent workflow is the engine-owned orchestration route and UI. Professional sessions allow provider-native delegation and do not receive the beginner dispatcher prompt. This is enforced by a server-selected `NativeDelegationPolicy`: `beginner` maps to `Block`, `professional` maps to `Allow`. The policy flows through `StartParams` into `houston-terminal-manager`, where provider launch flags and parser behavior are scoped per session. If a blocked beginner session still emits native delegation in stdout, including Claude system events like `task_started`, `task_progress`, `task_updated`, or `task_notification`, the parser marks it as a fatal policy violation, the process manager kills the CLI subprocess immediately, and the session ends with a visible error instead of rendering or allowing the native agent run.
+
+Delegation payloads support dependency graphs. Each `suggest_agents` item should include a stable `id` and `dependsOn`; agents with dependencies wait until upstream agents finish, then receive those dependency outputs in their run prompt. Agent instructions are split between `rolePrompt` and `taskPrompt`: `rolePrompt` is the reusable identity, while `taskPrompt` is the current mission assignment and may contain temporary topic, quantity, platform, and example details. The engine wraps `rolePrompt` into a durable saved role profile before writing generated agent instructions, and validates that the role does not repeat the task or contain current-mission language. The engine persists the graph as `.houston/orchestration/<parentSessionKey>.json` on the parent agent. Child activities are a status projection only, not the source of truth.
+
+Adjustment loops reuse the same temporary agents and the same DAG. When a parent chat already has an orchestration manifest for `parentAgentPath + parentSessionKey`, user feedback should call `/v1/orchestration/adjust-and-run`, not emit another `suggest_agents` marker. Adjustment dispatches carry a stable per-message `actionId`; the manifest records consumed action ids so long chat histories can stay visible without remounting old control links and re-running previous work. The right beginner drawer shows the same agents moving back to `waiting`, then `running`, then terminal status as dependencies allow. That drawer must filter child conversations by the active mission context `{ parentAgentPath, parentSessionKey }`; do not infer it from legacy `chat-${agent.id}` keys.
+
+Temporary specialized agents may reuse the same display name across different parent chats. Their folders are uniqued with an id suffix while `.houston/agent.json` keeps the human name, so hidden temporary agents from older runs cannot block a new delegation with `CONFLICT`.
+
+Generated agents created by orchestration use the builtin `generated-custom`
+config, not a free-floating `custom` id. Their `.houston/agent.json` carries
+`origin.kind = "orchestration"` plus a stable role id/fingerprint. Saving them
+is an upsert against user-created generated agents in the same workspace:
+matching generated agents are updated, Houston/system/template agents are never
+touched, and temporary execution instances remain hidden. Legacy visible
+`custom` generated agents are migrated to `generated-custom` on agent list so
+they open as chat-first reusable agents instead of the empty New Agent state.
+
 **Agent-context layer (engine-owned).**
 Built in `engine/houston-engine-core/src/agents/prompt.rs::build_agent_context`:
 1. **Working directory block** — hard rules scoping file I/O to `<agent-root>`.

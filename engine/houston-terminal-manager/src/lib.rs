@@ -12,6 +12,7 @@ mod codex_command;
 pub mod codex_parser;
 pub mod concurrency;
 pub mod manager;
+mod native_delegation;
 pub mod parser;
 pub mod provider_auth;
 mod provider_error;
@@ -28,6 +29,6 @@ pub use parser::{extract_session_id, parse_event, StreamAccumulator};
 pub use provider_auth::ProviderAuthState;
 pub use session_update::SessionUpdate;
 pub use types::{
-    ClaudeEvent, ContentBlock, FeedItem, FileChanges, Provider, SessionFeedBuffer, SessionStatus,
-    ToolRuntimeErrorKind,
+    ClaudeEvent, ContentBlock, FeedItem, FileChanges, NativeDelegationPolicy, Provider,
+    SessionFeedBuffer, SessionStatus, ToolRuntimeErrorKind,
 };

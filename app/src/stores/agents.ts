@@ -3,6 +3,7 @@ import { tauriAgents, tauriAttachments, tauriPreferences, tauriRoutines, tauriWa
 import { useFeedStore } from "./feeds";
 import { useDraftStore } from "./drafts";
 import { analytics } from "../lib/analytics";
+import { getConversationScopeKey } from "../lib/conversation-scope";
 import type { Agent } from "../lib/types";
 
 export interface CreatedAgent {
@@ -82,8 +83,10 @@ export const useAgentStore = create<AgentState>((set, get) => ({
     if (agentPath) {
       useFeedStore.getState().clearAgent(agentPath);
     }
-    // Clear the free-form chat draft for this agent.
-    useDraftStore.getState().clearDraft(`chat-${id}`);
+    // Clear drafts scoped to this agent.
+    if (agentPath) {
+      useDraftStore.getState().clearByPrefix(getConversationScopeKey(agentPath, ""));
+    }
     set((s) => {
       const agents = s.agents.filter((a) => a.id !== id);
       const current =

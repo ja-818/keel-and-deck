@@ -265,7 +265,10 @@ mod tests {
             classify(".houston/activity/activity.json"),
             Some("activity".to_string())
         );
-        assert_eq!(classify(".houston/routines/routines.json"), Some("routines".to_string()));
+        assert_eq!(
+            classify(".houston/routines/routines.json"),
+            Some("routines".to_string())
+        );
         assert_eq!(classify("CLAUDE.md"), None);
     }
 
@@ -274,7 +277,10 @@ mod tests {
         let dir = TempDir::new().unwrap();
         seed_schemas(dir.path()).unwrap();
         for (name, _) in schemas::ALL {
-            assert!(dir.path().join(format!(".houston/{name}/{name}.schema.json")).exists());
+            assert!(dir
+                .path()
+                .join(format!(".houston/{name}/{name}.schema.json"))
+                .exists());
         }
     }
 
@@ -325,7 +331,8 @@ mod tests {
 
         migrate_agent_data(dir.path()).unwrap();
 
-        let json = fs::read_to_string(dir.path().join(".houston/learnings/learnings.json")).unwrap();
+        let json =
+            fs::read_to_string(dir.path().join(".houston/learnings/learnings.json")).unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.as_array().unwrap().len(), 2);
         assert_eq!(parsed[0]["text"].as_str().unwrap(), "first learning");

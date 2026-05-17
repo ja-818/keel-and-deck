@@ -186,10 +186,7 @@ fn read_bundled_marker_version(workspace_agent_dir: &Path) -> Option<String> {
     marker.version
 }
 
-fn write_bundled_marker_version(
-    workspace_agent_dir: &Path,
-    version: &str,
-) -> CoreResult<()> {
+fn write_bundled_marker_version(workspace_agent_dir: &Path, version: &str) -> CoreResult<()> {
     let path = workspace_agent_dir.join(BUNDLED_PACKAGE_MARKER);
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
@@ -262,14 +259,8 @@ fn version_lte(a: &str, b: &str) -> bool {
 }
 
 fn cmp_versions(a: &str, b: &str) -> std::cmp::Ordering {
-    let a_parts: Vec<u32> = a
-        .split('.')
-        .map(|p| p.parse().unwrap_or(0))
-        .collect();
-    let b_parts: Vec<u32> = b
-        .split('.')
-        .map(|p| p.parse().unwrap_or(0))
-        .collect();
+    let a_parts: Vec<u32> = a.split('.').map(|p| p.parse().unwrap_or(0)).collect();
+    let b_parts: Vec<u32> = b.split('.').map(|p| p.parse().unwrap_or(0)).collect();
     let len = a_parts.len().max(b_parts.len());
     for i in 0..len {
         let av = a_parts.get(i).copied().unwrap_or(0);
@@ -427,11 +418,7 @@ pub(super) fn sync_bundled_agent_instances(
             if !migrations.is_empty() {
                 let last_synced = read_bundled_marker_version(&folder);
                 let target = target_version.as_deref().unwrap_or("");
-                let steps = migrations_to_apply(
-                    &migrations,
-                    last_synced.as_deref(),
-                    target,
-                );
+                let steps = migrations_to_apply(&migrations, last_synced.as_deref(), target);
                 if !steps.is_empty() {
                     let workspace_skills = folder.join(".agents").join("skills");
                     for step in steps {
@@ -745,6 +732,8 @@ mod tests {
                 installed_path: Some(agents.path().join("demo").to_string_lossy().to_string()),
                 seeds: None,
                 existing_path: None,
+                temporary: false,
+                origin: None,
             },
         )
         .unwrap();
@@ -828,6 +817,8 @@ Package v2 body
                 installed_path: Some(agents.path().join("demo").to_string_lossy().to_string()),
                 seeds: None,
                 existing_path: None,
+                temporary: false,
+                origin: None,
             },
         )
         .unwrap();
@@ -900,6 +891,8 @@ User customized body
                 installed_path: Some(agents.path().join("demo").to_string_lossy().to_string()),
                 seeds: None,
                 existing_path: None,
+                temporary: false,
+                origin: None,
             },
         )
         .unwrap();
@@ -1192,10 +1185,14 @@ User customized body
                 installed_path: Some(agents.path().join("demo").to_string_lossy().to_string()),
                 seeds: None,
                 existing_path: None,
+                temporary: false,
+                origin: None,
             },
         )
         .unwrap();
-        let user_skill = docs.path().join("Acme/Ops/.agents/skills/old-slug/SKILL.md");
+        let user_skill = docs
+            .path()
+            .join("Acme/Ops/.agents/skills/old-slug/SKILL.md");
         fs::write(
             &user_skill,
             "---\nname: old-slug\ndescription: my edits\n---\nuser edited body",
@@ -1224,7 +1221,10 @@ User customized body
         std::env::remove_var("HOUSTON_STORE_DIR");
         assert_eq!(changed, 1, "workspace should report a sync change");
         assert!(
-            !docs.path().join("Acme/Ops/.agents/skills/old-slug").exists(),
+            !docs
+                .path()
+                .join("Acme/Ops/.agents/skills/old-slug")
+                .exists(),
             "old slug should have been renamed away"
         );
         let renamed_md = docs
@@ -1292,6 +1292,8 @@ User customized body
                 installed_path: Some(agents.path().join("demo").to_string_lossy().to_string()),
                 seeds: None,
                 existing_path: None,
+                temporary: false,
+                origin: None,
             },
         )
         .unwrap();
@@ -1373,5 +1375,5 @@ User customized body
         if let Some(migrations_body) = migrations {
             fs::write(dir.join(".migrations.json"), migrations_body).unwrap();
         }
-}
+    }
 }

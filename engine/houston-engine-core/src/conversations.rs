@@ -23,6 +23,10 @@ struct ActivityRow {
     status: String,
     #[serde(default)]
     updated_at: Option<String>,
+    #[serde(default)]
+    orchestration_parent_agent_path: Option<String>,
+    #[serde(default)]
+    orchestration_parent_session_key: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,6 +48,10 @@ pub struct ConversationEntry {
     pub agent_path: String,
     /// Human-readable agent name.
     pub agent_name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub orchestration_parent_agent_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub orchestration_parent_session_key: Option<String>,
 }
 
 fn read_activities(root: &Path) -> CoreResult<Vec<ActivityRow>> {
@@ -82,6 +90,8 @@ pub fn list(root: &Path) -> CoreResult<Vec<ConversationEntry>> {
             updated_at: row.updated_at,
             agent_path: agent_path_str.clone(),
             agent_name: agent_name_str.clone(),
+            orchestration_parent_agent_path: row.orchestration_parent_agent_path,
+            orchestration_parent_session_key: row.orchestration_parent_session_key,
         })
         .collect())
 }

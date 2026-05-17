@@ -17,24 +17,27 @@ sign-in card directly in chat by writing the markdown link exactly as: \
 `[Sign in to Composio](https://composio.dev/#houston_composio_signin=1)`. \
 The Houston chat renders this as a rich sign-in card with a one-click \
 button. Then add ONE short line, e.g. \"I need you to sign into Composio \
-first so I can use your apps.\" Wait for the user to confirm they're back, \
-then retry the original command.\n\n\
+first so I can use your apps.\" Do not ask them to manually confirm completion. \
+Houston will prompt you to continue after sign-in completes, then retry the \
+original command.\n\n\
 ## When an app is not connected\n\n\
 If `composio execute` fails because no account is linked for that \
 toolkit, DO NOT open the browser for the user and DO NOT tell them \
 to go to the Integrations tab. Instead:\n\n\
-1. Offer to help connect the app right now and briefly say why, \
-   e.g. \"I'd need Gmail connected so I can send this. Want me to help?\"\n\
-2. If the user says yes, run `composio link <toolkit> --no-wait` via \
-   Bash and parse the JSON output.\n\
-3. Present the `redirect_url` from that JSON as a markdown link. \
-   **IMPORTANT**: append `#houston_toolkit=<toolkit>` to the URL so \
-   the Houston chat can render it as a rich connect card with live \
-   connection status instead of a plain button. Example: if the \
-   JSON has `\"toolkit\": \"gmail\"` and \
-   `\"redirect_url\": \"https://connect.composio.dev/link/lk_abc\"`, \
-   output exactly: \
-   `[Connect Gmail](https://connect.composio.dev/link/lk_abc#houston_toolkit=gmail)`. \
-   The card renders the app name/logo and handles the click for you.\n\
-4. After they tell you they've approved in the browser, retry the \
-   original request.";
+1. Identify ALL missing toolkits at once. Run `composio search \"<what you need>\"` \
+if needed, or determine which toolkits the task requires.\n\
+2. For EVERY missing toolkit, run `composio link <toolkit> --no-wait` via \
+Bash and collect all the JSON outputs.\n\
+3. Present ALL connect cards in a single message. For each toolkit, extract \
+the `redirect_url` from its JSON and format as a markdown link. \
+**IMPORTANT**: append `#houston_toolkit=<toolkit>` to each URL so the \
+Houston chat renders them as rich connect cards with live connection \
+status. Example: if the JSON has `\"toolkit\": \"gmail\"` and \
+`\"redirect_url\": \"https://connect.composio.dev/link/lk_abc\"`, \
+output exactly: \
+`[Connect Gmail](https://connect.composio.dev/link/lk_abc#houston_toolkit=gmail)`.\n\
+4. Tell the user to approve the cards in the browser and return to Houston. \
+Do not ask them to manually confirm completion. Houston watches the \
+connections and will prompt you to continue when the required apps are ready. \
+When that continuation prompt arrives, silently re-check connected apps and \
+retry the original request.";

@@ -48,12 +48,12 @@ export function ChatProcessBlock({
   getThinkingMessage,
 }: ChatProcessBlockProps) {
   const l = useMemo(() => ({ ...DEFAULT_LABELS, ...labels }), [labels]);
-  const [isOpen, setIsOpen] = useState(isActive);
+  const [isOpen, setIsOpen] = useState(false);
   const wasActiveRef = useRef(isActive);
 
   useEffect(() => {
     if (isActive) {
-      setIsOpen(true);
+      setIsOpen(false);
     } else if (wasActiveRef.current) {
       setIsOpen(false);
     }
@@ -96,10 +96,12 @@ export function ChatProcessBlock({
               {segment.reasoning && (
                 <Reasoning
                   isStreaming={segmentActive && segment.reasoning.isStreaming}
-                  defaultOpen={segmentActive && segment.reasoning.isStreaming}
+                  defaultOpen={false}
                 >
                   <ReasoningTrigger getThinkingMessage={getThinkingMessage} />
-                  <ReasoningContent>{segment.reasoning.content}</ReasoningContent>
+                  {!segmentActive && (
+                    <ReasoningContent>{segment.reasoning.content}</ReasoningContent>
+                  )}
                 </Reasoning>
               )}
               {segment.tools.length > 0 && (

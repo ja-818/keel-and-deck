@@ -2,10 +2,11 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ToastContainer, type Toast } from "@houston-ai/core";
 import { analytics } from "../../lib/analytics";
+import { EXPERIENCE_LEVEL_PREF_KEY } from "../../lib/experience-level";
+import { tauriPreferences, tauriWorkspaces } from "../../lib/tauri";
 import { useUIStore } from "../../stores/ui";
 import { useWorkspaceStore } from "../../stores/workspaces";
 import { useAgentStore } from "../../stores/agents";
-import { tauriWorkspaces } from "../../lib/tauri";
 import type { Agent } from "../../lib/types";
 import { MissionFrame } from "./mission-frame";
 import { MeetMission } from "./missions/meet";
@@ -41,6 +42,8 @@ export function PersonalAssistantOnboarding({
   const { t } = useTranslation(["setup", "common"]);
   const setTutorialActive = useUIStore((s) => s.setTutorialActive);
   const setUiTourActive = useUIStore((s) => s.setUiTourActive);
+  const setExperienceLevel = useUIStore((s) => s.setExperienceLevel);
+  const [experienceLevel, onLocalExperienceSelect] = useState<"beginner" | "professional" | null>(null);
   const [step, setStep] = useState<OnboardingStep>("welcome");
   const [agent, setAgent] = useState<Agent | null>(null);
   const [provider, setProvider] = useState<string | null>(null);
@@ -72,6 +75,12 @@ export function PersonalAssistantOnboarding({
   // trapped here once their real workspaces arrive.
   const startTutorial = () => {
     analytics.track("onboarding_started", { source: "tutorial" });
+    if (experienceLevel) {
+      setExperienceLevel(experienceLevel);
+      tauriPreferences
+        .set(EXPERIENCE_LEVEL_PREF_KEY, experienceLevel)
+        .catch((e) => console.error("[experience] persist failed:", e));
+    }
     setTutorialActive(true);
     setStep("meet");
   };
@@ -80,10 +89,11 @@ export function PersonalAssistantOnboarding({
     pickedProvider: string,
     pickedModel: string,
   ): Promise<Agent> => {
+    const isBeginner = experienceLevel === "beginner";
     const setup = defaultAssistantSetup({
       workspaceName: t("setup:tutorial.defaults.workspaceName"),
       assistantName: assistantName.trim() || t("setup:tutorial.defaults.assistantName"),
-      focus: t("setup:tutorial.defaults.focus"),
+      focus: isBeginner ? "orchestrator" : t("setup:tutorial.defaults.focus"),
       approvalRule: t("setup:tutorial.defaults.approvalRule"),
     });
     setup.color = assistantColor;
@@ -114,6 +124,10 @@ export function PersonalAssistantOnboarding({
     // Skip path: create the workspace + assistant, but no UI tour and no
     // tutorial artifacts. User lands directly in the workspace shell.
     analytics.track("onboarding_started", { source: "skip" });
+    if (experienceLevel) {
+      setExperienceLevel(experienceLevel);
+      await tauriPreferences.set(EXPERIENCE_LEVEL_PREF_KEY, experienceLevel);
+    }
     setTutorialActive(true);
     try {
       const fallbackProvider = provider ?? "anthropic";
@@ -172,6 +186,13 @@ export function PersonalAssistantOnboarding({
           skipLabel={t("setup:tutorial.welcome.skip")}
           onStart={startTutorial}
           onSkip={() => void handleSkip()}
+          experienceLabel={t("setup:experience.title")}
+          beginnerLabel={t("setup:experience.beginner.label")}
+          beginnerDesc={t("setup:experience.beginner.description")}
+          professionalLabel={t("setup:experience.professional.label")}
+          professionalDesc={t("setup:experience.professional.description")}
+          experienceLevel={experienceLevel}
+          onSelectExperience={onLocalExperienceSelect}
         />
       )}
       {meta && frame && step === "meet" && (

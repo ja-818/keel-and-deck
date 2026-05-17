@@ -31,16 +31,18 @@ use crate::{CoreError, CoreResult};
 use control::{
     SessionControl, SessionIdentity, SessionTurnGuard, SessionTurnLocks, WorkdirActivity,
 };
-use houston_agents_conversations::session_id_tracker::SessionIdTracker;
+use houston_agents_conversations::session_id_tracker::{session_ids_for_history, SessionIdTracker};
 use houston_agents_conversations::session_pids::SessionPidMap;
 use houston_agents_conversations::session_runner::{self, PersistOptions};
 use houston_db::Database;
-use houston_terminal_manager::{FeedItem, Provider};
+use houston_terminal_manager::{FeedItem, NativeDelegationPolicy, Provider};
 use houston_ui_events::{DynEventSink, HoustonEvent};
 use std::path::{Path, PathBuf};
 use workdir_locks::{WorkdirLocks, WorkdirSessionGuard};
 
 pub use provider::{resolve_provider, ResolvedProvider};
+
+const SESSION_RESUME_CONTRACT: &str = "2026-05-15-beginner-orchestration-v1";
 
 /// Engine-owned session state. Cheap to clone.
 #[derive(Default, Clone)]
@@ -83,6 +85,10 @@ pub struct StartParams {
     pub session_key: String,
     /// User-typed prompt for this turn.
     pub prompt: String,
+    /// Whether the starting prompt should be shown and stored as a human chat
+    /// message. Internal orchestration turns still pass a prompt to the
+    /// provider, but must not render as if the user sent it.
+    pub visible_user_message: bool,
     /// Pre-built system prompt (CLAUDE.md + seed + Composio guidance etc.).
     /// Engine does not assemble this today — caller supplies.
     pub system_prompt: Option<String>,
@@ -92,6 +98,10 @@ pub struct StartParams {
     /// [`resolve_provider`] first).
     pub provider: Provider,
     pub model: Option<String>,
+    /// Provider-native delegation policy for this session. Beginner mode
+    /// blocks native Agent/Task delegation so Houston owns orchestration;
+    /// professional mode allows provider-native behavior.
+    pub native_delegation_policy: NativeDelegationPolicy,
     /// Reasoning effort override. For Codex, this becomes
     /// `-c model_reasoning_effort=<value>` (also overrides whatever the user
     /// has in their global `~/.codex/config.toml`). For Claude, it becomes
@@ -162,10 +172,12 @@ async fn run_start(
         working_dir,
         session_key,
         prompt,
+        visible_user_message,
         system_prompt,
         source,
         provider,
         model,
+        native_delegation_policy,
         effort,
     } = params;
 
@@ -187,8 +199,15 @@ async fn run_start(
     //   embedding app (Houston desktop) passed in via `HOUSTON_APP_SYSTEM_PROMPT`.
     // - `agent_context`: assembled by the engine from disk (working-dir header,
     //   mode overlay, skills index, integrations list). Product-neutral.
-    let agent_context =
-        agent_prompt::build_agent_context(&agent_dir, Some(working_dir.as_path()), None);
+    let connected = houston_composio::cli::list_connected_toolkits().await;
+    let workspace_root = working_dir.parent();
+    let agent_context = agent_prompt::build_agent_context(
+        &agent_dir,
+        Some(working_dir.as_path()),
+        None,
+        workspace_root,
+        &connected,
+    );
     let product_prompt = system_prompt
         .as_deref()
         .filter(|s| !s.is_empty())
@@ -219,7 +238,13 @@ async fn run_start(
     );
     let sid_handle = rt
         .session_ids
-        .get_for_session(&agent_key, &working_dir, &session_key, provider)
+        .get_for_session(
+            &agent_key,
+            &working_dir,
+            &session_key,
+            provider,
+            Some(SESSION_RESUME_CONTRACT),
+        )
         .await;
     let resume_id = sid_handle.get().await;
 
@@ -258,7 +283,7 @@ async fn run_start(
     let persist = Some(PersistOptions {
         db,
         source,
-        user_message: Some(prompt.clone()),
+        user_message: user_message_for_persist(&prompt, visible_user_message),
         claude_session_id: None,
     });
 
@@ -278,6 +303,7 @@ async fn run_start(
         provider,
         model,
         effort,
+        native_delegation_policy,
     );
 
     // Own the end-of-session activity flip engine-side. Before this, the
@@ -348,7 +374,27 @@ async fn run_start(
         }
     }
 
+    // Persist the sub-agent's response text into the activity description
+    // so dispatch callers and the UI can read real output instead of just
+    // a status flip. Non-critical — failure is logged but not fatal.
+    if let Ok(result) = &session_result {
+        if let Some(text) = &result.response_text {
+            if !text.trim().is_empty() {
+                if let Err(e) = crate::agents::activity::set_description_by_session_key(
+                    &agent_dir_for_end,
+                    &session_key_for_end,
+                    text,
+                ) {
+                    tracing::warn!("[sessions] failed to save response_text to activity: {e}");
+                }
+            }
+        }
+    }
+
     let next_status = match session_result {
+        Ok(result) if result.error.is_none() && source_for_file_changes == "orchestration" => {
+            "done"
+        }
         Ok(result) if result.error.is_none() => "needs_you",
         Ok(_) => "error",
         Err(e) => {
@@ -396,6 +442,7 @@ async fn run_start(
 pub async fn cancel(
     rt: &SessionRuntime,
     events: &DynEventSink,
+    db: &Database,
     agent_path: &str,
     session_key: &str,
 ) -> bool {
@@ -433,6 +480,7 @@ pub async fn cancel(
         session_key: session_key.to_string(),
         item: FeedItem::SystemMessage("Stopped by user".into()),
     });
+    persist_cancel_message(db, Path::new(agent_path), session_key).await;
     events.emit(HoustonEvent::SessionStatus {
         agent_path: agent_path.to_string(),
         session_key: session_key.to_string(),
@@ -440,6 +488,20 @@ pub async fn cancel(
         error: None,
     });
     true
+}
+
+async fn persist_cancel_message(db: &Database, agent_dir: &Path, session_key: &str) {
+    let message = serde_json::Value::String("Stopped by user".to_string()).to_string();
+    for sid in session_ids_for_history(agent_dir, session_key) {
+        if let Err(e) = db
+            .add_chat_feed_item_by_session(&sid, "system_message", &message, "desktop")
+            .await
+        {
+            tracing::warn!(
+                "[sessions] failed to persist cancel message: {e} (session_key={session_key})"
+            );
+        }
+    }
 }
 
 #[cfg(unix)]
@@ -510,14 +572,20 @@ pub async fn start_onboarding(
             working_dir: agent_dir,
             session_key,
             prompt: ".".to_string(),
+            visible_user_message: true,
             system_prompt: Some(product_prompt),
             source: Some("desktop".into()),
             provider: resolved.provider,
             model: resolved.model,
+            native_delegation_policy: NativeDelegationPolicy::Block,
             effort: None,
         },
     )
     .await
+}
+
+fn user_message_for_persist(prompt: &str, visible_user_message: bool) -> Option<String> {
+    visible_user_message.then(|| prompt.to_string())
 }
 
 /// Expand a leading `~` to `$HOME`. Mirrors the one-liner the Tauri adapter
@@ -570,17 +638,19 @@ mod tests {
             start(
                 &rt,
                 events.clone(),
-                db,
+                db.clone(),
                 "",
                 StartParams {
                     agent_dir: dir.path().to_path_buf(),
                     working_dir: dir.path().to_path_buf(),
                     session_key: "chat-test".to_string(),
                     prompt: "hello".to_string(),
+                    visible_user_message: true,
                     system_prompt: None,
                     source: Some("test".to_string()),
                     provider: Provider::OpenAI,
                     model: None,
+                    native_delegation_policy: NativeDelegationPolicy::Allow,
                     effort: None,
                 },
             ),
@@ -590,7 +660,64 @@ mod tests {
         .expect("queued start should be accepted");
 
         assert_eq!(accepted, "chat-test");
-        assert!(cancel(&rt, &events, &dir.path().to_string_lossy(), "chat-test",).await);
+        assert!(
+            cancel(
+                &rt,
+                &events,
+                &db,
+                &dir.path().to_string_lossy(),
+                "chat-test",
+            )
+            .await
+        );
         drop(guard);
+    }
+
+    #[tokio::test]
+    async fn cancel_persists_stopped_message_when_session_id_exists() {
+        let rt = SessionRuntime::default();
+        let dir = TempDir::new().unwrap();
+        let identity =
+            SessionIdentity::new(dir.path().to_string_lossy().to_string(), "chat-test".into());
+        let guard = rt.acquire_turn(&identity).await;
+        let db = Database::connect_in_memory().await.unwrap();
+        let events: DynEventSink = Arc::new(NoopEventSink);
+        let sid_path = houston_agents_conversations::session_id_tracker::session_id_path(
+            dir.path(),
+            Provider::OpenAI,
+            "chat-test",
+        );
+        std::fs::create_dir_all(sid_path.parent().unwrap()).unwrap();
+        std::fs::write(&sid_path, "sid-1").unwrap();
+        rt.control.register(&identity).await;
+
+        assert!(
+            cancel(
+                &rt,
+                &events,
+                &db,
+                &dir.path().to_string_lossy(),
+                "chat-test",
+            )
+            .await
+        );
+        drop(guard);
+
+        let rows = db.list_chat_feed_by_session("sid-1").await.unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].feed_type, "system_message");
+        assert_eq!(rows[0].data_json, "\"Stopped by user\"");
+    }
+
+    #[test]
+    fn internal_turns_do_not_persist_prompt_as_user_message() {
+        assert_eq!(
+            user_message_for_persist("Summarize internal results", false),
+            None
+        );
+        assert_eq!(
+            user_message_for_persist("Visible user prompt", true),
+            Some("Visible user prompt".to_string())
+        );
     }
 }

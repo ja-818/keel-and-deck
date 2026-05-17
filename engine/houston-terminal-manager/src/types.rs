@@ -33,6 +33,24 @@ impl FromStr for Provider {
     }
 }
 
+/// Whether this session may use provider-native delegation primitives.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum NativeDelegationPolicy {
+    /// Houston-owned beginner orchestration is active. Provider-native
+    /// delegation would bypass the engine, so block it at args and parser.
+    #[default]
+    Block,
+    /// Professional mode keeps the provider's original tool surface.
+    Allow,
+}
+
+impl NativeDelegationPolicy {
+    pub fn blocks(self) -> bool {
+        matches!(self, Self::Block)
+    }
+}
+
 /// Events parsed from Claude's `--output-format stream-json` NDJSON output.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]

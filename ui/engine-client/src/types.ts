@@ -97,6 +97,7 @@ export interface Agent {
   folderPath: string;
   configId: string;
   color?: string;
+  temporary: boolean;
   createdAt: string;
   lastOpenedAt?: string;
 }
@@ -109,6 +110,7 @@ export interface CreateAgent {
   installedPath?: string;
   seeds?: Record<string, string>;
   existingPath?: string;
+  temporary?: boolean;
 }
 
 export interface CreateAgentResult {
@@ -254,6 +256,8 @@ export interface ConversationEntry {
   updated_at?: string;
   agent_path: string;
   agent_name: string;
+  orchestration_parent_agent_path?: string;
+  orchestration_parent_session_key?: string;
 }
 
 // ---------- Skills ----------
@@ -486,6 +490,7 @@ export interface RunShellRequest {
 export interface SessionStartRequest {
   sessionKey: string;
   prompt: string;
+  visibleUserMessage?: boolean;
   systemPrompt?: string;
   source?: string;
   workingDir?: string;
@@ -773,4 +778,93 @@ export interface PortableInstalledAgent {
   agentName: string;
   workspaceName: string;
   requiredIntegrations: string[];
+}
+
+// ---------- Orchestration ----------
+
+export interface OrchestrationAgentIntent {
+  id?: string;
+  name: string;
+  rolePrompt: string;
+  taskPrompt: string;
+  /** Legacy persisted chat links. New callers must send rolePrompt/taskPrompt. */
+  prompt?: string;
+  dependsOn?: string[];
+}
+
+export interface OrchestrationCreateAndRunRequest {
+  workspaceId: string;
+  parentAgentPath: string;
+  parentSessionKey: string;
+  agents: OrchestrationAgentIntent[];
+}
+
+export interface OrchestrationAdjustAndRunRequest {
+  workspaceId: string;
+  parentAgentPath: string;
+  parentSessionKey: string;
+  adjustment: string;
+  targetNodeIds: string[];
+  actionId?: string;
+}
+
+export interface OrchestrationStatusRequest {
+  parentAgentPath: string;
+  parentSessionKey: string;
+}
+
+export interface OrchestrationCreatedAgent {
+  id: string;
+  nodeId: string;
+  name: string;
+  agentPath: string;
+  sessionKey: string;
+  dependsOn: string[];
+  status: string;
+}
+
+export interface OrchestrationCreateAndRunResult {
+  agents: OrchestrationCreatedAgent[];
+}
+
+export interface OrchestrationNode {
+  id: string;
+  name: string;
+  rolePrompt: string;
+  taskPrompt: string;
+  dependsOn: string[];
+  agentPath: string;
+  sessionKey: string;
+  status: string;
+  output?: string;
+  error?: string;
+}
+
+export interface OrchestrationManifest {
+  id: string;
+  parentAgentPath: string;
+  parentSessionKey: string;
+  workspaceId: string;
+  revision: number;
+  status: string;
+  maxConcurrency: number;
+  currentAdjustment?: string;
+  currentAdjustmentTargets?: string[];
+  appliedDispatchActionIds?: string[];
+  appliedSaveActionIds?: string[];
+  nodes: OrchestrationNode[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrchestrationSaveAgentsRequest {
+  workspaceId: string;
+  parentAgentPath?: string;
+  parentSessionKey?: string;
+  agentPaths: string[];
+  actionId?: string;
+}
+
+export interface OrchestrationSaveAgentsResult {
+  agents: Agent[];
 }

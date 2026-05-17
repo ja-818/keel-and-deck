@@ -126,6 +126,8 @@ mod tests {
                 worktree_path: None,
                 provider: None,
                 model: None,
+                orchestration_parent_agent_path: None,
+                orchestration_parent_session_key: None,
             })
             .unwrap();
         assert_eq!(a.title, "first");
@@ -210,7 +212,9 @@ mod tests {
 
         let run = s.create_routine_run(&r.id).unwrap();
         assert_eq!(run.routine_id, r.id);
-        assert!(run.session_key.starts_with(&format!("routine-{}-run-", r.id)));
+        assert!(run
+            .session_key
+            .starts_with(&format!("routine-{}-run-", r.id)));
         assert_eq!(s.list_routine_runs_for(&r.id).unwrap().len(), 1);
 
         let upd = s

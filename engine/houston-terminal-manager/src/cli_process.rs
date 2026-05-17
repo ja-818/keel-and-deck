@@ -1,5 +1,7 @@
 use super::session_io;
-use super::types::{FeedItem, Provider, SessionStatus, ToolRuntimeErrorKind};
+use super::types::{
+    FeedItem, NativeDelegationPolicy, Provider, SessionStatus, ToolRuntimeErrorKind,
+};
 use crate::auth_error::is_auth_error;
 use crate::codex_command;
 use crate::provider_error::{
@@ -31,6 +33,7 @@ pub(crate) async fn run_cli_process(
     cmd: &mut Command,
     prompt: &str,
     provider: Provider,
+    native_delegation_policy: NativeDelegationPolicy,
 ) -> CliRunOutcome {
     let cli_name = match provider {
         Provider::Anthropic => "claude",
@@ -82,16 +85,31 @@ pub(crate) async fn run_cli_process(
     if let Some(stdout) = stdout {
         let tx2 = tx.clone();
         io_set.spawn(async move {
-            CliIoReport::Stdout(session_io::read_stdout_events(stdout, tx2, provider).await)
+            CliIoReport::Stdout(
+                session_io::read_stdout_events(stdout, tx2, provider, native_delegation_policy)
+                    .await,
+            )
         });
     }
 
     let mut stderr_lines = Vec::new();
     let mut stdout_report = session_io::StdoutReadReport::default();
+    let mut native_delegation_attempt = false;
     while let Some(result) = io_set.join_next().await {
         match result {
             Ok(CliIoReport::Stderr(lines)) => stderr_lines = lines,
-            Ok(CliIoReport::Stdout(report)) => stdout_report = report,
+            Ok(CliIoReport::Stdout(report)) => {
+                native_delegation_attempt = report.native_delegation_attempt;
+                stdout_report = report;
+                if native_delegation_attempt && native_delegation_policy.blocks() {
+                    tracing::error!(
+                        "[houston:session] killing {cli_name} after provider-native delegation attempt"
+                    );
+                    let _ = child.kill().await;
+                    io_set.abort_all();
+                    break;
+                }
+            }
             Err(e) => {
                 let msg = format!("I/O reader panicked: {e:?}");
                 tracing::info!("[houston:session] {msg}");
@@ -106,6 +124,9 @@ pub(crate) async fn run_cli_process(
     match child.wait().await {
         Ok(status) => {
             tracing::info!("[houston:session] process exited with {status}");
+            if native_delegation_attempt {
+                return CliRunOutcome::Failed;
+            }
             let is_sigterm = status.code() == Some(143);
             // On Windows, `sessions::cancel` calls `taskkill /F /T /PID` to
             // tear down the codex / claude process tree when the user
@@ -238,6 +259,71 @@ fn configure_process_group(cmd: &mut Command) {
 #[cfg(windows)]
 fn configure_process_group(_cmd: &mut Command) {}
 
+#[cfg(test)]
+mod exit_tests {
+    use super::*;
+
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn native_delegation_attempt_fails_and_kills_provider_process() {
+        let (tx, mut rx) = mpsc::unbounded_channel();
+        let mut cmd = Command::new("sh");
+        cmd.arg("-c").arg(
+            "printf '%s\n' '{\"type\":\"stream_event\",\"event\":{\"type\":\"content_block_start\",\"index\":1,\"content_block\":{\"type\":\"tool_use\",\"id\":\"call_00_idDUd\",\"name\":\"Task\",\"input\":{}}}}' '{\"type\":\"system\",\"subtype\":\"task_started\",\"task_id\":\"a686ea714acecc130\",\"tool_use_id\":\"call_00_idDUd\"}'; sleep 30",
+        );
+
+        let outcome = run_cli_process(
+            &tx,
+            &mut cmd,
+            "",
+            Provider::Anthropic,
+            NativeDelegationPolicy::Block,
+        )
+        .await;
+        assert_eq!(outcome, CliRunOutcome::Failed);
+
+        let mut saw_policy_error = false;
+        while let Ok(update) = rx.try_recv() {
+            if let SessionUpdate::Status(SessionStatus::Error(message)) = update {
+                if message == crate::native_delegation::NATIVE_DELEGATION_BLOCKED_MESSAGE {
+                    saw_policy_error = true;
+                }
+            }
+        }
+        assert!(saw_policy_error);
+    }
+
+    #[tokio::test]
+    #[cfg(unix)]
+    async fn native_delegation_output_is_not_fatal_when_policy_allows() {
+        let (tx, mut rx) = mpsc::unbounded_channel();
+        let mut cmd = Command::new("sh");
+        cmd.arg("-c").arg(
+            "printf '%s\n' '{\"type\":\"stream_event\",\"event\":{\"type\":\"content_block_start\",\"index\":1,\"content_block\":{\"type\":\"tool_use\",\"id\":\"call_00_idDUd\",\"name\":\"Task\",\"input\":{}}}}' '{\"type\":\"system\",\"subtype\":\"task_started\",\"task_id\":\"a686ea714acecc130\",\"tool_use_id\":\"call_00_idDUd\"}'",
+        );
+
+        let outcome = run_cli_process(
+            &tx,
+            &mut cmd,
+            "",
+            Provider::Anthropic,
+            NativeDelegationPolicy::Allow,
+        )
+        .await;
+        assert_eq!(outcome, CliRunOutcome::Completed);
+
+        let mut saw_policy_error = false;
+        while let Ok(update) = rx.try_recv() {
+            if let SessionUpdate::Status(SessionStatus::Error(message)) = update {
+                if message == crate::native_delegation::NATIVE_DELEGATION_BLOCKED_MESSAGE {
+                    saw_policy_error = true;
+                }
+            }
+        }
+        assert!(!saw_policy_error);
+    }
+}
+
 #[cfg(not(any(unix, windows)))]
 fn configure_process_group(_cmd: &mut Command) {}
 
@@ -267,6 +353,7 @@ mod tests {
             malformed_provider_json: false,
             saw_auth_error: true,
             saw_model_unsupported_error: false,
+            native_delegation_attempt: false,
         };
 
         let outcome =

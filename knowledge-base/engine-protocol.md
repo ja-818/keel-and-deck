@@ -37,6 +37,17 @@ Keep it this way — the WKWebView in the desktop app is cross-origin to
 preflights to fail (e.g. `setPreference` returning "Load failed" in
 Safari/WKWebView). See `engine/houston-engine-server/src/lib.rs`.
 
+### Desktop Sidecar Restart
+
+In development and production, the desktop supervisor may respawn
+`houston-engine` on a new port. The frontend must keep existing WebSocket
+handlers and topic subscriptions when swapping to the new `{baseUrl, token}`.
+Do not replace the shared `EngineWebSocket` singleton with a fresh instance
+after `houston-engine-restarted`; call its client-replacement path so mounted
+chat hooks keep receiving `FeedItem` and `SessionStatus`. Losing those handlers
+causes sessions to finish in the DB while the visible chat stays in a loading
+state.
+
 ## Auth
 
 Bearer token. Three accepted locations (server checks all):
@@ -126,10 +137,15 @@ strip, lets users remove them, then submits the remaining queued text as one
 combined turn when the active run finishes. The engine queue remains the
 protocol safety net for other clients and direct API callers.
 Different sessions in the same folder run in parallel. Cancelling a session
-invalidates any queued turns for that session key. If multiple sessions overlap
-in one folder, file-change attribution is skipped for those overlapping runs
-because the diff cannot be assigned to one model safely. On successful
-non-overlapping completion, the engine may emit and persist a `FeedItem` with
+invalidates any queued turns for that session key, emits `SessionStatus:
+completed`, and persists a `system_message` of `Stopped by user` when a
+provider session id exists. Clients must not derive an active run from final
+feed rows like `thinking`, `tool_call`, `tool_result`, or `user_message`;
+only `*_streaming` rows or explicit session loading/status state mean the run
+is still active. If multiple sessions overlap in one folder, file-change
+attribution is skipped for those overlapping runs because the diff cannot be
+assigned to one model safely. On successful non-overlapping completion, the
+engine may emit and persist a `FeedItem` with
 `feed_type: "file_changes"` and `data: { created: string[], modified:
 string[] }`; clients should render this as session-owned project artifacts.
 Provider/tool execution failures that need user recovery UI are emitted as
@@ -181,6 +197,108 @@ not user-facing copy.
 |---|---|---|
 | POST | `/v1/conversations/list` | List conversations for one agent |
 | POST | `/v1/conversations/list-all` | List across many agents |
+
+**Orchestration** (beginner-mode delegation)
+| Method | Path | Description |
+|---|---|---|
+| POST | `/v1/orchestration/create-and-run` | Create temporary specialized agents through canonical agent CRUD, persist a DAG manifest, run dependency-ready nodes, then queue a summary turn back into the parent conversation |
+| POST | `/v1/orchestration/adjust-and-run` | Re-run the affected subgraph of an existing DAG after user feedback, without creating duplicates |
+| POST | `/v1/orchestration/save-agents` | Save temporary specialized agents, or update matching user-created custom agents in the same workspace without duplicating them |
+
+Generated specialized agents are normal workspace agents with
+`configId: "generated-custom"` plus `origin.kind: "orchestration"` metadata in
+`.houston/agent.json`. The save route is an upsert by orchestration role
+identity, not by display name. It may update user-created generated agents in
+the same workspace, but must not update Houston/system/template agents. Legacy
+saved generated agents that used `configId: "custom"` are migrated to
+`generated-custom` when agents are listed.
+
+The queued parent summary turn is an internal engine prompt, not a human message. It must be sent to the provider so the parent can summarize child-agent output, but it must not be emitted or persisted as `user_message`; otherwise the chat UI leaks the handoff instructions and can render internal `save_agents` transport markers too early. Use `StartParams.visible_user_message = false` for `source = "orchestration-summary"` and keep normal user/API turns visible.
+
+`POST /v1/orchestration/create-and-run` accepts:
+
+```json
+{
+  "workspaceId": "ws_123",
+  "parentAgentPath": "/Users/me/.houston/workspaces/Workspace/Personal assistant",
+  "parentSessionKey": "activity-42",
+  "agents": [
+    {
+      "id": "extract",
+      "name": "Data Extractor",
+      "rolePrompt": "You are a reusable data extraction agent. You turn messy source material into accurate structured briefs. Ask one targeted question when required source material is missing.",
+      "taskPrompt": "For this mission, review the provided notes and extract the key dates, decisions, risks, and owners.",
+      "dependsOn": []
+    },
+    {
+      "id": "planner",
+      "name": "Action Plan Builder",
+      "rolePrompt": "You are a reusable planning agent. You convert briefs into clear action plans with priorities, dependencies, owners when available, and concrete next steps.",
+      "taskPrompt": "For this mission, use the extracted brief to create a prioritized action plan with owners, deadlines, dependencies, and next steps.",
+      "dependsOn": ["extract"]
+    }
+  ]
+}
+```
+
+Response:
+
+```json
+{
+  "agents": [
+    {
+      "id": "/Users/me/.houston/workspaces/Workspace/Data Extractor",
+      "nodeId": "extract",
+      "name": "Data Extractor",
+      "agentPath": "/Users/me/.houston/workspaces/Workspace/Data Extractor",
+      "sessionKey": "activity-1",
+      "dependsOn": [],
+      "status": "waiting"
+    }
+  ]
+}
+```
+
+Notes:
+- Empty `agents` arrays are rejected with `400 BAD_REQUEST`.
+- Each agent item accepts optional `id` and `dependsOn`. New prompt emitters should always send both. Missing ids are normalized to `agent_1`, `agent_2`, etc. for direct API callers.
+- Agent instructions are split: `rolePrompt` is the durable reusable identity written to the temporary agent and later saved/updated; `taskPrompt` is the concrete assignment for the current run. Keep domain/topic/quantity/platform details in `taskPrompt` so saved agents do not become hardcoded to one conversation. Legacy persisted chat links with a single `prompt` are still accepted and migrated into both fields for user-data compatibility.
+- Dependencies form a DAG. Duplicate ids, unknown dependencies, self dependencies, and cycles are rejected before any run starts.
+- The route resolves provider/model from the parent agent config, same as normal session starts.
+- Child runs are accepted immediately. Completion is asynchronous. Nodes with no dependencies start first; dependent nodes stay `waiting` until every dependency is `done`. If a dependency ends as `error`, `blocked`, or `cancelled`, downstream nodes become `blocked`.
+- The source of truth is `.houston/orchestration/<parentSessionKey>.json` under the parent agent. Activities are only the UI projection for the right panel and board.
+- Created agents are `temporary: true`. The desktop may show them in the current delegation panel, but must not show them in "Your agents" until the user explicitly saves them through `/v1/orchestration/save-agents`.
+- Saving is offered through a chat card rendered from `https://houston.ai/_/save-agents#agents=<json>`, after the user indicates the delegated work is finished or asks to keep the agents. The right panel stays status-only. Saving is idempotent for user-created generated agents in the same workspace: if a non-temporary `generated-custom` agent with matching orchestration origin already exists, Houston updates that agent's instructions instead of creating a duplicate. System/template-derived agents are never updated by this path.
+- Each child activity stores `orchestration_parent_agent_path` and `orchestration_parent_session_key`. The beginner-mode right panel must filter by those fields, not by all active workspace agents.
+- Child activity statuses are `waiting`, `running`, `done`, `error`, `blocked`, or `cancelled`; they should not remain `needs_you` unless the child actually requires user input outside this flow.
+- Once every DAG node reaches a terminal status, the engine starts one more turn on `parentSessionKey` with an internal handoff prompt so the parent agent can summarize the delegated work for the user in non-technical language. Do not expose internal handoff headings in chat.
+- If the user gives feedback after delegated results, use `/v1/orchestration/adjust-and-run` with the same `parentAgentPath` and `parentSessionKey`, an `adjustment`, `targetNodeIds`, and a stable per-message `actionId`. `targetNodeIds` names the nodes whose own output must change. The engine computes the downstream dependent subgraph, resets only those nodes to `waiting`, preserves unaffected outputs, injects the adjustment into the next run, preserves dependency order, records the action id as consumed, and queues another parent summary after terminal completion. Do not suggest or create a second set of agents for adjustment loops.
+
+`POST /v1/orchestration/adjust-and-run` accepts:
+
+```json
+{
+  "workspaceId": "ws_123",
+  "parentAgentPath": "/Users/me/.houston/workspaces/Salon/Personal assistant",
+  "parentSessionKey": "activity-42",
+  "adjustment": "Rewrite only the final plan with a warmer tone.",
+  "targetNodeIds": ["planner"],
+  "actionId": "adjust-1m7c6b2"
+}
+```
+
+If `targetNodeIds` is empty, the engine treats the adjustment as global and re-runs every node. Unknown target ids are rejected before any node is reset. If `actionId` is already recorded in the manifest, the route returns the existing agent list without mutating the DAG or starting another run. Clients should only auto-run dispatch markers from the latest assistant message; historical markers stay in the visible chat content but are inert. Clients should not call this route while the manifest is `running`; queue or wait in the UI instead.
+
+`POST /v1/orchestration/save-agents` accepts:
+
+```json
+{
+  "workspaceId": "ws_123",
+  "agentPaths": [
+    "/Users/me/.houston/workspaces/Salon/Social Post Writer (a1b2c3d4)"
+  ]
+}
+```
 
 **Skills**
 | Method | Path | Description |

@@ -27,6 +27,8 @@ export const queryKeys = {
     ["all-conversations", ...agentPaths] as const,
   chatHistory: (agentPath: string, sessionKey: string) =>
     ["chat-history", agentPath, sessionKey] as const,
+  orchestrationStatus: (agentPath: string, sessionKey: string) =>
+    ["orchestration-status", agentPath, sessionKey] as const,
 
   // App-scoped (less reactive, loaded on init)
   connections: () => ["connections"] as const,

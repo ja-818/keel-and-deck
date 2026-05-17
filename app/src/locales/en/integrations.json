@@ -48,5 +48,43 @@
     "alreadyConnected": "Already connected",
     "connected": "Connected",
     "connect": "Connect"
+  },
+  "connectedToast": "{{app}} connected",
+  "continueAfterConnected": "{{toolkits}} connected. Continue the original request now.",
+  "continueAfterComposioSignIn": "Composio sign-in complete. Continue the original request now.",
+  "connecting": "Connecting...",
+  "verify": "Verify",
+  "verifying": "Verifying",
+  "verifiedToast": "{{name}} connected",
+  "notVerified": "Still not connected. Finish approval in the browser, then verify again.",
+  "retry": "Try again",
+  "allConnected": "All your apps are connected",
+  "dispatch": {
+    "suggestionTitle": "I can create {{count}} specialized agents for this",
+    "tokenNote": "Creating agents uses extra tokens but is faster and produces better results.",
+    "accept": "Create agents",
+    "reject": "No, do it yourself",
+    "rejectPrompt": "No, handle the whole request yourself. Complete it sequentially without creating specialized agents.",
+    "creating": "Creating agents…",
+    "created": "Agents created and running",
+    "preparingAgents": "Preparing the agent plan…",
+    "preparingAdjustment": "Preparing the update…",
+    "preparingSave": "Preparing save options…",
+    "agentsWorking": "Agents working, {{done}}/{{total}} done",
+    "waitingForAgents": "Waiting for the current agents to finish…",
+    "adjusting": "Updating specialized agents…",
+    "error": "Failed to create agents. Please try again."
+  },
+  "saveAgents": {
+    "title": "Save or update these agents?",
+    "body": "Keep selected agents for later. If one already exists, Houston updates it instead of creating a duplicate.",
+    "accept": "Save selected",
+    "reject": "Not now",
+    "saving": "Saving agents…",
+    "saved": "Agents saved",
+    "savedDetail": "They are now available in your workspace.",
+    "savedConversation": "Done. The agents are saved or updated in your workspace. I can help with anything else you need.",
+    "skipped": "No agents were saved.",
+    "error": "Failed to save agents. Please try again."
   }
 }

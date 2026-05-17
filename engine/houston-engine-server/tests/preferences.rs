@@ -15,6 +15,7 @@ async fn spawn() -> (SocketAddr, String) {
         home_dir: home.path().to_path_buf(),
         docs_dir: docs.path().to_path_buf(),
         app_system_prompt: String::new(),
+        app_beginner_system_prompt: String::new(),
         app_onboarding_prompt: String::new(),
         tunnel_url: "http://test.invalid".into(),
     };
@@ -94,6 +95,8 @@ async fn put_then_get_roundtrip() {
 #[tokio::test]
 async fn unauthorized_without_token() {
     let (addr, _) = spawn().await;
-    let res = reqwest::get(format!("http://{addr}/v1/preferences/theme")).await.unwrap();
+    let res = reqwest::get(format!("http://{addr}/v1/preferences/theme"))
+        .await
+        .unwrap();
     assert_eq!(res.status(), 401);
 }

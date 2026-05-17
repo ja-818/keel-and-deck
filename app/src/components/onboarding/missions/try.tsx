@@ -23,8 +23,11 @@ import {
 import { useChatDisplayLabels } from "../../use-chat-display-labels";
 import {
   ComposioLinkCard,
-  parseComposioToolkitFromHref,
 } from "../../composio-link-card";
+import {
+  latestAssistantComposioToolkits,
+  parseComposioToolkitFromHref,
+} from "../../../lib/composio-links";
 import {
   ComposioSigninCard,
   isComposioSigninHref,
@@ -101,6 +104,7 @@ export function TryMission({
   onSkip,
 }: TryMissionProps) {
   const { t } = useTranslation(["setup", "chat"]);
+  const { t: tIntegrations } = useTranslation("integrations");
   const agentPath = agent.folderPath;
   const missionTitle = t("setup:tutorial.missions.try.skill.title");
 
@@ -128,6 +132,8 @@ export function TryMission({
   const [introDismissed, setIntroDismissed] = useState(false);
   const [pickedAny, setPickedAny] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const pendingComposioRef = useRef<Set<string>>(new Set());
+  const continuedComposioRef = useRef<string | null>(null);
 
   const { data: composioStatus } = useConnections();
   const isSignedIn = composioStatus?.status === "ok";
@@ -135,6 +141,10 @@ export function TryMission({
   const connectedSet = useMemo(
     () => new Set(connectedList ?? []),
     [connectedList],
+  );
+  const latestComposioToolkits = useMemo(
+    () => latestAssistantComposioToolkits((feedItems ?? []) as FeedItem[]),
+    [feedItems],
   );
 
   // Append the tutorial directive to CLAUDE.md while this mission is
@@ -196,10 +206,31 @@ export function TryMission({
     tauriSystem.openUrl(url).catch(console.error);
   }, []);
 
+  const handleComposioConnectStarted = useCallback((toolkit: string) => {
+    pendingComposioRef.current.add(toolkit);
+    continuedComposioRef.current = null;
+  }, []);
+  const sendComposioContinuation = useCallback((text: string) => {
+    if (!missionSessionKey) return;
+    tauriChat
+      .send(agentPath, text, missionSessionKey, {
+        providerOverride: provider,
+        modelOverride: model,
+        effortOverride: "medium",
+        visibleUserMessage: false,
+      })
+      .catch((e) => {
+        setError(e instanceof Error ? e.message : String(e));
+      });
+  }, [agentPath, missionSessionKey, model, provider]);
+  const handleComposioSignInComplete = useCallback(() => {
+    sendComposioContinuation(tIntegrations("continueAfterComposioSignIn"));
+  }, [sendComposioContinuation, tIntegrations]);
+
   const renderLink = useCallback(
     ({ href, onOpen }: { href: string; onOpen: () => void }) => {
       if (isComposioSigninHref(href)) {
-        return <ComposioSigninCard />;
+        return <ComposioSigninCard onSignInComplete={handleComposioSignInComplete} />;
       }
       const toolkit = parseComposioToolkitFromHref(href);
       if (!toolkit) return undefined;
@@ -208,10 +239,11 @@ export function TryMission({
           toolkit={toolkit}
           isConnected={connectedSet.has(toolkit)}
           onOpen={onOpen}
+          onConnectStarted={handleComposioConnectStarted}
         />
       );
     },
-    [connectedSet],
+    [connectedSet, handleComposioConnectStarted, handleComposioSignInComplete],
   );
 
   const transformContent = useCallback((content: string) => {
@@ -254,6 +286,30 @@ export function TryMission({
     sendNow,
   });
   const queuedLabels = useQueuedMessageLabels();
+
+  useEffect(() => {
+    if (!missionSessionKey) return;
+    if (latestComposioToolkits.length === 0) return;
+    if (isActive) return;
+    const pending = pendingComposioRef.current;
+    if (!latestComposioToolkits.some((toolkit) => pending.has(toolkit))) return;
+    if (!latestComposioToolkits.every((toolkit) => connectedSet.has(toolkit))) return;
+
+    const key = latestComposioToolkits.slice().sort().join(",");
+    if (continuedComposioRef.current === key) return;
+    continuedComposioRef.current = key;
+    pending.clear();
+    sendComposioContinuation(
+      tIntegrations("continueAfterConnected", { toolkits: key }),
+    );
+  }, [
+    connectedSet,
+    isActive,
+    latestComposioToolkits,
+    missionSessionKey,
+    sendComposioContinuation,
+    tIntegrations,
+  ]);
 
   const handleSend = useCallback(
     async (text: string, files: File[]) => {

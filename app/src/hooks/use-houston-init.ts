@@ -1,5 +1,9 @@
 import { useEffect, useRef } from "react";
 import { tauriPreferences, tauriProvider, tauriRoutines } from "../lib/tauri";
+import {
+  EXPERIENCE_LEVEL_PREF_KEY,
+  isExperienceLevel,
+} from "../lib/experience-level";
 import { useAgentCatalogStore } from "../stores/agent-catalog";
 import { useWorkspaceStore } from "../stores/workspaces";
 import { useAgentStore } from "../stores/agents";
@@ -17,6 +21,7 @@ export function useHoustonInit() {
   const setCurrent = useAgentStore((s) => s.setCurrent);
   const setClaudeAvailable = useUIStore((s) => s.setClaudeAvailable);
   const setViewMode = useUIStore((s) => s.setViewMode);
+  const setExperienceLevel = useUIStore((s) => s.setExperienceLevel);
 
   useEffect(() => {
     if (initRef.current) return;
@@ -25,6 +30,14 @@ export function useHoustonInit() {
     async function init() {
       await loadConfigs();
       await loadWorkspaces();
+      try {
+        const savedExperience = await tauriPreferences.get(EXPERIENCE_LEVEL_PREF_KEY);
+        if (isExperienceLevel(savedExperience)) {
+          setExperienceLevel(savedExperience);
+        }
+      } catch (e) {
+        console.error("[init] Failed to restore experience level:", e);
+      }
 
       const wsState = useWorkspaceStore.getState();
       let currentWorkspace = wsState.current;
@@ -89,5 +102,5 @@ export function useHoustonInit() {
     }
 
     init();
-  }, [loadConfigs, loadWorkspaces, loadAgents, setCurrent, setClaudeAvailable, setViewMode]);
+  }, [loadConfigs, loadWorkspaces, loadAgents, setCurrent, setClaudeAvailable, setViewMode, setExperienceLevel]);
 }

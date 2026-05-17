@@ -15,6 +15,17 @@
     "finishPage": "Get started",
     "finishDialog": "Create workspace"
   },
+  "experience": {
+    "title": "How do you want to use Houston?",
+    "beginner": {
+      "label": "Beginner",
+      "description": "Simplified interface with guided suggestions and fewer settings"
+    },
+    "professional": {
+      "label": "Professional",
+      "description": "Full access to all agents, tabs, and advanced features"
+    }
+  },
   "tutorial": {
     "brand": "Houston",
     "counter": "Mission {{current}} of {{total}}",

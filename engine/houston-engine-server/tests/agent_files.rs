@@ -19,6 +19,7 @@ async fn spawn_with_agent() -> (SocketAddr, String, String, tempfile::TempDir) {
         home_dir: home.path().to_path_buf(),
         docs_dir: docs.path().to_path_buf(),
         app_system_prompt: String::new(),
+        app_beginner_system_prompt: String::new(),
         app_onboarding_prompt: String::new(),
         tunnel_url: "http://test.invalid".into(),
     };
@@ -206,7 +207,10 @@ async fn project_files_listing_and_mutations() {
     // Delete missing → 404.
     let miss = c
         .delete(format!("http://{addr}/v1/agents/files"))
-        .query(&[("agent_path", agent_path.as_str()), ("rel_path", "ghost.png")])
+        .query(&[
+            ("agent_path", agent_path.as_str()),
+            ("rel_path", "ghost.png"),
+        ])
         .bearer_auth(&tok)
         .send()
         .await

@@ -31,6 +31,7 @@ import type { HoustonClient } from "./client";
 
 type EnvelopeHandler = (env: EngineEnvelope) => void;
 type EventHandler = (event: unknown) => void;
+type WebSocketCtor = typeof WebSocket;
 
 /** Convenience topic helpers. */
 export const topics = {
@@ -50,6 +51,8 @@ type ReconnectHandler = () => void;
 
 export class EngineWebSocket {
   private socket: WebSocket | null = null;
+  private client: HoustonClient;
+  private readonly WebSocketImpl: WebSocketCtor;
   private envelopeHandlers: Set<EnvelopeHandler> = new Set();
   private eventHandlers: Set<EventHandler> = new Set();
   private reconnectHandlers: Set<ReconnectHandler> = new Set();
@@ -65,7 +68,10 @@ export class EngineWebSocket {
   /** Topics the caller wants subscribed. Re-sent on every reconnect. */
   private subscribed: Set<string> = new Set();
 
-  constructor(private client: HoustonClient) {}
+  constructor(client: HoustonClient, WebSocketImpl: WebSocketCtor = WebSocket) {
+    this.client = client;
+    this.WebSocketImpl = WebSocketImpl;
+  }
 
   connect(): void {
     this.shouldRun = true;
@@ -75,8 +81,26 @@ export class EngineWebSocket {
   disconnect(): void {
     this.shouldRun = false;
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
     this.socket?.close();
     this.socket = null;
+  }
+
+  /**
+   * Swap to a new engine endpoint without losing handlers or subscriptions.
+   *
+   * Desktop uses this when the Tauri supervisor respawns the sidecar on a new
+   * port. Existing React hooks stay mounted, so replacing the singleton would
+   * strand their event handlers on a dead socket.
+   */
+  replaceClient(client: HoustonClient): void {
+    this.client = client;
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
+    this.shouldRun = true;
+    this.socket?.close();
+    this.socket = null;
+    this.open();
   }
 
   /** Raw envelope handler — called for every frame. */
@@ -145,7 +169,7 @@ export class EngineWebSocket {
   }
 
   private open(): void {
-    const ws = new WebSocket(this.client.wsUrl());
+    const ws = new this.WebSocketImpl(this.client.wsUrl());
     this.socket = ws;
 
     ws.onopen = () => {

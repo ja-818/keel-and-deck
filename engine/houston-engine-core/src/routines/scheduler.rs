@@ -181,9 +181,7 @@ impl AgentScheduler {
                 )
                 .await
                 {
-                    tracing::error!(
-                        "[routines] Error running routine {routine_id}: {e}"
-                    );
+                    tracing::error!("[routines] Error running routine {routine_id}: {e}");
                 }
             }
         }))

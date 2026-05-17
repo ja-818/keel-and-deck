@@ -211,5 +211,25 @@
       "boardNavigate": "Moverse entre misiones",
       "cheatsheet": "Mostrar esta hoja"
     }
+  },
+  "beginner": {
+    "emptyTitle": "Empieza con una sugerencia",
+    "emptyDescription": "Elige una sugerencia para empezar o escribe cualquier cosa en el chat.",
+    "suggestion1": "Planifica mi día",
+    "suggestion2": "Resume mi bandeja de entrada",
+    "suggestion3": "Redacta una respuesta",
+    "activeAgents": "Agentes activos",
+    "activeAgentsCount": "{{count}} agentes",
+    "showActiveAgents": "Mostrar agentes activos",
+    "hideActiveAgents": "Ocultar agentes activos",
+    "statusWaiting": "Esperando",
+    "statusRunning": "En ejecución",
+    "statusDone": "Finalizado",
+    "statusNeedsYou": "Necesita tu atención",
+    "statusBlocked": "Bloqueado",
+    "statusCancelled": "Cancelado",
+    "statusError": "Error",
+    "toggleToPro": "Modo profesional",
+    "toggleToBeginner": "Modo principiante"
   }
 }

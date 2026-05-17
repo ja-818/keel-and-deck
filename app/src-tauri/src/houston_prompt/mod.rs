@@ -6,12 +6,14 @@
 //! Houston desktop agent behaves and speaks.
 
 mod base;
+mod dispatcher;
 mod integrations;
 mod onboarding;
 mod routines;
 mod skills_memory;
 
 pub use base::HOUSTON_SYSTEM_PROMPT;
+pub use dispatcher::DISPATCHER_SECTION;
 pub use integrations::COMPOSIO_GUIDANCE;
 pub use onboarding::ONBOARDING_GUIDANCE;
 pub use routines::ROUTINES_GUIDANCE;
@@ -28,6 +30,20 @@ pub fn system_prompt() -> String {
 /// Onboarding prompt suffix, appended after `system_prompt()` on first-run sessions.
 pub fn onboarding_prompt() -> String {
     ONBOARDING_GUIDANCE.to_string()
+}
+
+/// Build a system prompt appropriate for the user's experience level.
+///
+/// Professional level: the standard [`system_prompt()`] with no extra sections.
+/// Beginner level: appends the [`DISPATCHER_SECTION`] so the agent knows how to
+/// delegate work to other agents without exposing technical details to the user.
+pub fn system_prompt_for_level(level: &str) -> String {
+    let base = system_prompt();
+    if level == "beginner" {
+        format!("{}\n\n---\n\n{}", base, DISPATCHER_SECTION)
+    } else {
+        base
+    }
 }
 
 #[cfg(test)]
@@ -88,5 +104,40 @@ mod tests {
         assert!(
             prompt.contains("Ask for approval before creating, enabling, or changing a Routine")
         );
+    }
+
+    #[test]
+    fn beginner_prompt_forbids_provider_native_agent_tools() {
+        let prompt = system_prompt_for_level("beginner");
+
+        assert!(prompt.contains("Never use provider-native delegation or child-agent tools"));
+        assert!(prompt.contains("Agent"));
+        assert!(prompt.contains("Task"));
+        assert!(prompt.contains("TaskCreate"));
+        assert!(prompt.contains("TaskUpdate"));
+        assert!(prompt.contains("SendMessage"));
+    }
+
+    #[test]
+    fn beginner_prompt_requires_general_multi_stage_detection() {
+        let prompt = system_prompt_for_level("beginner");
+
+        assert!(prompt.contains("multiple reusable stages"));
+        assert!(prompt.contains("semantic, not keyword-based"));
+        assert!(prompt.contains("external app actions"));
+        assert!(prompt.contains("Missing app access becomes a dependency"));
+        assert!(prompt.contains("Use `dependsOn` for sequential dependencies"));
+        assert!(!prompt.contains("Instagram"));
+        assert!(!prompt.contains("peluquer"));
+        assert!(!prompt.contains("hair salon"));
+    }
+
+    #[test]
+    fn professional_prompt_does_not_include_beginner_dispatcher() {
+        let prompt = system_prompt_for_level("professional");
+
+        assert!(!prompt.contains("Never use provider-native delegation or child-agent tools"));
+        assert!(!prompt.contains("suggest_agents"));
+        assert!(!prompt.contains("launch_agents"));
     }
 }

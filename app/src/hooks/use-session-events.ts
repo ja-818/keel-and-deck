@@ -5,10 +5,16 @@ import { useFeedStore } from "../stores/feeds";
 import { useUIStore } from "../stores/ui";
 import { useWorkspaceStore } from "../stores/workspaces";
 import { useAgentStore } from "../stores/agents";
-import { useSessionStatusStore } from "../stores/session-status";
+import {
+  isActiveSessionStatus,
+  parseSessionStatusKey,
+  useSessionStatusStore,
+} from "../stores/session-status";
 import { subscribeHoustonEvents, listenOsEvent } from "../lib/events";
 import { logger } from "../lib/logger";
 import { hasToolRuntimeError } from "../components/tool-runtime-feed";
+import { getEngineWs } from "../lib/engine";
+import { tauriChat } from "../lib/tauri";
 import {
   consumePendingNav,
   describePendingNotificationNav,
@@ -131,6 +137,36 @@ export function useSessionEvents() {
       }
     });
 
+    const unlistenReconnect = getEngineWs().onReconnect(() => {
+      const statuses = useSessionStatusStore.getState().statuses;
+      for (const [key, status] of Object.entries(statuses)) {
+        if (!isActiveSessionStatus(status)) continue;
+        const parts = parseSessionStatusKey(key);
+        if (!parts) continue;
+        void tauriChat
+          .loadHistory(parts.agentPath, parts.sessionKey)
+          .then((history) => {
+            if (history.length === 0) return;
+            useFeedStore
+              .getState()
+              .setFeed(parts.agentPath, parts.sessionKey, history as FeedItem[]);
+            const finished = history.some(
+              (item) => item.feed_type === "final_result" || item.feed_type === "system_message",
+            );
+            if (finished) {
+              useSessionStatusStore
+                .getState()
+                .setStatus(parts.agentPath, parts.sessionKey, "completed");
+            }
+          })
+          .catch((err) => {
+            logger.debug(
+              `[session] failed to recover history after reconnect: ${String(err)}`,
+            );
+          });
+      }
+    });
+
     // Case: user clicks notification → plugin fires onAction directly.
     // This is the most reliable path for macOS desktop notification clicks.
     let unlistenNotificationAction: (() => void) | undefined;
@@ -164,6 +200,7 @@ export function useSessionEvents() {
 
     return () => {
       unlisten();
+      unlistenReconnect();
       unlistenActivated();
       unlistenNotificationAction?.();
       unlistenTauriFocus?.then((fn) => fn()).catch((e) => {

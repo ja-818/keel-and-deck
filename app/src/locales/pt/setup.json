@@ -15,6 +15,17 @@
     "finishPage": "Começar",
     "finishDialog": "Criar espaço de trabalho"
   },
+  "experience": {
+    "title": "Como voce quer usar o Houston?",
+    "beginner": {
+      "label": "Iniciante",
+      "description": "Interface simplificada com sugestoes guiadas e menos configuracoes"
+    },
+    "professional": {
+      "label": "Profissional",
+      "description": "Acesso completo a todos os agentes, abas e recursos avancados"
+    }
+  },
   "tutorial": {
     "brand": "Houston",
     "counter": "Missão {{current}} de {{total}}",

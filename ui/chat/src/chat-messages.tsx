@@ -31,10 +31,10 @@ export interface ChatMessagesProps {
   messages: ChatMessage[];
   status: "ready" | "streaming" | "submitted";
   thinkingIndicator: ReactNode;
-  transformContent?: (content: string) => {
-    content: string;
-    extra?: ReactNode;
-  };
+  transformContent?: (
+    content: string,
+    meta: { isLatestAssistantMessage: boolean; messageKey: string },
+  ) => { content: string; extra?: ReactNode };
   toolLabels?: ToolsAndCardsProps["toolLabels"];
   isSpecialTool?: ToolsAndCardsProps["isSpecialTool"];
   renderToolResult?: ToolsAndCardsProps["renderToolResult"];
@@ -144,9 +144,13 @@ export function ChatMessages({
                     const custom = renderUserMessage(msg);
                     if (custom !== undefined) return custom;
                   }
-                  const transformed = msg.from === "assistant" && transformContent
-                    ? transformContent(msg.content)
-                    : null;
+                  const transformed =
+                    msg.from === "assistant" && transformContent
+                      ? transformContent(msg.content, {
+                          isLatestAssistantMessage: isLastMsg,
+                          messageKey: msg.key,
+                        })
+                      : null;
                   const displayContent = transformed?.content ?? msg.content;
                   return (
                     <MessageContent>

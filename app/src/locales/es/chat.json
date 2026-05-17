@@ -16,6 +16,25 @@
     "title": "Empieza una conversación",
     "description": "Escribe un mensaje para hablar con tu asistente."
   },
+  "conversations": {
+    "title": "Misiones",
+    "description": "Abre una misión anterior con {{name}} o empieza una nueva.",
+    "newMission": "Nueva misión",
+    "primaryTitle": "Misión principal",
+    "back": "Volver a misiones",
+    "status": {
+      "running": "En ejecución",
+      "needsYou": "Necesita tu respuesta",
+      "done": "Finalizada",
+      "cancelled": "Cancelada"
+    },
+    "relative": {
+      "justNow": "ahora",
+      "minutesAgo": "hace {{count}} min",
+      "hoursAgo": "hace {{count}} h",
+      "daysAgo": "hace {{count}} d"
+    }
+  },
   "errors": {
     "sessionStart": "No se pudo iniciar la sesión: {{error}}",
     "modelPersistFailed": "No se pudo guardar la preferencia de modelo"

@@ -1,8 +1,10 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { LayoutDashboard, Blend, Settings } from "lucide-react";
+import { LayoutDashboard, Blend, Settings, ArrowLeftFromLine, ArrowRightFromLine } from "lucide-react";
 import { ConfirmDialog } from "@houston-ai/core";
 import { AppSidebar, WorkspaceSwitcher } from "@houston-ai/layout";
+import { EXPERIENCE_LEVEL_PREF_KEY } from "../../lib/experience-level";
+import { tauriPreferences } from "../../lib/tauri";
 import { useWorkspaceStore } from "../../stores/workspaces";
 import { useAgentStore } from "../../stores/agents";
 import { useAgentCatalogStore } from "../../stores/agent-catalog";
@@ -34,9 +36,12 @@ export function Sidebar({ children }: { children: ReactNode }) {
   const viewMode = useUIStore((s) => s.viewMode);
   const setViewMode = useUIStore((s) => s.setViewMode);
   const setDialogOpen = useUIStore((s) => s.setCreateAgentDialogOpen);
+  const experienceLevel = useUIStore((s) => s.experienceLevel);
+  const setExperienceLevel = useUIStore((s) => s.setExperienceLevel);
 
-  const sorted = orderAgents(agents);
-  const activitySummaries = useAgentActivitySummaries(agents);
+  const visibleAgents = agents.filter((agent) => !agent.temporary);
+  const sorted = orderAgents(visibleAgents);
+  const activitySummaries = useAgentActivitySummaries(visibleAgents);
 
   const items = buildAgentSidebarItems({
     agents: sorted,
@@ -67,7 +72,7 @@ export function Sidebar({ children }: { children: ReactNode }) {
 
 
   const handleSelectAgent = (agentId: string) => {
-    const agent = agents.find((a) => a.id === agentId);
+    const agent = visibleAgents.find((a) => a.id === agentId);
     if (!agent) return;
     setCurrentAgent(agent);
     const def = getById(agent.configId);
@@ -156,6 +161,29 @@ export function Sidebar({ children }: { children: ReactNode }) {
         }}
         footer={
           <div className="flex flex-col">
+            <button
+              type="button"
+              onClick={() => {
+                const nextLevel = experienceLevel === "beginner" ? "professional" : "beginner";
+                setExperienceLevel(nextLevel);
+                tauriPreferences
+                  .set(EXPERIENCE_LEVEL_PREF_KEY, nextLevel)
+                  .catch((e) => console.error("[experience] persist failed:", e));
+              }}
+              className="flex items-center gap-2 w-full h-8 px-3 text-xs text-muted-foreground hover:bg-black/5 transition-colors"
+            >
+              {experienceLevel === "beginner" ? (
+                <>
+                  <ArrowRightFromLine className="h-3.5 w-3.5 shrink-0" />
+                  {t("beginner.toggleToPro")}
+                </>
+              ) : (
+                <>
+                  <ArrowLeftFromLine className="h-3.5 w-3.5 shrink-0" />
+                  {t("beginner.toggleToBeginner")}
+                </>
+              )}
+            </button>
             <UserMenu />
             <UpdateChecker />
           </div>

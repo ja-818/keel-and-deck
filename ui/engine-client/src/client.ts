@@ -23,6 +23,13 @@ import type {
   ComposioStartLoginResponse,
   ComposioStatus,
   ConversationEntry,
+  OrchestrationCreateAndRunRequest,
+  OrchestrationCreateAndRunResult,
+  OrchestrationAdjustAndRunRequest,
+  OrchestrationManifest,
+  OrchestrationStatusRequest,
+  OrchestrationSaveAgentsRequest,
+  OrchestrationSaveAgentsResult,
   CreateAgent,
   CreateAgentResult,
   CreateAttachmentUploadsResponse,
@@ -609,6 +616,29 @@ export class HoustonClient {
       provider: opts.provider,
       model: opts.model,
     });
+  }
+
+  // ---------- orchestration ----------
+
+  orchestrationCreateAndRun(
+    req: OrchestrationCreateAndRunRequest,
+  ): Promise<OrchestrationCreateAndRunResult> {
+    return this.request("POST", "/orchestration/create-and-run", req);
+  }
+  orchestrationAdjustAndRun(
+    req: OrchestrationAdjustAndRunRequest,
+  ): Promise<OrchestrationCreateAndRunResult> {
+    return this.request("POST", "/orchestration/adjust-and-run", req);
+  }
+  orchestrationStatus(
+    req: OrchestrationStatusRequest,
+  ): Promise<OrchestrationManifest | null> {
+    return this.request("POST", "/orchestration/status", req);
+  }
+  orchestrationSaveAgents(
+    req: OrchestrationSaveAgentsRequest,
+  ): Promise<OrchestrationSaveAgentsResult> {
+    return this.request("POST", "/orchestration/save-agents", req);
   }
 
   // ---------- routine scheduler ----------

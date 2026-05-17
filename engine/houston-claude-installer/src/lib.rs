@@ -83,9 +83,7 @@ pub async fn ensure_and_upgrade(sink: DynEventSink, db: Database) {
     // behavior they'd hit in a packaged release. Production always finds
     // the bundled copy.
     let Some(manifest) = resolve_manifest() else {
-        tracing::warn!(
-            "[claude-installer] no cli-deps.json available — skipping auto-install"
-        );
+        tracing::warn!("[claude-installer] no cli-deps.json available — skipping auto-install");
         sink.emit(HoustonEvent::ClaudeCliReady);
         return;
     };
@@ -102,7 +100,9 @@ pub async fn ensure_and_upgrade(sink: DynEventSink, db: Database) {
     if entry.bundled {
         // Defensive — shouldn't be possible without a license change.
         // Treat the bundled binary as authoritative if it's there.
-        tracing::info!("[claude-installer] manifest reports claude-code as bundled; trusting bundle");
+        tracing::info!(
+            "[claude-installer] manifest reports claude-code as bundled; trusting bundle"
+        );
         sink.emit(HoustonEvent::ClaudeCliReady);
         return;
     }
@@ -129,7 +129,11 @@ pub async fn ensure_and_upgrade(sink: DynEventSink, db: Database) {
     tracing::info!(
         "[claude-installer] installing claude-code v{} ({} → {})",
         pinned_version,
-        if last_version.is_empty() { "none" } else { &last_version },
+        if last_version.is_empty() {
+            "none"
+        } else {
+            &last_version
+        },
         pinned_version
     );
 
@@ -144,7 +148,10 @@ pub async fn ensure_and_upgrade(sink: DynEventSink, db: Database) {
     match result {
         Ok(path) => {
             tracing::info!("[claude-installer] installed at {}", path.display());
-            if let Err(e) = db.set_preference(PREF_INSTALLED_VERSION, &pinned_version).await {
+            if let Err(e) = db
+                .set_preference(PREF_INSTALLED_VERSION, &pinned_version)
+                .await
+            {
                 tracing::warn!("[claude-installer] failed to persist version marker: {e}");
             }
             sink.emit(HoustonEvent::ClaudeCliReady);
@@ -213,9 +220,12 @@ pub async fn install_to(
 
     tracing::info!("[claude-installer] GET {url}");
 
-    tokio::fs::create_dir_all(install_dir)
-        .await
-        .map_err(|e| format!("failed to create install dir {}: {e}", install_dir.display()))?;
+    tokio::fs::create_dir_all(install_dir).await.map_err(|e| {
+        format!(
+            "failed to create install dir {}: {e}",
+            install_dir.display()
+        )
+    })?;
 
     let final_path = install_dir.join(binary_name);
     // Temp path on the same filesystem so the final rename is atomic
@@ -237,10 +247,7 @@ pub async fn install_to(
         .map_err(|e| format!("download request failed: {e}"))?;
 
     if !resp.status().is_success() {
-        return Err(format!(
-            "download returned HTTP {}: {url}",
-            resp.status()
-        ));
+        return Err(format!("download returned HTTP {}: {url}", resp.status()));
     }
 
     let total = resp.content_length();
@@ -354,7 +361,12 @@ mod tests {
     fn cli_path_is_under_install_dir() {
         let cli = cli_path();
         let dir = install_dir();
-        assert!(cli.starts_with(&dir), "{} not under {}", cli.display(), dir.display());
+        assert!(
+            cli.starts_with(&dir),
+            "{} not under {}",
+            cli.display(),
+            dir.display()
+        );
     }
 
     /// Build a `CliEntry` parsed from a JSON document whose URL points
@@ -468,10 +480,7 @@ mod tests {
         let result = install_to(&entry, dest_dir.path(), "claude", |_| {}).await;
 
         let err = result.expect_err("checksum mismatch must error");
-        assert!(
-            err.contains("checksum mismatch"),
-            "unexpected error: {err}"
-        );
+        assert!(err.contains("checksum mismatch"), "unexpected error: {err}");
         // Both the partial and the final must be absent — we never want
         // a tampered binary on disk after a verification failure.
         assert!(!dest_dir.path().join("claude").exists());

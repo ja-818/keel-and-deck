@@ -137,35 +137,29 @@ fn stage_engine_sidecar() -> Result<(), String> {
         "houston-engine"
     };
 
-    // Pick the first existing source. Ordering:
-    //   1. `target/<triple>/release/` — required for universal-apple-darwin
-    //      because tauri invokes cargo once per real triple (aarch64 + x86_64)
-    //      and each invocation needs the engine built for THAT triple.
-    //   2. `target/release/` — single-triple release (local `pnpm tauri build`).
-    //   3. `target/<triple>/debug/` — rarely used but keeps `tauri dev --target`
-    //      happy.
-    //   4. `target/debug/` — default dev build.
+    // Pick the first existing source for the active Cargo profile. Dev must
+    // prefer debug builds: `pnpm tauri dev` can otherwise stage an older
+    // release sidecar and Tauri will copy that stale binary over the fresh
+    // debug engine.
     let mut candidates: Vec<PathBuf> = Vec::new();
-    if !triple.is_empty() {
-        candidates.push(
-            workspace
-                .join("target")
-                .join(&triple)
-                .join("release")
-                .join(bin_name),
-        );
+    let profile = std::env::var("PROFILE").unwrap_or_else(|_| "debug".to_string());
+    let ordered_profiles: &[&str] = if profile == "release" {
+        &["release", "debug"]
+    } else {
+        &["debug", "release"]
+    };
+    for profile in ordered_profiles {
+        if !triple.is_empty() {
+            candidates.push(
+                workspace
+                    .join("target")
+                    .join(&triple)
+                    .join(profile)
+                    .join(bin_name),
+            );
+        }
+        candidates.push(workspace.join("target").join(profile).join(bin_name));
     }
-    candidates.push(workspace.join("target").join("release").join(bin_name));
-    if !triple.is_empty() {
-        candidates.push(
-            workspace
-                .join("target")
-                .join(&triple)
-                .join("debug")
-                .join(bin_name),
-        );
-    }
-    candidates.push(workspace.join("target").join("debug").join(bin_name));
     let src = candidates
         .iter()
         .find(|p| p.exists())

@@ -19,7 +19,7 @@ interface MissionDoneScreenProps {
   /** Primary CTA label. */
   continueLabel: string;
   onContinue: () => void;
-  /** Optional always-visible skip link next to the CTA. */
+  /** Optional always-visible skip button next to the CTA. */
   skipLabel?: string;
   onSkip?: () => void;
 }
@@ -92,13 +92,15 @@ export function MissionDoneScreen({
             <ArrowRight className="ml-1 size-4" />
           </Button>
           {skipLabel && onSkip && (
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               onClick={onSkip}
-              className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+              className="rounded-full px-4"
             >
               {skipLabel}
-            </button>
+            </Button>
           )}
         </div>
       </footer>

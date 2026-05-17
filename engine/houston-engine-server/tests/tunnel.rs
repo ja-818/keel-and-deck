@@ -16,6 +16,7 @@ async fn spawn() -> (SocketAddr, String, Arc<ServerState>) {
         home_dir: home.path().to_path_buf(),
         docs_dir: docs.path().to_path_buf(),
         app_system_prompt: String::new(),
+        app_beginner_system_prompt: String::new(),
         app_onboarding_prompt: String::new(),
         tunnel_url: "http://test.invalid".into(),
     };
@@ -44,6 +45,7 @@ async fn spawn_with_tunnel() -> (SocketAddr, String, Arc<ServerState>) {
         home_dir: home.path().to_path_buf(),
         docs_dir: docs.path().to_path_buf(),
         app_system_prompt: String::new(),
+        app_beginner_system_prompt: String::new(),
         app_onboarding_prompt: String::new(),
         tunnel_url: "http://test.invalid".into(),
     };

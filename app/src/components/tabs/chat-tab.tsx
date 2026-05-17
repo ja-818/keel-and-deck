@@ -1,330 +1,155 @@
-import { useEffect, useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  ChatPanel,
-  decodeAttachmentMessage,
-  UserAttachmentMessage,
-} from "@houston-ai/chat";
-import type { FeedItem } from "@houston-ai/chat";
-import {
-  Empty,
-  EmptyHeader,
-  EmptyTitle,
-  EmptyDescription,
-} from "@houston-ai/core";
-import { useFeedStore } from "../../stores/feeds";
-import { useUIStore } from "../../stores/ui";
-import { useWorkspaceStore } from "../../stores/workspaces";
-import { useDraftStore, useDraftText, useDraftFiles } from "../../stores/drafts";
-import { isActiveSessionStatus, useSessionStatus } from "../../stores/session-status";
-import { useSessionMessageQueue } from "../../hooks/use-session-message-queue";
-import { tauriChat, tauriAttachments, tauriConfig } from "../../lib/tauri";
-import { openAgentHref } from "../../lib/open-href";
-import { buildAttachmentPrompt } from "../../lib/attachment-message";
-import { useFileToolRenderer } from "../../hooks/use-file-tool-renderer";
-import { useConnectedToolkits, useConnections } from "../../hooks/queries";
-import {
-  ComposioLinkCard,
-  parseComposioToolkitFromHref,
-} from "../composio-link-card";
-import { analytics } from "../../lib/analytics";
+import { Button } from "@houston-ai/core";
+import { ConversationList } from "@houston-ai/board";
+import type { ConversationEntry } from "@houston-ai/board";
+import { ArrowLeft, MessageSquarePlus } from "lucide-react";
+
+import { useChatHistory, useConversations } from "../../hooks/queries";
+import type { RawConversation } from "../../lib/tauri";
+import { getConversationScopeKey } from "../../lib/conversation-scope";
 import type { TabProps } from "../../lib/types";
-import { HoustonThinkingIndicator } from "../shell/experience-card";
-import { ChatModelSelector } from "../chat-model-selector";
-import { useChatDisplayLabels } from "../use-chat-display-labels";
-import { getDefaultModel } from "../../lib/providers";
-import { ProviderReconnectCard } from "../shell/provider-reconnect-card";
-import { ToolRuntimeErrorCard } from "../shell/tool-runtime-error-card";
-import { isToolRuntimeErrorMessage } from "../tool-runtime-feed";
-import { useQueuedMessageLabels } from "../use-queued-message-labels";
-import {
-  filterProviderAuthFeedItems,
-  isProviderAuthMessage,
-  providerAuthSignalKey,
-} from "./provider-auth-feed";
-import { useAttachmentRejectionDialog } from "../attachment-rejection-dialog";
+import { useUIStore } from "../../stores/ui";
+import { AgentSessionChat } from "../chat/agent-session-chat";
+
+const NEW_MISSION_SESSION = "new-agent-mission";
+
+function toConversationEntry(row: RawConversation): ConversationEntry {
+  return {
+    id: row.id,
+    title: row.title,
+    status: row.status,
+    type: row.type,
+    sessionKey: row.session_key,
+    updatedAt: row.updated_at,
+    agentPath: row.agent_path,
+    agentName: row.agent_name,
+  };
+}
 
 export default function ChatTab({ agent }: TabProps) {
   const { t } = useTranslation("chat");
-  const queuedLabels = useQueuedMessageLabels();
-  const attachmentLabels = useMemo(
-    () => ({
-      attachmentCount: (count: number) => t("attachmentMessage.count", { count }),
-    }),
-    [t],
-  );
-  const { processLabels, getThinkingMessage } = useChatDisplayLabels();
-  const attachmentValidation = useAttachmentRejectionDialog();
-  const { isSpecialTool, renderToolResult, renderTurnSummary } = useFileToolRenderer(agent.folderPath);
-  // Free-form chat tab gets its own UUID-scoped session key per agent.
-  // Must be stable across renders so streaming events land in the same bucket.
-  const sessionKey = `chat-${agent.id}`;
-  const agentPath = agent.folderPath;
-  // Attachments scope: keyed by agent so they survive restarts and are
-  // wiped only when the agent is deleted.
-  const attachmentScope = `agent-${agent.id}`;
-  const feedItems = useFeedStore((s) => s.items[agentPath]?.[sessionKey]);
-  const pushFeedItem = useFeedStore((s) => s.pushFeedItem);
-  const setFeed = useFeedStore((s) => s.setFeed);
-  const clearFeed = useFeedStore((s) => s.clearFeed);
-  const addToast = useUIStore((s) => s.addToast);
-  const handleNotice = useCallback(
-    (message: string) => addToast({ title: message }),
-    [addToast],
-  );
-  const [isLoading, setIsLoading] = useState(false);
-  const sessionStatus = useSessionStatus(agentPath, sessionKey);
-  const isSessionActive = isActiveSessionStatus(sessionStatus);
-  const composerText = useDraftText(sessionKey);
-  const composerFiles = useDraftFiles(sessionKey);
-  const setComposerText = useCallback(
-    (text: string) => useDraftStore.getState().setDraftText(sessionKey, text),
-    [sessionKey],
-  );
-  const setComposerFiles = useCallback(
-    (files: File[]) => useDraftStore.getState().setDraftFiles(sessionKey, files),
-    [sessionKey],
-  );
-  const sendingRef = useRef(false);
-  const loadedRef = useRef<string | null>(null);
+  const setActiveMissionContext = useUIStore((s) => s.setActiveMissionContext);
+  const { data: rows = [] } = useConversations(agent.folderPath);
+  const legacySessionKey = `chat-${agent.id}`;
+  const { data: legacyRows = [] } = useChatHistory(agent.folderPath, legacySessionKey);
+  const [selectedSessionKey, setSelectedSessionKey] = useState<string | null>(null);
 
-  // --- Model selector: three-tier resolution ---
-  // Workspace default → agent config override → chat-level override (ephemeral)
-  const workspace = useWorkspaceStore((s) => s.current);
-  const wsProvider = workspace?.provider ?? "anthropic";
-  const wsModel = workspace?.model ?? getDefaultModel(wsProvider);
-
-  // Agent-level config (loaded once per agent)
-  const [agentProvider, setAgentProvider] = useState<string | null>(null);
-  const [agentModel, setAgentModel] = useState<string | null>(null);
   useEffect(() => {
-    tauriConfig.read(agentPath).then((cfg) => {
-      setAgentProvider((cfg.provider as string) ?? null);
-      setAgentModel((cfg.model as string) ?? null);
-    }).catch(() => {});
-  }, [agentPath]);
-
-  // Chat-level override (ephemeral, resets per agent)
-  const [chatProvider, setChatProvider] = useState<string | null>(null);
-  const [chatModel, setChatModel] = useState<string | null>(null);
-  useEffect(() => {
-    setChatProvider(null);
-    setChatModel(null);
+    setSelectedSessionKey(null);
   }, [agent.id]);
 
-  // Effective = chat override > agent config > workspace default
-  const effectiveProvider = chatProvider ?? agentProvider ?? wsProvider;
-  const effectiveModel = chatModel ?? agentModel ?? wsModel;
-  const authSignalKey = useMemo(
-    () => providerAuthSignalKey(feedItems ?? []),
-    [feedItems],
+  const conversations = useMemo(
+    () => {
+      const activityConversations = rows.map(toConversationEntry);
+      if (legacyRows.length === 0) return activityConversations;
+      return [
+        {
+          id: legacySessionKey,
+          title: t("conversations.primaryTitle"),
+          type: "primary" as const,
+          sessionKey: legacySessionKey,
+          agentPath: agent.folderPath,
+          agentName: agent.name,
+        },
+        ...activityConversations,
+      ];
+    },
+    [agent.folderPath, agent.name, legacyRows.length, legacySessionKey, rows, t],
   );
-  const visibleFeedItems = useMemo(
-    () => filterProviderAuthFeedItems(feedItems ?? []),
-    [feedItems],
-  );
+  const hasHistory = conversations.length > 0;
+  const newMissionSessionKey = `${NEW_MISSION_SESSION}-${agent.id}`;
+  const isNewMission = selectedSessionKey === newMissionSessionKey || !hasHistory;
+  const activeSessionKey = isNewMission
+    ? newMissionSessionKey
+    : selectedSessionKey;
 
-  const handleModelSelect = useCallback((prov: string, mod: string) => {
-    setChatProvider(prov);
-    setChatModel(mod);
+  useEffect(() => {
+    if (activeSessionKey) {
+      setActiveMissionContext(agent.folderPath, activeSessionKey);
+    }
+  }, [activeSessionKey, agent.folderPath, setActiveMissionContext]);
+
+  const handleSelect = useCallback((entry: ConversationEntry) => {
+    setSelectedSessionKey(entry.sessionKey);
   }, []);
 
-  useEffect(() => {
-    if (loadedRef.current === agent.id) return;
-    loadedRef.current = agent.id;
-    clearFeed(agentPath, sessionKey);
-    tauriChat.loadHistory(agentPath, sessionKey).then((rows) => {
-      if (rows.length > 0) setFeed(agentPath, sessionKey, rows as FeedItem[]);
-    });
-  }, [agent.id, sessionKey, agentPath, setFeed, clearFeed]);
+  const handleCreated = useCallback((sessionKey: string) => {
+    setSelectedSessionKey(sessionKey);
+  }, []);
 
-  const handleStop = useCallback(() => {
-    tauriChat.stop(agentPath, sessionKey).catch(console.error);
-  }, [agentPath, sessionKey]);
-
-  useEffect(() => {
-    if (sessionStatus === "completed" || sessionStatus === "error") {
-      setIsLoading(false);
-    }
-  }, [sessionStatus]);
-
-  const handleOpenLink = useCallback(
-    (url: string) => {
-      openAgentHref(url, agentPath);
-    },
-    [agentPath],
-  );
-
-  // Connection state for inline Composio connect cards. Only query
-  // when the user is signed in — otherwise the CLI call will fail.
-  const { data: composioStatus } = useConnections();
-  const isSignedIn = composioStatus?.status === "ok";
-  const { data: connectedList } = useConnectedToolkits(isSignedIn);
-  const connectedSet = useMemo(
-    () => new Set(connectedList ?? []),
-    [connectedList],
-  );
-
-  // Custom link renderer — intercepts Composio connect URLs tagged
-  // with `#houston_toolkit=<slug>` and renders them as rich cards.
-  // Returns undefined for non-Composio links so the chat falls back
-  // to the default markdown button.
-  const renderLink = useCallback(
-    ({ href, onOpen }: { href: string; onOpen: () => void }) => {
-      const toolkit = parseComposioToolkitFromHref(href);
-      if (!toolkit) return undefined;
-      return (
-        <ComposioLinkCard
-          toolkit={toolkit}
-          isConnected={connectedSet.has(toolkit)}
-          onOpen={onOpen}
+  if (activeSessionKey) {
+    const activeConversationKey = getConversationScopeKey(
+      agent.folderPath,
+      activeSessionKey,
+    );
+    return (
+      <div className="h-full w-full flex flex-col">
+        {hasHistory && (
+          <div className="shrink-0 px-6 pt-4">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="gap-2"
+              onClick={() => setSelectedSessionKey(null)}
+            >
+              <ArrowLeft className="size-4" />
+              {t("conversations.back")}
+            </Button>
+          </div>
+        )}
+        <AgentSessionChat
+          key={activeConversationKey}
+          agent={agent}
+          sessionKey={activeSessionKey}
+          mode={isNewMission ? "new" : "existing"}
+          onMissionCreated={handleCreated}
         />
-      );
-    },
-    [connectedSet],
-  );
-
-  const sendNow = useCallback(
-    async (text: string, files: File[]) => {
-      if (sendingRef.current) return;
-      sendingRef.current = true;
-      setIsLoading(true);
-      let started = false;
-      try {
-        const paths = await tauriAttachments.save(attachmentScope, files);
-        const prompt = buildAttachmentPrompt(text, files, paths);
-        await tauriChat.send(agentPath, prompt, sessionKey, {
-          providerOverride: chatProvider ?? undefined,
-          modelOverride: chatModel ?? undefined,
-        });
-        started = true;
-        pushFeedItem(agentPath, sessionKey, { feed_type: "user_message", data: prompt });
-        analytics.track("chat_message_sent");
-        setComposerText("");
-        setComposerFiles([]);
-      } catch (err) {
-        setIsLoading(false);
-        pushFeedItem(agentPath, sessionKey, {
-          feed_type: "system_message",
-          data: t("errors.sessionStart", { error: String(err) }),
-        });
-        throw err;
-      } finally {
-        if (!started) setIsLoading(false);
-        sendingRef.current = false;
-      }
-    },
-    [agentPath, sessionKey, attachmentScope, pushFeedItem, setComposerText, setComposerFiles, chatProvider, chatModel, t],
-  );
-  const handleQueued = useCallback(() => {
-    setComposerText("");
-    setComposerFiles([]);
-  }, [setComposerText, setComposerFiles]);
-  const messageQueue = useSessionMessageQueue({
-    agentPath,
-    sessionKey,
-    isActive: isLoading || isSessionActive,
-    sendNow,
-    onQueued: handleQueued,
-  });
+      </div>
+    );
+  }
 
   return (
-    <div className="h-full w-full flex flex-col">
-      <ChatPanel
-        sessionKey={sessionKey}
-        feedItems={visibleFeedItems}
-        isLoading={isLoading || isSessionActive}
-        onSend={messageQueue.sendOrQueue}
-        onStop={handleStop}
-        onOpenLink={handleOpenLink}
-        renderLink={renderLink}
-        isSpecialTool={isSpecialTool}
-        renderToolResult={renderToolResult}
-        processLabels={processLabels}
-        getThinkingMessage={getThinkingMessage}
-        renderTurnSummary={renderTurnSummary}
-        renderSystemMessage={(msg) => {
-          if (isToolRuntimeErrorMessage(msg)) {
-            const isModelUnsupported =
-              msg.runtimeError.kind === "provider_model_unsupported";
-            return (
-              <ToolRuntimeErrorCard
-                error={msg.runtimeError}
-                onRetry={() =>
-                  messageQueue.sendOrQueue(t("toolRuntimeError.retryPrompt"), [])
-                }
-                onSwitchModel={
-                  isModelUnsupported
-                    ? async () => {
-                        if (workspace?.id) {
-                          await useWorkspaceStore
-                            .getState()
-                            .updateProvider(workspace.id, "openai", "gpt-5.5");
-                        }
-                        setChatProvider("openai");
-                        setChatModel("gpt-5.5");
-                      }
-                    : undefined
-                }
-              />
-            );
-          }
-          if (isProviderAuthMessage(msg.content)) {
-            return null;
-          }
-          if (authSignalKey && msg.content.startsWith("Session error:")) {
-            return null;
-          }
-          return undefined;
-        }}
-        renderUserMessage={(msg) => {
-          const invocation = decodeAttachmentMessage(msg.content);
-          if (!invocation) return undefined;
-          return (
-            <UserAttachmentMessage
-              invocation={invocation}
-              labels={attachmentLabels}
-            />
-          );
-        }}
-        afterMessages={
-          <ProviderReconnectCard
-            providerId={authSignalKey ? effectiveProvider : undefined}
-            signalKey={authSignalKey ?? undefined}
-          />
-        }
-        thinkingIndicator={<HoustonThinkingIndicator />}
-        placeholder={t("composer.placeholder")}
-        value={composerText}
-        onValueChange={setComposerText}
-        attachments={composerFiles}
-        onAttachmentsChange={setComposerFiles}
-        onNotice={handleNotice}
-        prepareAttachments={attachmentValidation.prepareAttachments}
-        onAttachmentRejections={attachmentValidation.onAttachmentRejections}
-        queuedMessages={messageQueue.queuedMessages}
-        onRemoveQueuedMessage={messageQueue.removeQueuedMessage}
-        queuedLabels={queuedLabels}
-        footer={
-          <ChatModelSelector
-            provider={effectiveProvider}
-            model={effectiveModel}
-            onSelect={handleModelSelect}
-            lockedProvider={visibleFeedItems.length > 0 ? effectiveProvider : null}
-          />
-        }
-        emptyState={
-          <Empty className="border-0">
-            <EmptyHeader>
-              <EmptyTitle>{t("empty.title")}</EmptyTitle>
-              <EmptyDescription>
-                {t("empty.description")}
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        }
-      />
-      {attachmentValidation.dialog}
+    <div className="h-full w-full overflow-y-auto">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-6 py-8">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h2 className="text-xl font-semibold text-foreground">
+              {t("conversations.title")}
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t("conversations.description", { name: agent.name })}
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            className="shrink-0 gap-2 rounded-full"
+            onClick={() => setSelectedSessionKey(newMissionSessionKey)}
+          >
+            <MessageSquarePlus className="size-4" />
+            {t("conversations.newMission")}
+          </Button>
+        </div>
+        <ConversationList
+          entries={conversations}
+          onSelect={handleSelect}
+          showAgentName={false}
+          labels={{
+            status: {
+              running: t("conversations.status.running"),
+              needs_you: t("conversations.status.needsYou"),
+              done: t("conversations.status.done"),
+              cancelled: t("conversations.status.cancelled"),
+            },
+            justNow: t("conversations.relative.justNow"),
+            minutesAgo: (count) => t("conversations.relative.minutesAgo", { count }),
+            hoursAgo: (count) => t("conversations.relative.hoursAgo", { count }),
+            daysAgo: (count) => t("conversations.relative.daysAgo", { count }),
+          }}
+        />
+      </div>
     </div>
   );
 }

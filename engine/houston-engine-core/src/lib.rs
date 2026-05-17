@@ -11,6 +11,7 @@ pub mod attachments;
 pub mod conversations;
 pub mod error;
 pub mod git_bash;
+pub mod orchestration;
 pub mod paths;
 pub mod portable;
 pub mod preferences;
@@ -20,9 +21,9 @@ pub mod sessions;
 pub mod skills;
 pub mod state;
 pub mod store;
-pub mod worktree;
 pub mod workspace_context;
 pub mod workspaces;
+pub mod worktree;
 
 pub use error::{CoreError, CoreResult};
 pub use state::EngineState;

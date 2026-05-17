@@ -29,6 +29,7 @@ import { LanguageSection } from "./sections/language";
 import { AppearanceSection } from "./sections/appearance";
 import { DangerSection } from "./sections/danger";
 import { ReportBugSection } from "./sections/report-bug";
+import { ExperienceSection } from "./sections/experience";
 
 export function SettingsView() {
   const { t } = useTranslation(["settings", "common"]);
@@ -95,6 +96,7 @@ export function SettingsView() {
                 <WorkspaceSection />
                 <LanguageSection />
                 <TimezoneSection />
+                <ExperienceSection />
                 <AppearanceSection />
                 <DangerSection />
               </div>

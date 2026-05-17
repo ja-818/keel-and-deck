@@ -17,6 +17,9 @@ pub struct EngineState {
     /// Houston desktop app) via env. Prepended to caller-less sessions.
     /// Empty string if unset.
     pub app_system_prompt: String,
+    /// Beginner-mode product prompt prefix supplied by the embedding app.
+    /// Empty string if unset, in which case the standard prompt is reused.
+    pub app_beginner_system_prompt: String,
     /// Product-layer onboarding suffix supplied by the embedding app.
     /// Appended on first-run sessions.
     pub app_onboarding_prompt: String,
@@ -30,6 +33,7 @@ impl EngineState {
             db,
             sessions: SessionRuntime::default(),
             app_system_prompt: String::new(),
+            app_beginner_system_prompt: String::new(),
             app_onboarding_prompt: String::new(),
         }
     }
@@ -42,6 +46,11 @@ impl EngineState {
     ) -> Self {
         self.app_system_prompt = app_system_prompt;
         self.app_onboarding_prompt = app_onboarding_prompt;
+        self
+    }
+
+    pub fn with_beginner_prompt(mut self, app_beginner_system_prompt: String) -> Self {
+        self.app_beginner_system_prompt = app_beginner_system_prompt;
         self
     }
 }

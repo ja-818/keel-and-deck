@@ -136,3 +136,10 @@ See `always-on/README.md` for the VPS path.
 - **CORS `Load failed` in WKWebView** → rebuild the engine. The old
   allow_methods list omitted PUT/PATCH; current code uses `Any` + `*`
   wildcard. Stale sidecar binary is the usual cause.
+- **Dev feature exists in source/tests but not in the running desktop app** →
+  check both `target/debug/houston-engine` and
+  `app/src-tauri/binaries/houston-engine-<triple>`. In dev,
+  `app/src-tauri/build.rs` must stage the debug engine before any stale
+  release engine; `tauri dev` can otherwise copy an older release sidecar
+  over the fresh debug binary. `pnpm dev:clean` builds `--bin
+  houston-engine`, then the app build must keep that same debug sidecar.
