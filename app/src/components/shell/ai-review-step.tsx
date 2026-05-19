@@ -1,17 +1,16 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Check } from "lucide-react";
+import { Check } from "lucide-react";
 import {
   AGENT_COLORS,
-  Button,
   DialogTitle,
   HoustonAvatar,
   Input,
-  Spinner,
   cn,
   colorHex,
   resolveAgentColor,
 } from "@houston-ai/core";
+import { AiStepFooter } from "./ai-step-footer";
 
 interface AiReviewStepProps {
   name: string;
@@ -46,18 +45,9 @@ export function AiReviewStep({
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <button
-        type="button"
-        onClick={onBack}
-        aria-label={t("common:actions.back")}
-        className="absolute top-5 left-5 rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-      </button>
-
       <DialogTitle className="sr-only">{t("aiReview.stepTitle")}</DialogTitle>
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6 pt-14">
+      <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6 pt-6">
         <div className="max-w-2xl mx-auto space-y-6">
           {/* Avatar + color */}
           <div className="flex flex-col items-center gap-4">
@@ -118,23 +108,18 @@ export function AiReviewStep({
           </div>
 
           {error && (
-            <p className="text-xs text-destructive text-center">{error}</p>
+            <p className="text-xs text-destructive">{error}</p>
           )}
-
-          <Button
-            type="button"
-            onClick={onSubmit}
-            disabled={!name.trim() || creating}
-            className="mx-auto w-fit rounded-full"
-          >
-            {creating ? (
-              <><Spinner className="size-4" />{t("naming.createAgent")}</>
-            ) : (
-              t("naming.createAgent")
-            )}
-          </Button>
         </div>
       </div>
+
+      <AiStepFooter
+        onBack={onBack}
+        primaryLabel={t("naming.createAgent")}
+        onPrimary={onSubmit}
+        primaryDisabled={!name.trim()}
+        primaryLoading={creating}
+      />
     </div>
   );
 }

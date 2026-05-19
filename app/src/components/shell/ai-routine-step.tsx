@@ -1,8 +1,9 @@
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, AlertTriangle } from "lucide-react";
-import { Button, DialogTitle, Input, Switch, cn } from "@houston-ai/core";
+import { AlertTriangle } from "lucide-react";
+import { DialogTitle, Input, Switch, cn } from "@houston-ai/core";
 import { ScheduleBuilder } from "@houston-ai/routines";
 import type { SchedulePreset, RoutineFormData } from "@houston-ai/routines";
+import { AiStepFooter } from "./ai-step-footer";
 
 interface AiRoutineStepProps {
   routine: RoutineFormData;
@@ -29,18 +30,9 @@ export function AiRoutineStep({
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <button
-        type="button"
-        onClick={onBack}
-        aria-label={t("common:actions.back")}
-        className="absolute top-5 left-5 rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-      </button>
-
       <DialogTitle className="sr-only">{t("aiRoutine.stepTitle")}</DialogTitle>
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6 pt-14">
+      <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6 pt-6">
         <div className="max-w-2xl mx-auto space-y-6">
           <div>
             <h2 className="text-base font-semibold">{t("aiRoutine.stepTitle")}</h2>
@@ -103,11 +95,14 @@ export function AiRoutineStep({
             <Switch checked={accepted} onCheckedChange={onAcceptedChange} />
           </label>
 
-          <Button onClick={onContinue} className="mx-auto w-fit rounded-full">
-            {t("aiRoutine.continueButton")}
-          </Button>
         </div>
       </div>
+
+      <AiStepFooter
+        onBack={onBack}
+        primaryLabel={t("aiRoutine.continueButton")}
+        onPrimary={onContinue}
+      />
     </div>
   );
 }
