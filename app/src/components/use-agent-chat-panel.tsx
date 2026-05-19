@@ -66,7 +66,7 @@ import {
   isComposioSigninHref,
 } from "./composio-signin-card";
 import { ChatModelSelector } from "./chat-model-selector";
-import { getDefaultModel } from "../lib/providers";
+import { getDefaultModel, validProviderOrNull } from "../lib/providers";
 import { analytics } from "../lib/analytics";
 import {
   buildSkillClaudePrompt,
@@ -191,7 +191,18 @@ export function useAgentChatPanel({
     setChatProvider(null);
     setChatModel(null);
   }, [selectedSessionKey]);
-  const effectiveProvider = chatProvider ?? activityProvider ?? agentProvider ?? wsProvider;
+  // Walk the fallback chain (chat → activity → agent → workspace) but
+  // skip any tier whose provider id is no longer in `PROVIDERS` —
+  // typically a stored value from when Gemini was an active provider.
+  // Falling through means a legacy gemini-defaulted agent or workspace
+  // produces an anthropic/openai chat instead of routing to a paused
+  // provider the engine would reject.
+  const effectiveProvider =
+    validProviderOrNull(chatProvider) ??
+    validProviderOrNull(activityProvider) ??
+    validProviderOrNull(agentProvider) ??
+    validProviderOrNull(wsProvider) ??
+    "anthropic";
   const effectiveModel = chatModel ?? activityModel ?? agentModel ?? wsModel;
   const handleModelSelect = useCallback(
     (prov: string, mod: string) => {

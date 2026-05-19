@@ -11,7 +11,7 @@ import {
 } from "@houston-ai/core";
 import { tauriProvider, type ProviderStatus } from "../lib/tauri";
 import { PROVIDERS, getProvider, getModel, type ProviderInfo } from "../lib/providers";
-import { ClaudeLogo, OpenAILogo, GeminiLogo } from "./shell/provider-logos";
+import { ClaudeLogo, OpenAILogo } from "./shell/provider-logos";
 
 interface ChatModelSelectorProps {
   /** Current provider id (from workspace/agent config). */
@@ -47,16 +47,27 @@ export function ChatModelSelector({ provider, model, onSelect, lockedProvider }:
   const currentModel = getModel(provider, model);
   const displayLabel = currentModel?.label ?? currentProvider?.subtitle ?? t("modelSelector.selectModel");
 
-  // Honour `lockedProvider` only when that provider is still installed.
-  // If the chat was created against a provider that the engine now
-  // reports as missing (e.g. Gemini on a Windows install that does not
-  // ship the binary in v1), the user must be able to switch to an
-  // installed alternative — otherwise every send routes back to the
-  // missing CLI and fails. Drop the lock in that case so other
-  // connected providers appear in the dropdown.
+  // Honour `lockedProvider` only when it points at a currently-active
+  // provider that the engine reports as installed. Two cases drop the
+  // lock so the user can switch instead of being stuck:
+  //
+  //   * The locked provider is in `COMING_SOON_PROVIDERS` (or unknown),
+  //     so `getProvider` returns undefined. This happens when Gemini is
+  //     paused in the catalog but a stored activity still references
+  //     it.
+  //   * The locked provider is in `PROVIDERS` but the engine reports
+  //     `cli_installed=false` (binary missing on this platform).
+  //
+  // In both cases every send would route to a provider the user cannot
+  // currently invoke, so the dropdown must expose installed
+  // alternatives instead of pinning the broken choice.
+  const lockedProviderEntry = lockedProvider ? getProvider(lockedProvider) : undefined;
   const lockedStatus = lockedProvider ? statuses[lockedProvider] : undefined;
   const lockedProviderInstalled = lockedStatus?.cli_installed ?? true;
-  const effectiveLock = lockedProvider && lockedProviderInstalled ? lockedProvider : null;
+  const effectiveLock =
+    lockedProvider && lockedProviderEntry && lockedProviderInstalled
+      ? lockedProvider
+      : null;
 
   return (
     // Stop pointer events from bubbling — prevents the board detail panel
@@ -179,8 +190,6 @@ function iconFor(providerId: string) {
       return <ClaudeLogo className="size-full" />;
     case "openai":
       return <OpenAILogo className="size-full" />;
-    case "gemini":
-      return <GeminiLogo className="size-full" />;
     default:
       return null;
   }

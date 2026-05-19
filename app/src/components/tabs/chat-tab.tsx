@@ -33,7 +33,7 @@ import { HoustonThinkingIndicator } from "../shell/experience-card";
 import { ChatModelSelector } from "../chat-model-selector";
 import { Paperclip } from "lucide-react";
 import { useChatDisplayLabels } from "../use-chat-display-labels";
-import { getDefaultModel, PROVIDERS } from "../../lib/providers";
+import { getDefaultModel, PROVIDERS, validProviderOrNull } from "../../lib/providers";
 import type { ProviderError } from "@houston-ai/chat";
 import { ProviderReconnectCard } from "../shell/provider-reconnect-card";
 import { ProviderErrorCard } from "../shell/provider-error-card";
@@ -115,8 +115,16 @@ export default function ChatTab({ agent }: TabProps) {
     setChatModel(null);
   }, [agent.id]);
 
-  // Effective = chat override > agent config > workspace default
-  const effectiveProvider = chatProvider ?? agentProvider ?? wsProvider;
+  // Effective = chat override > agent config > workspace default.
+  // Skip tiers whose provider is no longer in `PROVIDERS` (e.g. a
+  // legacy agent or workspace pointing at Gemini while it sits under
+  // "coming soon") so the resolved value is always something Houston
+  // can actually invoke.
+  const effectiveProvider =
+    validProviderOrNull(chatProvider) ??
+    validProviderOrNull(agentProvider) ??
+    validProviderOrNull(wsProvider) ??
+    "anthropic";
   const effectiveModel = chatModel ?? agentModel ?? wsModel;
   const authSignalKey = useMemo(
     () => providerAuthSignalKey(feedItems ?? []),
