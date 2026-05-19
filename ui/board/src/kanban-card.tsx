@@ -38,6 +38,7 @@ export interface KanbanCardProps {
   onRename?: (newTitle: string) => void
   runningStatuses?: string[]
   approveStatuses?: string[]
+  errorStatuses?: string[]
   actions?: React.ReactNode
   avatar?: React.ReactNode
   labels?: KanbanCardLabels
@@ -56,6 +57,7 @@ export function KanbanCard({
   onRename,
   runningStatuses = ["running"],
   approveStatuses = ["needs_you"],
+  errorStatuses = ["error"],
   actions,
   avatar,
   labels,
@@ -65,6 +67,7 @@ export function KanbanCard({
   const l = { ...DEFAULT_LABELS, ...labels }
   const isRunning = runningStatuses.includes(item.status)
   const isNeedsApproval = approveStatuses.includes(item.status)
+  const isError = errorStatuses.includes(item.status)
   const [showConfirm, setShowConfirm] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editValue, setEditValue] = useState(item.title)
@@ -135,9 +138,11 @@ export function KanbanCard({
           // otherwise) so toggling selection doesn't shift layout.
           isRunning
             ? "card-running-glow shadow-[0_2px_12px_rgba(59,130,246,0.12)]"
-            : selected
-              ? "border border-transparent"
-              : "border border-border/20 shadow-sm hover:shadow-md",
+            : isError
+              ? "border border-destructive/60 shadow-sm hover:shadow-md"
+              : selected
+                ? "border border-transparent"
+                : "border border-border/20 shadow-sm hover:shadow-md",
           // Keyboard focus ring — distinct from `selected` so it shows
           // up on the card the user is about to open with Enter, even
           // before the detail panel mounts.

@@ -16,6 +16,7 @@ export interface KanbanBoardProps {
   renderCard?: (item: KanbanItem) => React.ReactNode
   runningStatuses?: string[]
   approveStatuses?: string[]
+  errorStatuses?: string[]
   actions?: (item: KanbanItem) => React.ReactNode
   avatar?: React.ReactNode
   cardLabels?: KanbanCardLabels
@@ -34,6 +35,7 @@ export function KanbanBoard({
   renderCard,
   runningStatuses,
   approveStatuses,
+  errorStatuses,
   actions,
   avatar,
   cardLabels,
@@ -77,6 +79,7 @@ export function KanbanBoard({
           renderCard={renderCard}
           runningStatuses={runningStatuses}
           approveStatuses={approveStatuses}
+          errorStatuses={errorStatuses}
           actions={actions}
           avatar={avatar}
           cardLabels={cardLabels}
