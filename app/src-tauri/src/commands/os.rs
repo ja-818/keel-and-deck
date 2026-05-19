@@ -176,6 +176,19 @@ pub async fn reveal_agent(agent_path: String) -> Result<(), String> {
         .map_err(|e| format!("Failed to open folder: {e}"))
 }
 
+/// Reveal an arbitrary absolute path in the OS file manager. Used by flows
+/// that produce a file outside any agent root (e.g. the portable-agent
+/// exporter writes a `.houstonagent` wherever the user picked in the save
+/// dialog — Desktop, Downloads, USB drive, …).
+#[tauri::command(rename_all = "snake_case")]
+pub async fn reveal_path(path: String) -> Result<(), String> {
+    let target = expand(&path);
+    if !target.exists() {
+        return Err(format!("Path does not exist: {}", target.display()));
+    }
+    reveal_in_file_manager(&target).map_err(|e| format!("Failed to reveal path: {e}"))
+}
+
 /// Open the OS file manager with the given path selected (Finder reveal /
 /// Explorer /select / xdg-open on parent dir).
 fn reveal_in_file_manager(path: &Path) -> Result<(), String> {

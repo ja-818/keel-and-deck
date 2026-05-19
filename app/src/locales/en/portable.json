@@ -57,11 +57,13 @@
       "previewFailed": "Could not read your agent.",
       "anonymizeFailed": "Anonymize step failed.",
       "saveFailed": "Could not save the file.",
-      "noPreview": "No preview available."
+      "noPreview": "No preview available.",
+      "revealFailed": "Could not open that folder."
     },
     "toasts": {
       "savedTitle": "File saved",
-      "savedDescription": "Saved to {{path}}"
+      "savedDescription": "Saved to {{path}}",
+      "revealAction": "Show in folder"
     }
   },
   "import": {

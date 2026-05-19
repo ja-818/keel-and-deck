@@ -57,11 +57,13 @@
       "previewFailed": "No pude leer tu agente.",
       "anonymizeFailed": "Falló la anonimización.",
       "saveFailed": "No pude guardar el archivo.",
-      "noPreview": "No hay vista previa."
+      "noPreview": "No hay vista previa.",
+      "revealFailed": "No pude abrir esa carpeta."
     },
     "toasts": {
       "savedTitle": "Archivo guardado",
-      "savedDescription": "Guardado en {{path}}"
+      "savedDescription": "Guardado en {{path}}",
+      "revealAction": "Mostrar en la carpeta"
     }
   },
   "import": {

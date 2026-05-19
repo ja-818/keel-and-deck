@@ -57,11 +57,13 @@
       "previewFailed": "Não consegui ler seu agente.",
       "anonymizeFailed": "Falha na anonimização.",
       "saveFailed": "Não consegui salvar o arquivo.",
-      "noPreview": "Sem prévia."
+      "noPreview": "Sem prévia.",
+      "revealFailed": "Não consegui abrir essa pasta."
     },
     "toasts": {
       "savedTitle": "Arquivo salvo",
-      "savedDescription": "Salvo em {{path}}"
+      "savedDescription": "Salvo em {{path}}",
+      "revealAction": "Mostrar na pasta"
     }
   },
   "import": {

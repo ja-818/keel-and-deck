@@ -24,6 +24,7 @@ import {
 import { useUIStore } from "../../stores/ui";
 import { useAgentStore } from "../../stores/agents";
 import { getEngine } from "../../lib/engine";
+import { osRevealPath } from "../../lib/os-bridge";
 import { IntegrationLogos } from "../integration-logos";
 import type {
   PortableAnonymizeResponse,
@@ -220,6 +221,18 @@ export function ExportAgentWizard() {
           variant: "success",
           title: t("export.toasts.savedTitle"),
           description: t("export.toasts.savedDescription", { path: savedPath }),
+          action: {
+            label: t("export.toasts.revealAction"),
+            onClick: () => {
+              void osRevealPath(savedPath).catch((err) =>
+                addToast({
+                  variant: "error",
+                  title: t("export.errors.revealFailed"),
+                  description: String(err),
+                }),
+              );
+            },
+          },
         });
         handleClose();
       }

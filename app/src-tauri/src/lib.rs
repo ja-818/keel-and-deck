@@ -323,6 +323,7 @@ pub fn run() {
             commands::os::open_file,
             commands::os::reveal_file,
             commands::os::reveal_agent,
+            commands::os::reveal_path,
             commands::terminal::open_terminal,
             commands::os::check_claude_cli,
             commands::portable::save_portable_agent,

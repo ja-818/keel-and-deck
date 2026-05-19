@@ -55,6 +55,12 @@ export function osRevealAgent(agentPath: string): Promise<void> {
   return invoke<void>("reveal_agent", { agent_path: agentPath });
 }
 
+/** Reveal an arbitrary absolute path in Finder / Explorer. For files written
+ * outside any agent root (e.g. the portable-agent exporter's save dialog). */
+export function osRevealPath(path: string): Promise<void> {
+  return invoke<void>("reveal_path", { path });
+}
+
 /** Open an agent-relative file with the user's default application. */
 export function osOpenFile(agentPath: string, relativePath: string): Promise<void> {
   return invoke<void>("open_file", { agent_path: agentPath, relative_path: relativePath });
