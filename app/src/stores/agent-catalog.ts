@@ -63,7 +63,16 @@ export const useAgentCatalogStore = create<AgentCatalogState>((set, get) => ({
     }
   },
 
-  getById: (id) => get().agents.find((a) => a.config.id === id),
+  getById: (id) => {
+    const hit = get().agents.find((a) => a.config.id === id);
+    if (hit) return hit;
+    // Fallback: custom agents created by the stack recommender's
+    // "Create custom agent" flow used to record their config_id as
+    // "custom", which never maps to a real listing. Treat unknown ids
+    // as the blank agent so they get the standard tab set instead of
+    // falling through to the empty state.
+    return get().agents.find((a) => a.config.id === "blank");
+  },
 
   installAgent: async (listing) => {
     await tauriStore.install(listing.repo, listing.id);

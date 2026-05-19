@@ -20,6 +20,7 @@ import { useAgentCatalogStore } from "../../stores/agent-catalog";
 import { useAgentStore } from "../../stores/agents";
 import { useUIStore } from "../../stores/ui";
 import { AgentRenderer } from "./experience-renderer";
+import { CustomAgentPendingIntegrations } from "./custom-agent-pending-integrations";
 import { Dashboard } from "../dashboard";
 import { IntegrationsView } from "../tabs/integrations-view";
 import { SettingsView } from "../settings/settings-view";
@@ -107,6 +108,9 @@ export function WorkspaceShell({ toasts, onDismissToast }: WorkspaceShellProps) 
                 <SettingsView />
               ) : currentAgent && agentDef && tabs.length > 0 && isAgentView ? (
                 <>
+                  <CustomAgentPendingIntegrations
+                    agentPath={currentAgent.folderPath}
+                  />
                   <div data-tour-target="tabs">
                   <TabBar
                     title={currentAgent.name}

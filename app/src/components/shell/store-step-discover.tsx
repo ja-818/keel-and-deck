@@ -1,8 +1,8 @@
 import { useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation } from "@tanstack/react-query";
-import { Sparkles, Loader2, ChevronDown, ChevronUp } from "lucide-react";
-import type { RecommendStackResponse } from "@houston-ai/engine-client";
+import { Sparkles, Loader2, ChevronDown, ChevronUp, Wand2 } from "lucide-react";
+import type { RecommendStackResponse, StackEntry } from "@houston-ai/engine-client";
 import { tauriConnections } from "../../lib/tauri";
 
 interface Props {
@@ -14,6 +14,10 @@ interface Props {
    *  Receives the toolkit slugs from the primary stack so the parent
    *  can re-rank agent cards. Empty array clears the highlight. */
   onStackRecommended: (toolkitSlugs: string[]) => void;
+  /** Fired when the user clicks "Create custom agent with this stack".
+   *  Hands the parent dialog the intent + the full stack so it can
+   *  switch to the custom-agent review step. */
+  onCreateCustomAgent: (intent: string, stack: StackEntry[]) => void;
 }
 
 /**
@@ -32,6 +36,7 @@ interface Props {
 export function StoreStepDiscover({
   connectedToolkits,
   onStackRecommended,
+  onCreateCustomAgent,
 }: Props) {
   const { t } = useTranslation("shell");
   const [open, setOpen] = useState(false);
@@ -113,26 +118,41 @@ export function StoreStepDiscover({
           )}
 
           {recommend.data && recommend.data.primaryStack.length > 0 && (
-            <div className="rounded-lg bg-background border border-border p-3">
-              <p className="text-xs font-medium text-foreground mb-2">
-                {t("storeDiscover.stackLabel")}
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {recommend.data.primaryStack.map((entry) => (
-                  <span
-                    key={entry.toolkit}
-                    className="inline-flex items-center gap-1 text-[11px] bg-secondary text-foreground px-2 py-0.5 rounded-full"
-                    title={entry.reason}
-                  >
-                    {entry.name}
-                    <span className="text-muted-foreground">·</span>
-                    <span className="text-muted-foreground">{entry.role}</span>
-                  </span>
-                ))}
+            <div className="rounded-lg bg-background border border-border p-3 space-y-3">
+              <div>
+                <p className="text-xs font-medium text-foreground mb-2">
+                  {t("storeDiscover.stackLabel")}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {recommend.data.primaryStack.map((entry) => (
+                    <span
+                      key={entry.toolkit}
+                      className="inline-flex items-center gap-1 text-[11px] bg-secondary text-foreground px-2 py-0.5 rounded-full"
+                      title={entry.reason}
+                    >
+                      {entry.name}
+                      <span className="text-muted-foreground">·</span>
+                      <span className="text-muted-foreground">{entry.role}</span>
+                    </span>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-2">
+                  {t("storeDiscover.rankedHint")}
+                </p>
               </div>
-              <p className="text-[11px] text-muted-foreground mt-2">
-                {t("storeDiscover.rankedHint")}
-              </p>
+              <button
+                type="button"
+                onClick={() =>
+                  onCreateCustomAgent(
+                    intent.trim(),
+                    recommend.data!.primaryStack,
+                  )
+                }
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-violet-600 text-white text-xs font-medium hover:bg-violet-700 transition-colors duration-200"
+              >
+                <Wand2 className="size-3.5" />
+                {t("customAgent.button")}
+              </button>
             </div>
           )}
         </div>

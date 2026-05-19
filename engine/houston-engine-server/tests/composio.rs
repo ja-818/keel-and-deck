@@ -84,19 +84,30 @@ async fn composio_routes_smoke() {
         .unwrap();
     assert_eq!(bad.status(), 400);
 
-    // /composio/recommend: with stub catalog (no enriched toolkits in
-    // this build) → 503 Unavailable. Once the enrichment script has run
-    // and the bundled JSON is populated, the same call returns 200 with
-    // a stack instead.
-    let unavail = c
-        .post(format!("http://{addr}/v1/composio/recommend"))
+    // /composio/generate-custom: empty intent → 400.
+    let bad_gen = c
+        .post(format!("http://{addr}/v1/composio/generate-custom"))
         .bearer_auth(&tok)
-        .json(&serde_json::json!({
-            "intent": "validate leads from a form",
-            "alreadyConnected": [],
-        }))
+        .json(&serde_json::json!({ "intent": "   ", "stack": [] }))
         .send()
         .await
         .unwrap();
-    assert_eq!(unavail.status(), 503);
+    assert_eq!(bad_gen.status(), 400);
+
+    // Non-empty intent + empty stack → 400.
+    let bad_stack = c
+        .post(format!("http://{addr}/v1/composio/generate-custom"))
+        .bearer_auth(&tok)
+        .json(&serde_json::json!({ "intent": "do a thing", "stack": [] }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(bad_stack.status(), 400);
+
+    // Note: positive-path tests for `/recommend` and `/generate-custom`
+    // are intentionally NOT here. Both shell out to the user's provider
+    // CLI (`claude -p` / `codex exec`), which is not available in the
+    // test environment. Unit tests in `houston-composio::recommender`
+    // cover the catalog + parsing logic hermetically; end-to-end calls
+    // are validated manually with `pnpm tauri dev`.
 }

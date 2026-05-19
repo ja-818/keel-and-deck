@@ -15,7 +15,10 @@ use houston_composio::apps::ComposioAppEntry;
 use houston_composio::cli::{ComposioStatus, StartLinkResponse, StartLoginResponse};
 use houston_composio::commands as inner;
 use houston_composio::connection_watcher;
-use houston_composio::recommender::{self, RecommendError, RecommendResult};
+use houston_composio::recommender::{
+    self, GenerateCustomRequest, GenerateCustomResponse, GenerateError, RecommendError,
+    RecommendResult, StackEntry,
+};
 use houston_engine_core::CoreError;
 use houston_terminal_manager::Provider;
 use serde::{Deserialize, Serialize};
@@ -36,6 +39,7 @@ pub fn router() -> Router<Arc<ServerState>> {
         )
         .route("/composio/connections/watch", post(watch_connection))
         .route("/composio/recommend", post(recommend_stack))
+        .route("/composio/generate-custom", post(generate_custom_agent))
 }
 
 #[derive(Serialize)]
@@ -178,5 +182,63 @@ fn map_recommend_error(e: RecommendError) -> ApiError {
         RecommendError::NoMatches => {
             ApiError(CoreError::NotFound("no toolkits matched the intent".into()))
         }
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GenerateCustomReq {
+    intent: String,
+    #[serde(default)]
+    stack: Vec<StackEntry>,
+    /// Provider hint. Same semantics as `recommend_stack`: defaults to
+    /// the workspace's provider when missing.
+    #[serde(default)]
+    provider: Option<String>,
+}
+
+/// Generate a complete custom-agent bundle (name, description,
+/// CLAUDE.md, skills, optional routine) from the user's intent + the
+/// stack the recommender returned. One LLM call.
+///
+/// Errors map: empty intent → 400, empty stack → 400, LLM/parse failures
+/// → 502 with the underlying message exposed so the frontend surfaces
+/// it (no silent fallback — see CLAUDE.md "never swallow" rule).
+async fn generate_custom_agent(
+    State(_st): State<Arc<ServerState>>,
+    Json(req): Json<GenerateCustomReq>,
+) -> Result<Json<GenerateCustomResponse>, ApiError> {
+    let provider = req
+        .provider
+        .as_deref()
+        .and_then(|s| Provider::from_str(s).ok())
+        .unwrap_or_default();
+
+    let request = GenerateCustomRequest {
+        intent: req.intent,
+        stack: req.stack,
+        provider,
+    };
+
+    match recommender::generate_custom_agent(request).await {
+        Ok(r) => Ok(Json(r)),
+        Err(e) => Err(map_generate_error(e)),
+    }
+}
+
+fn map_generate_error(e: GenerateError) -> ApiError {
+    match e {
+        GenerateError::EmptyIntent => {
+            ApiError(CoreError::BadRequest("intent must not be empty".into()))
+        }
+        GenerateError::EmptyStack => {
+            ApiError(CoreError::BadRequest("stack must not be empty".into()))
+        }
+        GenerateError::LlmCallFailed(msg) => ApiError(CoreError::Internal(format!(
+            "LLM call failed: {msg}"
+        ))),
+        GenerateError::ParseFailed(msg) => ApiError(CoreError::Internal(format!(
+            "LLM response parse failed: {msg}"
+        ))),
     }
 }

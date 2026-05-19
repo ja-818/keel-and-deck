@@ -25,9 +25,11 @@ import type {
 import type {
   ComposioAppEntry as EngineComposioAppEntry,
   ComposioStatus as EngineComposioStatus,
+  GenerateCustomAgentResponse,
   ProviderAuthState,
   ProviderStatus as EngineProviderStatus,
   RecommendStackResponse,
+  StackEntry,
 } from "@houston-ai/engine-client";
 import { getEngine } from "./engine";
 import { osPickDirectory } from "./os-bridge";
@@ -412,6 +414,16 @@ export const tauriConnections = {
       "recommend_composio_stack",
       () => getEngine().composioRecommendStack({ intent, alreadyConnected, provider }),
       { intent, alreadyConnected, provider },
+    ),
+  generateCustomAgent: (
+    intent: string,
+    stack: StackEntry[],
+    provider?: "anthropic" | "openai",
+  ) =>
+    call<GenerateCustomAgentResponse>(
+      "generate_custom_composio_agent",
+      () => getEngine().composioGenerateCustomAgent({ intent, stack, provider }),
+      { intent, stack, provider },
     ),
 };
 

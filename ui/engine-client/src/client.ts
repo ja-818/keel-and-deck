@@ -44,6 +44,8 @@ import type {
   ProjectConfig,
   ProjectFile,
   ProviderStatus,
+  GenerateCustomAgentRequest,
+  GenerateCustomAgentResponse,
   RecommendStackRequest,
   RecommendStackResponse,
   RemoveWorktreeRequest,
@@ -769,6 +771,24 @@ export class HoustonClient {
   }
   importInstall(req: PortableInstallRequest): Promise<PortableInstalledAgent> {
     return this.request("POST", "/store/imports/install", req);
+  }
+
+  /**
+   * Generate the full custom-agent bundle (name, description, CLAUDE.md,
+   * skills, optional routine) for an intent + a recommended stack. One
+   * LLM call. The frontend persists the bundle by calling `createAgent`,
+   * `createSkill`, and (optionally) `createRoutine` — this endpoint
+   * never writes to disk on its own.
+   *
+   * Errors surface verbatim: if the LLM fails or returns malformed JSON
+   * the server returns 502 with the underlying message exposed.
+   * Frontends MUST display the error and offer Retry rather than
+   * silently falling back (CLAUDE.md "never swallow" rule).
+   */
+  composioGenerateCustomAgent(
+    req: GenerateCustomAgentRequest,
+  ): Promise<GenerateCustomAgentResponse> {
+    return this.request("POST", "/composio/generate-custom", req);
   }
 
   // ---------- WebSocket access (see ws.ts) ----------

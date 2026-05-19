@@ -6,6 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@houston-ai/core";
+import type { StackEntry } from "@houston-ai/engine-client";
 import { useAgentCatalogStore } from "../../stores/agent-catalog";
 import { useAgentStore } from "../../stores/agents";
 import { useWorkspaceStore } from "../../stores/workspaces";
@@ -16,6 +17,7 @@ import type { StoreListing } from "../../lib/types";
 import { getDefaultModel } from "../../lib/providers";
 import { StoreStep } from "./store-step";
 import { NamingStep } from "./naming-step";
+import { CustomAgentReviewStep } from "./custom-agent-review-step";
 
 export function CreateAgentDialog() {
   const { t } = useTranslation("shell");
@@ -28,13 +30,15 @@ export function CreateAgentDialog() {
   const createAgent = useAgentStore((s) => s.create);
   const currentWorkspace = useWorkspaceStore((s) => s.current);
 
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedConfigId, setSelectedConfigId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [color, setColor] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [existingPath, setExistingPath] = useState<string | null>(null);
+  const [customIntent, setCustomIntent] = useState("");
+  const [customStack, setCustomStack] = useState<StackEntry[]>([]);
   const wsProvider = currentWorkspace?.provider ?? "anthropic";
   const wsModel = currentWorkspace?.model ?? getDefaultModel(wsProvider);
   const [provider, setProvider] = useState(wsProvider);
@@ -58,6 +62,8 @@ export function CreateAgentDialog() {
       setError(null);
       setSearch("");
       setExistingPath(null);
+      setCustomIntent("");
+      setCustomStack([]);
       setProvider(wsProvider);
       setModel(wsModel);
     }
@@ -103,6 +109,29 @@ export function CreateAgentDialog() {
     await installAgent(listing);
   };
 
+  const handleCreateCustomAgent = (intent: string, stack: StackEntry[]) => {
+    setCustomIntent(intent);
+    setCustomStack(stack);
+    setStep(3);
+  };
+
+  /**
+   * Custom-agent flow completed. The review step already wrote the
+   * agent + skills + routine to disk AND the pending-integrations
+   * file. We just hand the user off to the new agent's view.
+   */
+  const handleCustomCreated = (agentPath: string) => {
+    const newAgent = useAgentStore
+      .getState()
+      .agents.find((a) => a.folderPath === agentPath);
+    if (newAgent) useAgentStore.getState().setCurrent(newAgent);
+    // "blank" config defaults to the activity tab. workspace-shell's
+    // viewMode-correction useEffect would fall back here too, but we
+    // set it explicitly to avoid a frame of empty state.
+    useUIStore.getState().setViewMode("activity");
+    handleClose();
+  };
+
   const selectedDef = agentDefs.find((d) => d.config.id === selectedConfigId);
 
   return (
@@ -124,7 +153,7 @@ export function CreateAgentDialog() {
         onPointerDownOutside={(e) => { if (uiTourActive) e.preventDefault(); }}
         onEscapeKeyDown={(e) => { if (uiTourActive) e.preventDefault(); }}
       >
-        {step === 1 ? (
+        {step === 1 && (
           <>
             <DialogHeader className="shrink-0 px-6 pt-6 pb-3">
               <DialogTitle>{t("newAgent.dialogTitle")}</DialogTitle>
@@ -141,9 +170,11 @@ export function CreateAgentDialog() {
               }}
               onInstall={handleInstall}
               connectedToolkits={connectedToolkits ?? []}
+              onCreateCustomAgent={handleCreateCustomAgent}
             />
           </>
-        ) : (
+        )}
+        {step === 2 && (
           <NamingStep
             selectedAgent={selectedDef}
             name={name}
@@ -159,6 +190,16 @@ export function CreateAgentDialog() {
             onProviderChange={(p, m) => { setProvider(p); setModel(m); }}
             onBack={() => setStep(1)}
             onSubmit={handleSubmit}
+          />
+        )}
+        {step === 3 && currentWorkspace && (
+          <CustomAgentReviewStep
+            intent={customIntent}
+            stack={customStack}
+            provider={provider}
+            workspace={currentWorkspace}
+            onBack={() => setStep(1)}
+            onCreated={handleCustomCreated}
           />
         )}
       </DialogContent>

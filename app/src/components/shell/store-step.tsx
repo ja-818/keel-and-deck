@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Input } from "@houston-ai/core";
 import { Gift, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import type { StackEntry } from "@houston-ai/engine-client";
 import type { AgentDefinition, StoreListing } from "../../lib/types";
 import { AgentCard, StoreAgentCard } from "./experience-card";
 import { StoreStepDiscover } from "./store-step-discover";
@@ -18,6 +19,9 @@ interface StoreStepProps {
    *  to the discover disclosure so the recommender can mark them as
    *  connected and bias toward reuse. Defaults to empty. */
   connectedToolkits?: string[];
+  /** Forwarded from the dialog so the discover disclosure can route a
+   *  "Create custom agent" click up to the dialog's step-3 swap. */
+  onCreateCustomAgent: (intent: string, stack: StackEntry[]) => void;
 }
 
 export function StoreStep({
@@ -28,6 +32,7 @@ export function StoreStep({
   onSelect,
   onInstall,
   connectedToolkits = [],
+  onCreateCustomAgent,
 }: StoreStepProps) {
   const { t } = useTranslation(["shell", "portable"]);
   const setImportOpen = useUIStore((s) => s.setImportFromFriendOpen);
@@ -74,6 +79,7 @@ export function StoreStep({
         <StoreStepDiscover
           connectedToolkits={connectedToolkits}
           onStackRecommended={setRecommendedSlugs}
+          onCreateCustomAgent={onCreateCustomAgent}
         />
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />

@@ -44,9 +44,16 @@ mod cache;
 mod catalog;
 pub mod embedding_store;
 pub mod embeddings;
+pub mod generate_custom;
 mod llm_pick;
 mod matcher;
+mod provider_cli;
 mod types;
+
+pub use generate_custom::{
+    generate_custom as generate_custom_agent, GenerateCustomRequest, GenerateCustomResponse,
+    GenerateError, GeneratedRoutine, GeneratedSkill,
+};
 
 use banlist::is_banned_app;
 

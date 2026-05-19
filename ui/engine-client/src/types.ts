@@ -817,3 +817,49 @@ export interface RecommendStackResponse {
    *  Frontends should show a softer confidence indicator in that case. */
   llmPicked: boolean;
 }
+
+/** A skill the LLM designed for a custom agent, ready to be persisted
+ *  as `.agents/skills/{name}/SKILL.md` via `createSkill`. */
+export interface GeneratedSkill {
+  /** Slug-style folder name, prefixed with the agent slug to avoid
+   *  collisions with other agents' skills in the same workspace. */
+  name: string;
+  description: string;
+  /** SKILL.md body (frontmatter is added by the engine on write). */
+  content: string;
+}
+
+/** A routine the LLM designed for the agent, ready to be persisted via
+ *  `createRoutine`. Present only when the intent had a temporal cue. */
+export interface GeneratedRoutine {
+  name: string;
+  description: string;
+  prompt: string;
+  /** 5-field cron expression (`"0 9 * * 1-5"`). */
+  schedule: string;
+  suppressWhenSilent: boolean;
+  timezone?: string | null;
+}
+
+/** Request for `/v1/composio/generate-custom`. */
+export interface GenerateCustomAgentRequest {
+  intent: string;
+  stack: StackEntry[];
+  /** Provider hint. Defaults server-side to "anthropic". */
+  provider?: "anthropic" | "openai";
+}
+
+/** Full custom-agent bundle the engine generates in one LLM call. */
+export interface GenerateCustomAgentResponse {
+  /** Agent name (1-3 words, no emoji). User can edit before submit. */
+  name: string;
+  /** One-sentence description for the agent card. */
+  description: string;
+  /** Full CLAUDE.md content. Engine writes this verbatim to the agent
+   *  folder via the existing createAgent flow. */
+  claudeMd: string;
+  /** 0-2 skills the agent starts with. May be empty. */
+  skills: GeneratedSkill[];
+  /** Routine spec or null. Null when the intent had no temporal cue. */
+  routine: GeneratedRoutine | null;
+}
