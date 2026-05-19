@@ -114,11 +114,26 @@ fn should_skip_dir(name: &str) -> bool {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ProjectFile {
+    /// Relative path from the agent root, always forward-slash separated
+    /// regardless of host OS. The frontend file tree depends on this contract
+    /// to split path segments and nest entries correctly.
     pub path: String,
     pub name: String,
     pub extension: String,
     pub size: u64,
     pub is_directory: bool,
+}
+
+/// Build the relative-path string used in `ProjectFile.path`: strip the agent
+/// root prefix and force forward slashes so the frontend tree builder works
+/// the same on Windows and Unix.
+fn relative_path_string(root: &Path, path: &Path) -> String {
+    let rel = path.strip_prefix(root).unwrap_or(path).to_string_lossy();
+    if std::path::MAIN_SEPARATOR == '/' {
+        rel.into_owned()
+    } else {
+        rel.replace(std::path::MAIN_SEPARATOR, "/")
+    }
 }
 
 /// List user-facing files in an agent folder. Returns an empty vec if the
@@ -254,11 +269,7 @@ pub fn import_files(
                     .map(|e| e.to_string_lossy().to_lowercase())
                     .unwrap_or_default();
                 let size = dest.metadata().map(|m| m.len()).unwrap_or(0);
-                let relative = dest
-                    .strip_prefix(agent_root)
-                    .unwrap_or(&dest)
-                    .to_string_lossy()
-                    .to_string();
+                let relative = relative_path_string(agent_root, &dest);
                 imported.push(ProjectFile {
                     path: relative,
                     name: final_name,
@@ -321,11 +332,7 @@ fn collect_files(root: &Path, dir: &Path, out: &mut Vec<ProjectFile>) {
             if should_skip_dir(&name) {
                 continue;
             }
-            let relative = path
-                .strip_prefix(root)
-                .unwrap_or(&path)
-                .to_string_lossy()
-                .to_string();
+            let relative = relative_path_string(root, &path);
             out.push(ProjectFile {
                 path: relative,
                 name,
@@ -343,11 +350,7 @@ fn collect_files(root: &Path, dir: &Path, out: &mut Vec<ProjectFile>) {
         if !USER_EXTENSIONS.contains(&ext.as_str()) {
             continue;
         }
-        let relative = path
-            .strip_prefix(root)
-            .unwrap_or(&path)
-            .to_string_lossy()
-            .to_string();
+        let relative = relative_path_string(root, &path);
         let size = entry.metadata().map(|m| m.len()).unwrap_or(0);
         out.push(ProjectFile {
             path: relative,
@@ -427,6 +430,22 @@ mod tests {
         assert!(names.contains(&"notes.txt"));
         assert!(!names.contains(&"script.py"));
         assert!(!names.iter().any(|n| n.starts_with('.')));
+    }
+
+    #[test]
+    fn list_project_files_uses_forward_slashes_on_all_platforms() {
+        let d = tmp();
+        std::fs::create_dir_all(d.path().join("docs/inner")).unwrap();
+        std::fs::write(d.path().join("docs/inner/note.txt"), "x").unwrap();
+        std::fs::create_dir_all(d.path().join("empty")).unwrap();
+
+        let files = list_project_files(d.path()).unwrap();
+        let paths: Vec<&str> = files.iter().map(|f| f.path.as_str()).collect();
+        assert!(paths.contains(&"docs"));
+        assert!(paths.contains(&"docs/inner"));
+        assert!(paths.contains(&"docs/inner/note.txt"));
+        assert!(paths.contains(&"empty"));
+        assert!(!paths.iter().any(|p| p.contains('\\')));
     }
 
     #[test]
