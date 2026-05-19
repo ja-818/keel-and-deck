@@ -15,6 +15,7 @@ export interface KanbanColumnProps {
   onRename?: (item: KanbanItem, newTitle: string) => void
   runningStatuses?: string[]
   approveStatuses?: string[]
+  errorStatuses?: string[]
   renderCard?: (item: KanbanItem) => React.ReactNode
   actions?: (item: KanbanItem) => React.ReactNode
   avatar?: React.ReactNode
@@ -33,6 +34,7 @@ export function KanbanColumn({
   onRename,
   runningStatuses,
   approveStatuses,
+  errorStatuses,
   renderCard,
   actions,
   avatar,
@@ -77,6 +79,7 @@ export function KanbanColumn({
                   onRename={onRename ? (title) => onRename(item, title) : undefined}
                   runningStatuses={runningStatuses}
                   approveStatuses={approveStatuses}
+                  errorStatuses={errorStatuses}
                   actions={actions?.(item)}
                   avatar={avatar}
                   labels={cardLabels}

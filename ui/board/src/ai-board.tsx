@@ -37,6 +37,7 @@ export interface AIBoardProps {
   sessionKeyFor?: (activityId: string) => string
   runningStatuses?: string[]
   approveStatuses?: string[]
+  errorStatuses?: string[]
   /** Load persisted chat history for a session. Called once per session key when selected. */
   onLoadHistory?: (sessionKey: string) => Promise<FeedItem[]>
   /** Called with the loaded history so the parent can merge it into its
@@ -168,6 +169,7 @@ export function AIBoard({
   sessionKeyFor = defaultSessionKey,
   runningStatuses = ["running"],
   approveStatuses = ["needs_you"],
+  errorStatuses = ["error"],
   onLoadHistory,
   onHistoryLoaded,
   onNewPanelOpenerReady,
@@ -408,6 +410,7 @@ export function AIBoard({
         selectedId={selectedId}
         runningStatuses={runningStatuses}
         approveStatuses={approveStatuses}
+        errorStatuses={errorStatuses}
         onSelect={handleCardSelect}
         onDelete={onDelete ? handleDelete : undefined}
         onApprove={onApprove}
