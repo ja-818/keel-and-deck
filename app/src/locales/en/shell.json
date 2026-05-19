@@ -196,7 +196,11 @@
     "pendingHint": "Your new agent needs these connections to work end-to-end.",
     "pendingConnect": "Connect",
     "pendingAlreadyConnected": "Connected",
-    "connectFailed": "Could not connect {{name}}"
+    "connectFailed": "Could not connect {{name}}",
+    "stackTitle": "Your agent's tools",
+    "stackHintPending_one": "{{count}} integration still needs connecting.",
+    "stackHintPending_other": "{{count}} integrations still need connecting.",
+    "stackHintAllConnected": "All set. Every tool your agent uses is connected."
   },
   "naming": {
     "dialogTitle": "Name your Agent",

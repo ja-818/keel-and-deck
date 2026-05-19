@@ -196,7 +196,11 @@
     "pendingHint": "Tu agente necesita estas conexiones para funcionar de punta a punta.",
     "pendingConnect": "Conectar",
     "pendingAlreadyConnected": "Conectado",
-    "connectFailed": "No se pudo conectar {{name}}"
+    "connectFailed": "No se pudo conectar {{name}}",
+    "stackTitle": "Las herramientas de tu agente",
+    "stackHintPending_one": "Falta conectar {{count}} integración.",
+    "stackHintPending_other": "Faltan conectar {{count}} integraciones.",
+    "stackHintAllConnected": "Listo. Todas las herramientas que usa tu agente están conectadas."
   },
   "naming": {
     "dialogTitle": "Nombra tu agente",

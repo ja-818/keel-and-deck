@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, X, Check } from "lucide-react";
@@ -22,18 +22,19 @@ const PENDING_QUERY_KEY = (agentPath: string) => [
 ];
 
 /**
- * Card mounted on top of the agent's workspace surface when the user
- * just finished the custom-agent creation flow. Lists the toolkits the
- * agent's stack declared but the user hasn't connected yet. Clicking
- * Connect opens the OAuth flow in the browser; the panel reconciles
- * against the live connected-toolkits list and removes rows as
- * connections land.
+ * Card mounted on top of the agent's workspace surface for agents that
+ * came out of the custom-agent creation flow. Lists every toolkit in
+ * the agent's stack with a per-row badge: "Conectado" (live in the
+ * Composio connections list) or a "Conectar" button that drives the
+ * OAuth flow.
  *
- * Persistence: the list lives at `.houston/pending-stack-integrations
- * .json` inside the agent folder so it survives app reloads. The file
- * is rewritten on every reconciliation (and gets `entries: []` when
- * everything is connected); the panel hides itself when entries are
- * empty so a stale empty file is harmless.
+ * Persistence: the stack lives at `.houston/pending-stack-integrations
+ * .json` inside the agent folder so it survives app reloads. The user
+ * can dismiss the panel manually (X); the panel does NOT auto-hide
+ * when every entry is connected because it doubles as the user's
+ * canonical view of "what tools is this agent using".
+ *
+ * Non-custom agents (where the file is absent) render nothing.
  */
 export function CustomAgentPendingIntegrations({ agentPath }: Props) {
   const { t } = useTranslation("shell");
@@ -48,29 +49,11 @@ export function CustomAgentPendingIntegrations({ agentPath }: Props) {
   const addToast = useUIStore((s) => s.addToast);
   const [connectingSlug, setConnectingSlug] = useState<string | null>(null);
 
-  // Reconcile against the live connected set: when EVERY entry in the
-  // file is already connected, clear the file (panel disappears). If
-  // some are still pending, keep all entries in place — we want the
-  // user to see "GitHub ✓ Connected · Trello [Connect]" so they have
-  // context about the full stack their agent uses, not just the few
-  // that happen to be unconnected.
-  useEffect(() => {
-    if (!entries || entries.length === 0 || !connectedSlugs) return;
-    const allConnected = entries.every((e) =>
-      connectedSlugs.includes(e.toolkit),
-    );
-    if (allConnected) {
-      writePendingStackIntegrations(agentPath, [])
-        .then(() => {
-          qc.setQueryData(PENDING_QUERY_KEY(agentPath), []);
-        })
-        .catch((err) => {
-          console.error("[pendingIntegrations] write failed", err);
-        });
-    }
-  }, [entries, connectedSlugs, agentPath, qc]);
-
   if (!entries || entries.length === 0) return null;
+
+  const pendingCount = entries.filter(
+    (e) => !(connectedSlugs ?? []).includes(e.toolkit),
+  ).length;
 
   const handleConnect = async (toolkit: string) => {
     setConnectingSlug(toolkit);
@@ -99,10 +82,12 @@ export function CustomAgentPendingIntegrations({ agentPath }: Props) {
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-foreground">
-            {t("customAgent.pendingTitle")}
+            {t("customAgent.stackTitle")}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {t("customAgent.pendingHint")}
+            {pendingCount > 0
+              ? t("customAgent.stackHintPending", { count: pendingCount })
+              : t("customAgent.stackHintAllConnected")}
           </p>
         </div>
         <button

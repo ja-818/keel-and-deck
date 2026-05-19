@@ -1,7 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation } from "@tanstack/react-query";
-import { Sparkles, Loader2, ChevronDown, ChevronUp, Wand2 } from "lucide-react";
+import { Sparkles, Loader2, ChevronDown, ChevronUp, Wand2, X } from "lucide-react";
 import type { RecommendStackResponse, StackEntry } from "@houston-ai/engine-client";
 import { tauriConnections } from "../../lib/tauri";
 
@@ -41,6 +41,10 @@ export function StoreStepDiscover({
   const { t } = useTranslation("shell");
   const [open, setOpen] = useState(false);
   const [intent, setIntent] = useState("");
+  /** Local, user-editable copy of the recommended stack. Reset every
+   *  time a fresh recommendation lands; the user can prune entries with
+   *  the X button before clicking "Create custom agent". */
+  const [editedStack, setEditedStack] = useState<StackEntry[]>([]);
 
   const recommend = useMutation({
     mutationFn: async (goal: string) => {
@@ -50,6 +54,22 @@ export function StoreStepDiscover({
       onStackRecommended(data.primaryStack.map((e) => e.toolkit));
     },
   });
+
+  // Reset the editable stack whenever a new recommendation lands so the
+  // user always starts from the model's fresh proposal.
+  useEffect(() => {
+    if (recommend.data) {
+      setEditedStack(recommend.data.primaryStack);
+    }
+  }, [recommend.data]);
+
+  const removeFromStack = useCallback((toolkit: string) => {
+    setEditedStack((prev) => {
+      const next = prev.filter((e) => e.toolkit !== toolkit);
+      onStackRecommended(next.map((e) => e.toolkit));
+      return next;
+    });
+  }, [onStackRecommended]);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -117,25 +137,21 @@ export function StoreStepDiscover({
             <p className="text-xs text-red-600">{t("storeDiscover.error")}</p>
           )}
 
-          {recommend.data && recommend.data.primaryStack.length > 0 && (
+          {recommend.data && editedStack.length > 0 && (
             <div className="rounded-lg bg-background border border-border p-3 space-y-3">
               <div>
                 <p className="text-xs font-medium text-foreground mb-2">
                   {t("storeDiscover.stackLabel")}
                 </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {recommend.data.primaryStack.map((entry) => (
-                    <span
+                <ul className="flex flex-wrap gap-1.5">
+                  {editedStack.map((entry) => (
+                    <StackChip
                       key={entry.toolkit}
-                      className="inline-flex items-center gap-1 text-[11px] bg-secondary text-foreground px-2 py-0.5 rounded-full"
-                      title={entry.reason}
-                    >
-                      {entry.name}
-                      <span className="text-muted-foreground">·</span>
-                      <span className="text-muted-foreground">{entry.role}</span>
-                    </span>
+                      entry={entry}
+                      onRemove={removeFromStack}
+                    />
                   ))}
-                </div>
+                </ul>
                 <p className="text-[11px] text-muted-foreground mt-2">
                   {t("storeDiscover.rankedHint")}
                 </p>
@@ -143,10 +159,7 @@ export function StoreStepDiscover({
               <button
                 type="button"
                 onClick={() =>
-                  onCreateCustomAgent(
-                    intent.trim(),
-                    recommend.data!.primaryStack,
-                  )
+                  onCreateCustomAgent(intent.trim(), editedStack)
                 }
                 className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-violet-600 text-white text-xs font-medium hover:bg-violet-700 transition-colors duration-200"
               >
@@ -158,5 +171,49 @@ export function StoreStepDiscover({
         </div>
       )}
     </div>
+  );
+}
+
+function StackChip({
+  entry,
+  onRemove,
+}: {
+  entry: StackEntry;
+  onRemove: (toolkit: string) => void;
+}) {
+  const [imgError, setImgError] = useState(false);
+  const initial = entry.name.charAt(0).toUpperCase();
+
+  return (
+    <li
+      className="inline-flex items-center gap-1.5 text-[11px] bg-secondary text-foreground pl-1 pr-1 py-0.5 rounded-full"
+      title={entry.reason}
+    >
+      <span className="flex-shrink-0 size-5 rounded-full bg-background overflow-hidden flex items-center justify-center">
+        {!imgError && entry.logoUrl ? (
+          <img
+            src={entry.logoUrl}
+            alt=""
+            className="size-full object-contain"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <span className="text-[9px] font-medium text-muted-foreground">
+            {initial}
+          </span>
+        )}
+      </span>
+      <span className="font-medium">{entry.name}</span>
+      <span className="text-muted-foreground">·</span>
+      <span className="text-muted-foreground">{entry.role}</span>
+      <button
+        type="button"
+        onClick={() => onRemove(entry.toolkit)}
+        className="ml-0.5 flex-shrink-0 size-4 rounded-full hover:bg-background flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+        aria-label={`Remove ${entry.name}`}
+      >
+        <X className="size-3" />
+      </button>
+    </li>
   );
 }

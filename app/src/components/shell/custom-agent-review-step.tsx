@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Wand2, Loader2, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { Button, DialogHeader, DialogTitle, Input } from "@houston-ai/core";
 import type {
@@ -167,6 +167,7 @@ function ReviewForm({
   onCreated: (agentPath: string) => void;
 }) {
   const { t } = useTranslation("shell");
+  const qc = useQueryClient();
   const [name, setName] = useState(generated.name);
   const [description, setDescription] = useState(generated.description);
   const [enabledSkills, setEnabledSkills] = useState<Set<string>>(
@@ -251,17 +252,24 @@ function ReviewForm({
         }
       }
 
-      const pending = stack.filter((e) => !e.connected);
-      // Persist to the agent's .houston/ folder so the pending-
-      // integrations panel survives reloads. Best-effort: if the write
-      // fails the panel just won't appear after reload, but the agent
-      // itself is fine — connections can still be made from the
-      // Integrations tab.
+      // Persist the FULL stack (not only the unconnected entries) to
+      // the agent's .houston/ folder so the panel can render badges for
+      // both "Conectado" and "Conectar" — it's useful for the user to
+      // see the complete set of tools their agent uses, not just the
+      // ones that happen to be missing right now. Best-effort write:
+      // if it fails the panel just won't appear after reload, but the
+      // agent itself is fine.
       try {
-        await writePendingStackIntegrations(agent.folderPath, pending);
+        await writePendingStackIntegrations(agent.folderPath, stack);
       } catch (e) {
         console.error("[customAgent] writePendingStackIntegrations failed", e);
       }
+      // Invalidate the panel's query so its read-on-mount doesn't race
+      // the file write. Without this the panel mounts before the write
+      // lands and shows nothing until the user manually reloads.
+      qc.invalidateQueries({
+        queryKey: ["pending-stack-integrations", agent.folderPath],
+      });
       onCreated(agent.folderPath);
     } catch (e) {
       setSubmitError(String(e));
