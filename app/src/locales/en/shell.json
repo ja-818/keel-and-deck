@@ -274,6 +274,8 @@
       "prevAgent": "Previous agent",
       "nextAgent": "Next agent",
       "boardNavigate": "Move between missions",
+      "boardOpen": "Open highlighted mission",
+      "panelEscape": "Leave chat, then close",
       "cheatsheet": "Show this sheet"
     }
   }

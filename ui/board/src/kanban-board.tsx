@@ -7,6 +7,7 @@ export interface KanbanBoardProps {
   columns: KanbanColumnType[]
   items: KanbanItem[]
   selectedId?: string | null
+  highlightedId?: string | null
   onSelect?: (item: KanbanItem) => void
   onDelete?: (item: KanbanItem) => void
   onApprove?: (item: KanbanItem) => void
@@ -24,6 +25,7 @@ export function KanbanBoard({
   columns,
   items,
   selectedId,
+  highlightedId,
   onSelect,
   onDelete,
   onApprove,
@@ -65,6 +67,7 @@ export function KanbanBoard({
           label={col.label}
           items={col.items}
           selectedId={selectedId}
+          highlightedId={highlightedId}
           onAdd={col.onAdd}
           addLabel={col.addLabel}
           onSelect={onSelect ?? (() => {})}

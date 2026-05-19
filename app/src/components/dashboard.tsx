@@ -52,6 +52,8 @@ export function Dashboard() {
   const missionPanelOpen = useUIStore((s) => s.missionPanelOpen);
   const setOnStartMission = useUIStore((s) => s.setOnStartMission);
   const setOnBoardNavigate = useUIStore((s) => s.setOnBoardNavigate);
+  const setOnBoardOpen = useUIStore((s) => s.setOnBoardOpen);
+  const setOnPanelClose = useUIStore((s) => s.setOnPanelClose);
   const addToast = useUIStore((s) => s.addToast);
 
   const [filterPath, setFilterPath] = useState("");
@@ -82,13 +84,17 @@ export function Dashboard() {
   const mc = useMissionControl(agents);
   const setMissionControlSelectedId = mc.setSelectedId;
 
+  // Keyboard "highlight" — independent of the open panel. Arrow keys
+  // move the ring; Enter promotes the ring to the open selection.
+  const [highlightedId, setHighlightedId] = useState<string | null>(mc.selectedId);
+
   // Refs hold the latest snapshot so the navigator we register in the
   // UI store stays stable while always reading the current items,
-  // selection, and column config.
+  // highlight, and column config.
   const navItemsRef = useRef(mc.items);
   const navColumnsRef = useRef(MC_COLUMNS);
-  const selectedIdRef = useRef(mc.selectedId);
-  selectedIdRef.current = mc.selectedId;
+  const highlightedIdRef = useRef(highlightedId);
+  highlightedIdRef.current = highlightedId;
   navColumnsRef.current = MC_COLUMNS;
   useEffect(() => {
     setOnBoardNavigate((dir) => {
@@ -96,14 +102,40 @@ export function Dashboard() {
         {
           items: navItemsRef.current,
           columns: navColumnsRef.current,
-          selectedId: selectedIdRef.current,
+          selectedId: highlightedIdRef.current,
         },
         dir,
       );
-      if (next) setMissionControlSelectedId(next);
+      if (next) setHighlightedId(next);
     });
-    return () => setOnBoardNavigate(null);
-  }, [setOnBoardNavigate, setMissionControlSelectedId]);
+    setOnBoardOpen(() => {
+      const id = highlightedIdRef.current;
+      if (id) setMissionControlSelectedId(id);
+    });
+    return () => {
+      setOnBoardNavigate(null);
+      setOnBoardOpen(null);
+    };
+  }, [setOnBoardNavigate, setOnBoardOpen, setMissionControlSelectedId]);
+
+  // Register Escape-to-close while a card is open. Cleared when nothing
+  // is selected so the global handler can't fire into a stale callback.
+  useEffect(() => {
+    if (!mc.selectedId) {
+      setOnPanelClose(null);
+      return;
+    }
+    setOnPanelClose(() => setMissionControlSelectedId(null));
+    return () => setOnPanelClose(null);
+  }, [mc.selectedId, setOnPanelClose, setMissionControlSelectedId]);
+
+  // Mouse selection (or any external selection change) drags the
+  // highlight ring along, so closing the panel leaves it in place.
+  useEffect(() => {
+    if (mc.selectedId && mc.selectedId !== highlightedIdRef.current) {
+      setHighlightedId(mc.selectedId);
+    }
+  }, [mc.selectedId]);
 
   // Picking an agent from the "New mission" modal stays on Mission
   // Control: we set the pending agent so the right panel scopes its
@@ -333,6 +365,7 @@ export function Dashboard() {
           items={missionSearch.items}
           columns={MC_COLUMNS}
           selectedId={mc.selectedId}
+          highlightedId={highlightedId}
           onSelect={mc.setSelectedId}
           feedItems={mc.feedItems}
           isLoading={mc.loading}

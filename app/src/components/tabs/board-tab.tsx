@@ -69,6 +69,8 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
   const queryClient = useQueryClient();
   const setOnStartMission = useUIStore((s) => s.setOnStartMission);
   const setOnBoardNavigate = useUIStore((s) => s.setOnBoardNavigate);
+  const setOnBoardOpen = useUIStore((s) => s.setOnBoardOpen);
+  const setOnPanelClose = useUIStore((s) => s.setOnPanelClose);
   const setBoardActions = useUIStore((s) => s.setBoardActions);
   const missionSearchQuery = useUIStore((s) => s.agentMissionSearchQueries[path] ?? "");
   const setAgentMissionSearchQuery = useUIStore((s) => s.setAgentMissionSearchQuery);
@@ -131,6 +133,10 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
   const pendingId = useUIStore((s) => s.activityPanelId);
   const clearPending = useUIStore((s) => s.setActivityPanelId);
   const [selectedId, setSelectedId] = useState<string | null>(pendingId);
+  // The keyboard "focus ring" card — moved by arrow keys, opened by
+  // Enter. Kept separate from `selectedId` so arrow nav doesn't auto-
+  // mount the chat panel.
+  const [highlightedId, setHighlightedId] = useState<string | null>(pendingId);
   useEffect(() => {
     if (pendingId) {
       // Only navigate if the user isn't already viewing a conversation
@@ -277,7 +283,9 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
   const navItemsRef = useRef<KanbanItem[]>(items);
   const navColumnsRef = useRef(boardColumns);
   const selectedIdRef = useRef(selectedId);
+  const highlightedIdRef = useRef(highlightedId);
   selectedIdRef.current = selectedId;
+  highlightedIdRef.current = highlightedId;
   navColumnsRef.current = boardColumns;
 
   const missionSearch = useMissionSearch({
@@ -327,21 +335,50 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
 
   // Register the arrow-key navigator scoped to THIS agent's board.
   // Refs declared above keep the callback stable while always reading
-  // the latest items, selection, and column config.
+  // the latest items, highlight, and column config. Arrow navigation
+  // walks the HIGHLIGHT (no chat panel open); Enter promotes it to
+  // the selection.
   useEffect(() => {
     setOnBoardNavigate((dir) => {
       const next = navigateBoard(
         {
           items: navItemsRef.current,
           columns: navColumnsRef.current,
-          selectedId: selectedIdRef.current,
+          selectedId: highlightedIdRef.current,
         },
         dir,
       );
-      if (next) setSelectedId(next);
+      if (next) setHighlightedId(next);
     });
-    return () => setOnBoardNavigate(null);
-  }, [setOnBoardNavigate]);
+    setOnBoardOpen(() => {
+      const id = highlightedIdRef.current;
+      if (id) setSelectedId(id);
+    });
+    return () => {
+      setOnBoardNavigate(null);
+      setOnBoardOpen(null);
+    };
+  }, [setOnBoardNavigate, setOnBoardOpen]);
+
+  // Wire the global Escape handler to close THIS board's chat panel
+  // when a card is open. The hook drops the registration when nothing
+  // is selected so a stray Escape can't fire into a stale callback.
+  useEffect(() => {
+    if (!selectedId) {
+      setOnPanelClose(null);
+      return;
+    }
+    setOnPanelClose(() => setSelectedId(null));
+    return () => setOnPanelClose(null);
+  }, [selectedId, setOnPanelClose]);
+
+  // Keep the highlight aligned with the currently-open card so that
+  // closing the panel leaves the ring where the user last was.
+  useEffect(() => {
+    if (selectedId && selectedId !== highlightedIdRef.current) {
+      setHighlightedId(selectedId);
+    }
+  }, [selectedId]);
 
   const handleDelete = useCallback(
     async (item: KanbanItem) => {
@@ -606,6 +643,7 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
           items={missionSearch.items}
           columns={boardColumns}
           selectedId={selectedId}
+          highlightedId={highlightedId}
           onSelect={setSelectedId}
           panelContainer={panelContainer}
           feedItems={feedItems}

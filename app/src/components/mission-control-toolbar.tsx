@@ -15,6 +15,7 @@ import { AgentCardAvatar } from "./shell/agent-card-avatar";
 import type { Agent } from "../lib/types";
 import { MissionSearchInput } from "./mission-search-input";
 import { shortcutLabel } from "../lib/shortcuts";
+import { CommandPaletteButton } from "./command-palette-button";
 
 interface MissionControlToolbarProps {
   agents: Agent[];
@@ -45,17 +46,20 @@ export function MissionControlToolbar({
           {t("title")}
         </h1>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center lg:ml-auto">
-          <MissionSearchInput
-            value={search}
-            isSearchingText={isSearchingText}
-            labels={{
-              placeholder: t("search.placeholder"),
-              clear: t("search.clear"),
-              searchingText: t("search.searchingText"),
-            }}
-            className="relative sm:w-[280px] lg:w-[320px]"
-            onChange={onSearchChange}
-          />
+          <div className="flex items-center gap-2">
+            <CommandPaletteButton />
+            <MissionSearchInput
+              value={search}
+              isSearchingText={isSearchingText}
+              labels={{
+                placeholder: t("search.placeholder"),
+                clear: t("search.clear"),
+                searchingText: t("search.searchingText"),
+              }}
+              className="relative sm:w-[280px] lg:w-[320px]"
+              onChange={onSearchChange}
+            />
+          </div>
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

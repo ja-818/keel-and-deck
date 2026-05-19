@@ -34,8 +34,16 @@ interface UIState {
   /** Whether the keyboard shortcut cheatsheet (?) is open. */
   cheatsheetOpen: boolean;
   /** Arrow-key kanban navigator registered by whichever board is on
-   *  screen (Mission Control or an agent's Activity tab). */
+   *  screen (Mission Control or an agent's Activity tab). Moves the
+   *  keyboard highlight; does NOT open the chat panel. */
   onBoardNavigate: ((dir: "up" | "down" | "left" | "right") => void) | null;
+  /** Open the currently-highlighted card's chat panel. Registered by
+   *  the same board owner as `onBoardNavigate`. Fired by Enter. */
+  onBoardOpen: (() => void) | null;
+  /** Close the chat detail panel. Registered by the board owner while
+   *  a card is selected; fired by Escape when the composer is not
+   *  focused (the first Escape blurs the composer, the second closes). */
+  onPanelClose: (() => void) | null;
   jobDescriptionTarget: JobDescriptionTarget | null;
   /** Pin the first-run tutorial UI in front of the workspace shell. Set true
    * while the orchestrator is mid-flight, cleared on graduation or skip. */
@@ -64,6 +72,8 @@ interface UIState {
   setPaletteOpen: (open: boolean) => void;
   setCheatsheetOpen: (open: boolean) => void;
   setOnBoardNavigate: (cb: ((dir: "up" | "down" | "left" | "right") => void) | null) => void;
+  setOnBoardOpen: (cb: (() => void) | null) => void;
+  setOnPanelClose: (cb: (() => void) | null) => void;
   setJobDescriptionTarget: (target: JobDescriptionTarget | null) => void;
   setTutorialActive: (active: boolean) => void;
   setUiTourActive: (active: boolean) => void;
@@ -89,6 +99,8 @@ export const useUIStore = create<UIState>((set) => ({
   paletteOpen: false,
   cheatsheetOpen: false,
   onBoardNavigate: null,
+  onBoardOpen: null,
+  onPanelClose: null,
   jobDescriptionTarget: null,
   tutorialActive: false,
   uiTourActive: false,
@@ -148,6 +160,8 @@ export const useUIStore = create<UIState>((set) => ({
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
   setCheatsheetOpen: (cheatsheetOpen) => set({ cheatsheetOpen }),
   setOnBoardNavigate: (onBoardNavigate) => set({ onBoardNavigate }),
+  setOnBoardOpen: (onBoardOpen) => set({ onBoardOpen }),
+  setOnPanelClose: (onPanelClose) => set({ onPanelClose }),
   setJobDescriptionTarget: (jobDescriptionTarget) => set({ jobDescriptionTarget }),
   setTutorialActive: (tutorialActive) => set({ tutorialActive }),
   setUiTourActive: (uiTourActive) => set({ uiTourActive }),

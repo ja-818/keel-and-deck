@@ -29,6 +29,8 @@ const CYCLE_ROWS: Row[] = [
     glyphs: `${shortcutLabel("boardUp")} ${shortcutLabel("boardDown")} ${shortcutLabel("boardLeft")} ${shortcutLabel("boardRight")}`,
     labelKey: "shell:cheatsheet.rows.boardNavigate",
   },
+  { glyphs: shortcutLabel("boardOpen"), labelKey: "shell:cheatsheet.rows.boardOpen" },
+  { glyphs: "Esc", labelKey: "shell:cheatsheet.rows.panelEscape" },
 ];
 
 const HELP_ROWS: Row[] = [

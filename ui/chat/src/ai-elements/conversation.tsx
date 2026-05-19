@@ -12,10 +12,18 @@ export type ConversationProps = ComponentProps<typeof StickToBottom>;
 
 export const Conversation = ({ className, ...props }: ConversationProps) => (
   <StickToBottom
-    className={cn("relative flex-1 overflow-y-hidden", className)}
+    // The element rendered here is NOT the scroll container — it just
+    // wraps one. use-stick-to-bottom builds a second div inside
+    // <StickToBottom.Content> and sets overflow:auto on that div via
+    // its scrollRef, so the inner pane is what actually scrolls. We
+    // keep role="log" + tabIndex={-1} on the outer so the app shell
+    // can focus it on Escape; the programmatic chat-scroll lives in
+    // use-keyboard-shortcuts and targets the inner pane by class.
+    className={cn("relative flex-1 outline-none", className)}
     initial="smooth"
     resize="smooth"
     role="log"
+    tabIndex={-1}
     {...props}
   />
 );
@@ -29,6 +37,11 @@ export const ConversationContent = ({
   ...props
 }: ConversationContentProps) => (
   <StickToBottom.Content
+    // `scrollClassName` lands on the real scroll pane (the div the
+    // library binds its scrollRef to). The `conversation-scroll-pane`
+    // marker class is the stable selector the keyboard-shortcut layer
+    // uses to step-scroll the log with arrow keys.
+    scrollClassName="conversation-scroll-pane [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     className={cn("flex flex-col gap-8 p-4", className)}
     {...props}
   />

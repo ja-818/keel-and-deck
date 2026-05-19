@@ -20,6 +20,9 @@ export interface AIBoardProps {
   items: KanbanItem[]
   columns?: KanbanColumn[]
   selectedId?: string | null
+  /** Keyboard focus ring (arrow-nav highlight). Separate from selection so
+   *  the user can preview the next card without auto-opening the chat. */
+  highlightedId?: string | null
   onSelect?: (id: string | null) => void
   onDelete?: (item: KanbanItem) => void
   onApprove?: (item: KanbanItem) => void
@@ -157,6 +160,7 @@ export function AIBoard({
   items,
   columns,
   selectedId: controlledSelectedId,
+  highlightedId,
   onSelect: onSelectProp,
   onDelete,
   onApprove,
@@ -406,6 +410,7 @@ export function AIBoard({
         columns={resolvedColumns}
         items={items}
         selectedId={selectedId}
+        highlightedId={highlightedId}
         runningStatuses={runningStatuses}
         approveStatuses={approveStatuses}
         onSelect={handleCardSelect}

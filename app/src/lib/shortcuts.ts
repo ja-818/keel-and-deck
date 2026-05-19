@@ -12,6 +12,7 @@ export type ShortcutAction =
   | "boardDown"
   | "boardLeft"
   | "boardRight"
+  | "boardOpen"
   | "cheatsheet";
 
 interface ShortcutDef {
@@ -65,6 +66,11 @@ const shortcuts: Record<ShortcutAction, ShortcutDef> = {
     match: (e) =>
       e.key === "ArrowRight" && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey,
   },
+  boardOpen: {
+    label: "↵",
+    match: (e) =>
+      e.key === "Enter" && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey,
+  },
   cheatsheet: {
     label: "?",
     match: (e) => !cmd(e) && !e.altKey && e.shiftKey && e.key === "?",
@@ -90,4 +96,18 @@ export function isTypingTarget(e: KeyboardEvent): boolean {
   if (t.isContentEditable) return true;
   const tag = t.tagName;
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+}
+
+/**
+ * True when the typing target exists but holds no text yet. Used by
+ * arrow-key shortcuts so an auto-focused, still-empty composer doesn't
+ * swallow board navigation — there's no cursor motion to perform until
+ * the user types something.
+ */
+export function isEmptyEditable(e: KeyboardEvent): boolean {
+  const t = e.target as HTMLElement | null;
+  if (!t) return false;
+  if (t.isContentEditable) return (t.textContent ?? "").length === 0;
+  const v = (t as HTMLInputElement | HTMLTextAreaElement).value;
+  return typeof v === "string" && v.length === 0;
 }

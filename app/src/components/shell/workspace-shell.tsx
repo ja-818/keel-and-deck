@@ -31,6 +31,7 @@ import { ImportAgentWizard } from "../portable/import-wizard";
 import { AgentUpdateBanner } from "./agent-update-banner";
 import { DetailPanelProvider } from "./detail-panel-context";
 import { MissionSearchInput } from "../mission-search-input";
+import { CommandPaletteButton } from "../command-palette-button";
 import { UiTour } from "./ui-tour";
 import { CommandPalette } from "../command-palette";
 import { ShortcutCheatsheet } from "../shortcut-cheatsheet";
@@ -120,6 +121,7 @@ export function WorkspaceShell({ toasts, onDismissToast }: WorkspaceShellProps) 
                     onTabChange={setViewMode}
                     actions={
                       <div data-keep-panel-open className="flex items-center gap-2">
+                        <CommandPaletteButton />
                         {currentAgent && hasActivityTab && (
                           <MissionSearchInput
                             value={agentMissionSearchQuery}

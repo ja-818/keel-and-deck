@@ -13,7 +13,8 @@
     "emptyTitle": "No matching missions",
     "emptyDescription": "Try a different search or clear the current one.",
     "historyErrorTitle": "Couldn't search every mission",
-    "historyErrorDescription": "Some older mission text could not be loaded."
+    "historyErrorDescription": "Some older mission text could not be loaded.",
+    "openCommands": "Command palette"
   },
   "columns": {
     "running": "Running",

@@ -3,7 +3,35 @@ import { useAgentStore } from "../stores/agents";
 import { useAgentCatalogStore } from "../stores/agent-catalog";
 import { useUIStore } from "../stores/ui";
 import { orderAgents } from "../lib/agent-order";
-import { isTypingTarget, matchShortcut } from "../lib/shortcuts";
+import { isEmptyEditable, isTypingTarget, matchShortcut } from "../lib/shortcuts";
+
+/**
+ * Programmatic step-scroll of the chat message log. The conversation
+ * has two nested divs: the outer carries role="log" (focus target on
+ * Escape) but use-stick-to-bottom drives a SEPARATE inner pane as its
+ * actual scroll container — outer's content exactly fills outer, so
+ * scrollBy on outer is a no-op. We target the inner pane by its
+ * stable marker class. The lib's "escapedFromLock" tracker picks the
+ * scrollTop change up and stops auto-following the bottom while the
+ * user reads.
+ */
+function scrollChatLog(dir: "up" | "down"): boolean {
+  const pane = document.querySelector(
+    ".conversation-scroll-pane",
+  ) as HTMLElement | null;
+  if (!pane) return false;
+  const step = Math.max(60, pane.clientHeight * 0.4);
+  pane.scrollBy({ top: dir === "down" ? step : -step, behavior: "smooth" });
+  return true;
+}
+
+/** True when document.activeElement is the chat composer textarea. */
+function isComposerFocused(): boolean {
+  const active = document.activeElement as HTMLElement | null;
+  if (!active) return false;
+  if (active.tagName !== "TEXTAREA") return false;
+  return active.getAttribute("name") === "message";
+}
 
 /**
  * Global keyboard shortcut router. Mounted once at the shell level.
@@ -16,9 +44,9 @@ import { isTypingTarget, matchShortcut } from "../lib/shortcuts";
 export function useKeyboardShortcuts() {
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      // Bare `?` is the only shortcut that yields to typing — it would
-      // otherwise steal a literal `?` from the composer. Everything else
-      // is ⌘-modified and safe to fire from any focus.
+      // Bare-key shortcuts (no ⌘/Ctrl) must yield to typing or they
+      // steal characters / cursor motion from the composer. ⌘-modified
+      // bindings are safe to fire from any focus.
       if (matchShortcut("cheatsheet", e)) {
         if (isTypingTarget(e)) return;
         e.preventDefault();
@@ -88,12 +116,66 @@ export function useKeyboardShortcuts() {
         : null;
       if (arrowDir) {
         const ui = useUIStore.getState();
-        // Only navigate when the user is already on a board view, and
-        // never when a dialog (palette/cheatsheet) owns its own arrows.
+        // Chat panel is open → arrows are a chat-reading affordance,
+        // BUT only when focus is in the composer or outside any
+        // editable. A different editable (e.g. the search input in
+        // the tab bar) keeps its own cursor motion.
+        if (ui.missionPanelOpen) {
+          if (isTypingTarget(e)) {
+            if (!isComposerFocused()) return;
+            if (!isEmptyEditable(e)) return;
+          }
+          if (arrowDir !== "up" && arrowDir !== "down") return;
+          if (scrollChatLog(arrowDir)) e.preventDefault();
+          return;
+        }
+        // Board view → arrows move the highlight. They do NOT open
+        // the panel; Enter does that. Yield to any editable so
+        // search inputs etc. keep their cursor motion.
+        if (isTypingTarget(e)) return;
         const onBoard = ui.viewMode === "dashboard" || ui.viewMode === "activity";
         if (!onBoard || ui.paletteOpen || ui.cheatsheetOpen) return;
         e.preventDefault();
         ui.onBoardNavigate?.(arrowDir);
+        return;
+      }
+
+      if (matchShortcut("boardOpen", e)) {
+        // Bare Enter opens the highlighted card. Yield to typing so
+        // the composer's own Enter-to-send keeps working.
+        if (isTypingTarget(e)) return;
+        const ui = useUIStore.getState();
+        if (ui.missionPanelOpen || ui.paletteOpen || ui.cheatsheetOpen) return;
+        const onBoard = ui.viewMode === "dashboard" || ui.viewMode === "activity";
+        if (!onBoard) return;
+        e.preventDefault();
+        ui.onBoardOpen?.();
+        return;
+      }
+
+      if (
+        e.key === "Escape"
+        && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey
+      ) {
+        // chat-input stops streaming on Escape with preventDefault; if
+        // that already ran, don't also collapse the panel.
+        if (e.defaultPrevented) return;
+        const ui = useUIStore.getState();
+        if (!ui.missionPanelOpen) return;
+        if (isComposerFocused()) {
+          // First Escape: leave the composer so arrows scroll the
+          // chat log and a second Escape can close the panel.
+          const active = document.activeElement as HTMLElement | null;
+          const log = document.querySelector('[role="log"]') as HTMLElement | null;
+          active?.blur();
+          log?.focus();
+          e.preventDefault();
+          return;
+        }
+        // Second Escape (or any Escape when the composer isn't focused):
+        // close the chat panel entirely.
+        e.preventDefault();
+        ui.onPanelClose?.();
         return;
       }
     }

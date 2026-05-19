@@ -13,7 +13,8 @@
     "emptyTitle": "No hay misiones que coincidan",
     "emptyDescription": "Prueba otra búsqueda o borra la actual.",
     "historyErrorTitle": "No se pudieron buscar todas las misiones",
-    "historyErrorDescription": "No se pudo cargar parte del texto de misiones anteriores."
+    "historyErrorDescription": "No se pudo cargar parte del texto de misiones anteriores.",
+    "openCommands": "Paleta de comandos"
   },
   "columns": {
     "running": "En curso",

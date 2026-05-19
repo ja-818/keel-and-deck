@@ -43,6 +43,9 @@ export interface KanbanCardProps {
   labels?: KanbanCardLabels
   /** Mark this card as the currently-open one in the right panel. */
   selected?: boolean
+  /** Mark this card as keyboard-focused (highlighted via arrow nav, not yet
+   *  opened). Renders a focus ring distinct from `selected`. */
+  highlighted?: boolean
 }
 
 export function KanbanCard({
@@ -57,6 +60,7 @@ export function KanbanCard({
   avatar,
   labels,
   selected = false,
+  highlighted = false,
 }: KanbanCardProps) {
   const l = { ...DEFAULT_LABELS, ...labels }
   const isRunning = runningStatuses.includes(item.status)
@@ -99,6 +103,7 @@ export function KanbanCard({
       <div
         onClick={(e) => { e.stopPropagation(); onSelect() }}
         aria-selected={selected || undefined}
+        data-highlighted={highlighted || undefined}
         // For running + selected, override the running-glow inner
         // fill (--glow-bg) so the selection is visible through the
         // rotating border. The accent token is a translucent overlay
@@ -133,6 +138,10 @@ export function KanbanCard({
             : selected
               ? "border border-transparent"
               : "border border-border/20 shadow-sm hover:shadow-md",
+          // Keyboard focus ring — distinct from `selected` so it shows
+          // up on the card the user is about to open with Enter, even
+          // before the detail panel mounts.
+          highlighted && !selected && "ring-2 ring-primary/50 ring-offset-1 ring-offset-background",
         )}
       >
         {/* Top row: agent info + action buttons */}
