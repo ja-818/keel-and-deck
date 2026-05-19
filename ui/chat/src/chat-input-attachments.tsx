@@ -1,5 +1,7 @@
-import type { ChangeEvent, RefObject } from "react";
-import { PlusIcon } from "lucide-react";
+import { useState } from "react";
+import type { ChangeEvent, ReactNode, RefObject } from "react";
+import { Paperclip } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@houston-ai/core";
 import { AttachmentChip } from "./attachment-chip";
 
 interface ChatInputAttachmentsProps {
@@ -45,21 +47,64 @@ export function ChatInputAttachments({
   );
 }
 
+type AttachMenuApi = { openFilePicker: () => void; close: () => void };
+
+interface ChatInputAttachButtonProps {
+  onOpenFilePicker: () => void;
+  /** Optional popover menu. When provided, clicking the paperclip opens a
+   *  popover instead of invoking `onOpenFilePicker` directly. The render-prop
+   *  form receives an API the caller uses to trigger the file picker from
+   *  inside the menu and close the popover. */
+  attachMenu?: ReactNode | ((api: AttachMenuApi) => ReactNode);
+  ariaLabel?: string;
+}
+
 export function ChatInputAttachButton({
   onOpenFilePicker,
-}: {
-  onOpenFilePicker: () => void;
-}) {
+  attachMenu,
+  ariaLabel = "Attach files",
+}: ChatInputAttachButtonProps) {
+  const [open, setOpen] = useState(false);
+
+  const button = (
+    <button
+      type="button"
+      onClick={attachMenu ? undefined : onOpenFilePicker}
+      className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
+      aria-label={ariaLabel}
+    >
+      <Paperclip className="size-5" />
+    </button>
+  );
+
+  if (!attachMenu) {
+    return <div className="flex items-center [grid-area:leading]">{button}</div>;
+  }
+
+  const content =
+    typeof attachMenu === "function"
+      ? attachMenu({
+          openFilePicker: () => {
+            setOpen(false);
+            onOpenFilePicker();
+          },
+          close: () => setOpen(false),
+        })
+      : attachMenu;
+
   return (
     <div className="flex items-center [grid-area:leading]">
-      <button
-        type="button"
-        onClick={onOpenFilePicker}
-        className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-accent transition-colors"
-        aria-label="Attach files"
-      >
-        <PlusIcon className="size-5" />
-      </button>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>{button}</PopoverTrigger>
+        <PopoverContent
+          align="start"
+          side="top"
+          sideOffset={8}
+          className="w-auto min-w-56 p-1.5"
+        >
+          {content}
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }

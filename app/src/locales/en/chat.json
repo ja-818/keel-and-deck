@@ -4,7 +4,8 @@
     "fileAlreadyInChat": "File already in chat",
     "dropTitle": "Drop your files",
     "dropDescription": "Drop them here to add them to the conversation",
-    "imagePasteUnavailable": "Couldn't read the pasted image. Try dragging the file in instead."
+    "imagePasteUnavailable": "Couldn't read the pasted image. Try dragging the file in instead.",
+    "addFiles": "Add files"
   },
   "queue": {
     "title": "Queued",

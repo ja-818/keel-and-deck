@@ -16,8 +16,8 @@ export type ShortcutAction =
   | "cheatsheet";
 
 interface ShortcutDef {
-  /** Glyph string shown to the user. */
-  label: string;
+  /** Individual key chunks. One chunk per `<Kbd>` chip when rendered. */
+  parts: string[];
   /** Whether the binding fires when typing in inputs. Default: never. */
   match: (e: KeyboardEvent) => boolean;
 }
@@ -25,60 +25,68 @@ interface ShortcutDef {
 const cmd = (e: KeyboardEvent) =>
   isMac ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey;
 
+const mod = isMac ? "⌘" : "Ctrl";
+
 const shortcuts: Record<ShortcutAction, ShortcutDef> = {
   newMission: {
-    label: isMac ? "⌘N" : "Ctrl+N",
+    parts: [mod, "N"],
     match: (e) => cmd(e) && !e.shiftKey && !e.altKey && (e.key === "n" || e.key === "N"),
   },
   palette: {
-    label: isMac ? "⌘K" : "Ctrl+K",
+    parts: [mod, "K"],
     match: (e) => cmd(e) && !e.shiftKey && !e.altKey && (e.key === "k" || e.key === "K"),
   },
   missionControl: {
-    label: isMac ? "⌘M" : "Ctrl+M",
+    parts: [mod, "M"],
     match: (e) => cmd(e) && !e.shiftKey && !e.altKey && (e.key === "m" || e.key === "M"),
   },
   prevAgent: {
-    label: isMac ? "⌘[" : "Ctrl+[",
+    parts: [mod, "["],
     match: (e) => cmd(e) && !e.shiftKey && !e.altKey && e.key === "[",
   },
   nextAgent: {
-    label: isMac ? "⌘]" : "Ctrl+]",
+    parts: [mod, "]"],
     match: (e) => cmd(e) && !e.shiftKey && !e.altKey && e.key === "]",
   },
   boardUp: {
-    label: "↑",
+    parts: ["↑"],
     match: (e) =>
       e.key === "ArrowUp" && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey,
   },
   boardDown: {
-    label: "↓",
+    parts: ["↓"],
     match: (e) =>
       e.key === "ArrowDown" && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey,
   },
   boardLeft: {
-    label: "←",
+    parts: ["←"],
     match: (e) =>
       e.key === "ArrowLeft" && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey,
   },
   boardRight: {
-    label: "→",
+    parts: ["→"],
     match: (e) =>
       e.key === "ArrowRight" && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey,
   },
   boardOpen: {
-    label: "↵",
+    parts: ["↵"],
     match: (e) =>
       e.key === "Enter" && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey,
   },
   cheatsheet: {
-    label: "?",
+    parts: ["?"],
     match: (e) => !cmd(e) && !e.altKey && e.shiftKey && e.key === "?",
   },
 };
 
+export function shortcutParts(action: ShortcutAction): string[] {
+  return shortcuts[action].parts;
+}
+
 export function shortcutLabel(action: ShortcutAction): string {
-  return shortcuts[action].label;
+  const parts = shortcuts[action].parts;
+  // Mac uses glyph clusters with no separator (⌘K). Other platforms use "+".
+  return isMac ? parts.join("") : parts.join("+");
 }
 
 export function matchShortcut(action: ShortcutAction, e: KeyboardEvent): boolean {

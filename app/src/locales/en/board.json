@@ -44,6 +44,9 @@
   "composerSkill": {
     "browse": "Skills"
   },
+  "composerAttach": {
+    "addFiles": "Add files"
+  },
   "selectedSkill": {
     "cancel": "Close"
   }

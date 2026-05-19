@@ -1,6 +1,6 @@
 # @houston-ai/core
 
-Foundation layer for Houston UI. 36 shadcn/ui components, design tokens, CSS animations, and utilities.
+Foundation layer for Houston UI. 37 shadcn/ui components, design tokens, CSS animations, and utilities.
 
 ## Install
 
@@ -20,7 +20,7 @@ import "@houston-ai/core/src/globals.css"
 
 ## What's included
 
-**Components:** Accordion, AgentAvatar, Alert, AlertDialog, Avatar, Badge, Button, ButtonGroup, Card, Carousel, Collapsible, Command, ConfirmDialog, Dialog, DropdownMenu, Empty, ErrorBoundary, HoverCard, Input, InputGroup, Popover, Progress, Resizable, ScrollArea, Select, Separator, Sheet, Sidebar, Skeleton, Sonner, Spinner, Switch, Tabs, Textarea, ToastContainer, Tooltip
+**Components:** Accordion, AgentAvatar, Alert, AlertDialog, Avatar, Badge, Button, ButtonGroup, Card, Carousel, Collapsible, Command, ConfirmDialog, Dialog, DropdownMenu, Empty, ErrorBoundary, HoverCard, Input, InputGroup, Kbd, Popover, Progress, Resizable, ScrollArea, Select, Separator, Sheet, Sidebar, Skeleton, Sonner, Spinner, Switch, Tabs, Textarea, ToastContainer, Tooltip
 
 **Utilities:** `cn()` (clsx + tailwind-merge), `useMobile()` hook
 

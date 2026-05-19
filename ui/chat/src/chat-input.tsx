@@ -49,6 +49,13 @@ export interface ChatInputProps {
   footer?: ReactNode;
   /** Optional content rendered inside the composer above the textarea. */
   header?: ReactNode;
+  /** Optional menu rendered in a popover anchored to the paperclip button.
+   *  When provided, clicking the button opens the popover instead of going
+   *  straight to the file picker. The render-prop form receives an API the
+   *  caller can use to trigger the file picker from inside the menu. */
+  attachMenu?:
+    | ReactNode
+    | ((api: { openFilePicker: () => void; close: () => void }) => ReactNode);
   /** Messages accepted while a turn is active, waiting to be sent as one turn. */
   queuedMessages?: QueuedChatMessage[];
   onRemoveQueuedMessage?: (id: string) => void;
@@ -72,6 +79,7 @@ export function ChatInput({
   onAttachmentRejections,
   footer,
   header,
+  attachMenu,
   queuedMessages = [],
   onRemoveQueuedMessage,
   queuedLabels,
@@ -151,7 +159,10 @@ export function ChatInput({
             </PromptInputHeader>
           )}
 
-          <ChatInputAttachButton onOpenFilePicker={openFilePicker} />
+          <ChatInputAttachButton
+            onOpenFilePicker={openFilePicker}
+            attachMenu={attachMenu}
+          />
 
           <PromptInputBody>
             <PromptInputTextarea

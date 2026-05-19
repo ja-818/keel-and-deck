@@ -15,7 +15,6 @@ import { AgentCardAvatar } from "./shell/agent-card-avatar";
 import type { Agent } from "../lib/types";
 import { MissionSearchInput } from "./mission-search-input";
 import { shortcutLabel } from "../lib/shortcuts";
-import { CommandPaletteButton } from "./command-palette-button";
 
 interface MissionControlToolbarProps {
   agents: Agent[];
@@ -47,7 +46,6 @@ export function MissionControlToolbar({
         </h1>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center lg:ml-auto">
           <div className="flex items-center gap-2">
-            <CommandPaletteButton />
             <MissionSearchInput
               value={search}
               isSearchingText={isSearchingText}

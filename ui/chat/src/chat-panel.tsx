@@ -55,6 +55,7 @@ export function ChatPanel({
   onAttachmentRejections,
   footer,
   composerHeader,
+  attachMenu,
   queuedMessages,
   onRemoveQueuedMessage,
   queuedLabels,
@@ -168,6 +169,7 @@ export function ChatPanel({
           onAttachmentRejections={onAttachmentRejections}
           footer={footer}
           header={composerHeader}
+          attachMenu={attachMenu}
           queuedMessages={queuedMessages}
           onRemoveQueuedMessage={onRemoveQueuedMessage}
           queuedLabels={queuedLabels}

@@ -107,14 +107,14 @@ export function KanbanCard({
         onClick={(e) => { e.stopPropagation(); onSelect() }}
         aria-selected={selected || undefined}
         data-highlighted={highlighted || undefined}
-        // For running + selected, override the running-glow inner
-        // fill (--glow-bg) so the selection is visible through the
-        // rotating border. The accent token is a translucent overlay
-        // (rgba), which would let the conic gradient bleed through —
-        // flatten it via color-mix to a solid tint that matches what
-        // bg-accent looks like rendered over the card background.
+        // For running + active, override the running-glow inner fill
+        // (--glow-bg) so the accent tint is visible through the rotating
+        // border. The accent token is a translucent overlay (rgba), which
+        // would let the conic gradient bleed through — flatten it via
+        // color-mix to a solid tint that matches bg-accent rendered over
+        // the card background.
         style={
-          selected && isRunning
+          (selected || highlighted) && isRunning
             ? ({
                 "--glow-bg":
                   "color-mix(in srgb, var(--color-background) 93%, currentColor 7%)",
@@ -129,24 +129,20 @@ export function KanbanCard({
           // Restrict transitions to the safe properties we actually
           // care about.
           "group/card relative rounded-xl p-3 cursor-pointer transition-[background-color,box-shadow,border-color] duration-200",
-          selected ? "bg-accent shadow-md" : "bg-background",
+          selected || highlighted ? "bg-accent shadow-md" : "bg-background",
           // Running cards keep their own animated border untouched —
           // setting Tailwind's `border` would override the
           // `border-style: solid` from card-running-glow's shorthand
           // and kill the rotating gradient. For everything else, the
-          // border is always 1px (transparent when selected, gray
-          // otherwise) so toggling selection doesn't shift layout.
+          // border is always 1px (transparent when active, gray
+          // otherwise) so toggling state doesn't shift layout.
           isRunning
             ? "card-running-glow shadow-[0_2px_12px_rgba(59,130,246,0.12)]"
             : isError
               ? "border border-destructive/60 shadow-sm hover:shadow-md"
-              : selected
+              : selected || highlighted
                 ? "border border-transparent"
                 : "border border-border/20 shadow-sm hover:shadow-md",
-          // Keyboard focus ring — distinct from `selected` so it shows
-          // up on the card the user is about to open with Enter, even
-          // before the detail panel mounts.
-          highlighted && !selected && "ring-2 ring-primary/50 ring-offset-1 ring-offset-background",
         )}
       >
         {/* Top row: agent info + action buttons */}

@@ -31,6 +31,7 @@ import { analytics } from "../../lib/analytics";
 import type { TabProps } from "../../lib/types";
 import { HoustonThinkingIndicator } from "../shell/experience-card";
 import { ChatModelSelector } from "../chat-model-selector";
+import { Paperclip } from "lucide-react";
 import { useChatDisplayLabels } from "../use-chat-display-labels";
 import { getDefaultModel, PROVIDERS } from "../../lib/providers";
 import type { ProviderError } from "@houston-ai/chat";
@@ -358,6 +359,28 @@ export default function ChatTab({ agent }: TabProps) {
             lockedProvider={visibleFeedItems.length > 0 ? effectiveProvider : null}
           />
         }
+        attachMenu={({ openFilePicker }) => (
+          <div className="flex flex-col gap-0.5">
+            <button
+              type="button"
+              onClick={() => {
+                openFilePicker();
+              }}
+              className="flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-foreground hover:bg-accent transition-colors"
+            >
+              <Paperclip className="size-4 text-muted-foreground" />
+              {t("composer.addFiles")}
+            </button>
+            <div className="px-2 py-1">
+              <ChatModelSelector
+                provider={effectiveProvider}
+                model={effectiveModel}
+                onSelect={handleModelSelect}
+                lockedProvider={visibleFeedItems.length > 0 ? effectiveProvider : null}
+              />
+            </div>
+          </div>
+        )}
         emptyState={
           <Empty className="border-0">
             <EmptyHeader>

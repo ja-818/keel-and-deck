@@ -4,7 +4,8 @@
     "fileAlreadyInChat": "El archivo ya está en el chat",
     "dropTitle": "Suelta tus archivos",
     "dropDescription": "Suéltalos aquí para añadirlos a la conversación",
-    "imagePasteUnavailable": "No se pudo leer la imagen pegada. Prueba a arrastrar el archivo."
+    "imagePasteUnavailable": "No se pudo leer la imagen pegada. Prueba a arrastrar el archivo.",
+    "addFiles": "Agregar archivos"
   },
   "queue": {
     "title": "En cola",

@@ -50,6 +50,11 @@ export interface ChatPanelProps {
   onAttachmentRejections?: (rejections: AttachmentRejection[]) => void;
   footer?: ReactNode;
   composerHeader?: ReactNode;
+  /** Popover menu anchored to the paperclip button. Receives `openFilePicker`
+   *  so the menu can trigger the underlying file input. */
+  attachMenu?:
+    | ReactNode
+    | ((api: { openFilePicker: () => void; close: () => void }) => ReactNode);
   queuedMessages?: QueuedChatMessage[];
   onRemoveQueuedMessage?: (id: string) => void;
   queuedLabels?: QueuedMessageLabels;

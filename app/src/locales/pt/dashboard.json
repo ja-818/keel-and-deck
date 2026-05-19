@@ -13,8 +13,7 @@
     "emptyTitle": "Nenhuma missão encontrada",
     "emptyDescription": "Tente outra busca ou limpe a atual.",
     "historyErrorTitle": "Não foi possível buscar todas as missões",
-    "historyErrorDescription": "Parte do texto de missões antigas não pôde ser carregada.",
-    "openCommands": "Paleta de comandos"
+    "historyErrorDescription": "Parte do texto de missões antigas não pôde ser carregada."
   },
   "columns": {
     "running": "Em execução",

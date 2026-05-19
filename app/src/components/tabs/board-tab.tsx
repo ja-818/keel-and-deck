@@ -698,6 +698,7 @@ export default function BoardTab({ agent, agentDef }: TabProps) {
           canSendEmpty={panel.canSendEmpty}
           onComposerSubmit={handleComposerSubmit}
           footer={panel.footer}
+          attachMenu={panel.attachMenu}
           renderUserMessage={panel.renderUserMessage}
           renderSystemMessage={panel.renderSystemMessage}
           mapFeedItems={panel.mapFeedItems}

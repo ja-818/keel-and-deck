@@ -28,7 +28,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@houston-ai/core";
-import { Play } from "lucide-react";
+import { Paperclip, Play } from "lucide-react";
 import {
   decodeAttachmentMessage,
   UserAttachmentMessage,
@@ -114,6 +114,8 @@ interface AgentChatPanelProps {
   onComposerSubmit: AIBoardProps["onComposerSubmit"];
   /** Composer footer with model selector + Skills button. */
   footer: AIBoardProps["footer"];
+  /** Paperclip popover content with Add files / Skills / Model. */
+  attachMenu: AIBoardProps["attachMenu"];
   /** Decodes skill-invocation user messages into a card. */
   renderUserMessage: AIBoardProps["renderUserMessage"];
   /** Forwarded to AIBoard / ChatPanel for tool rendering. */
@@ -573,6 +575,43 @@ export function useAgentChatPanel({
     );
   }, [agent, t, effectiveProvider, effectiveModel, handleModelSelect]);
 
+  const attachMenu = useMemo<AIBoardProps["attachMenu"]>(() => {
+    if (!agent) return undefined;
+    return ({ hasMessages, openFilePicker, close }) => (
+      <div className="flex flex-col gap-0.5">
+        <button
+          type="button"
+          onClick={() => {
+            openFilePicker();
+          }}
+          className="flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-foreground hover:bg-accent transition-colors"
+        >
+          <Paperclip className="size-4 text-muted-foreground" />
+          {t("composerAttach.addFiles")}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setPickerOpen(true);
+            close();
+          }}
+          className="flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-foreground hover:bg-accent transition-colors"
+        >
+          <Play className="size-4 text-muted-foreground fill-current" />
+          {t("composerSkill.browse")}
+        </button>
+        <div className="px-2 py-1">
+          <ChatModelSelector
+            provider={effectiveProvider}
+            model={effectiveModel}
+            onSelect={handleModelSelect}
+            lockedProvider={hasMessages ? effectiveProvider : null}
+          />
+        </div>
+      </div>
+    );
+  }, [agent, t, effectiveProvider, effectiveModel, handleModelSelect]);
+
   const pickerDialog = agent ? (
     <NewMissionPickerDialog
       open={pickerOpen}
@@ -592,6 +631,7 @@ export function useAgentChatPanel({
     canSendEmpty: activeSkill != null,
     onComposerSubmit: handleSkillComposerSubmit,
     footer,
+    attachMenu,
     renderUserMessage,
     isSpecialTool,
     renderToolResult,

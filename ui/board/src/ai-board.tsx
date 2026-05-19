@@ -108,6 +108,17 @@ export interface AIBoardProps {
   footer?: ReactNode | ((ctx: { hasMessages: boolean }) => ReactNode)
   /** Content rendered inside the composer above the textarea. */
   composerHeader?: ReactNode | ((ctx: { hasMessages: boolean }) => ReactNode)
+  /** Popover menu anchored to the composer's paperclip button. When a
+   *  function, called with `{ hasMessages, openFilePicker, close }` — the
+   *  consumer can lock the provider for active conversations, trigger the
+   *  file picker from inside the menu, and close the popover. */
+  attachMenu?:
+    | ReactNode
+    | ((ctx: {
+        hasMessages: boolean
+        openFilePicker: () => void
+        close: () => void
+      }) => ReactNode)
   /** Enables submit even when the composer has no text or files. */
   canSendEmpty?: boolean
   /** Lets consumers handle a submit before the board creates/sends a normal chat message. */
@@ -210,6 +221,7 @@ export function AIBoard({
   renderLink,
   footer,
   composerHeader,
+  attachMenu,
   canSendEmpty,
   onComposerSubmit,
   cardLabels,
@@ -388,6 +400,12 @@ export function AIBoard({
       if (target instanceof Element) {
         // Radix popovers/dropdowns/menus render outside the panel DOM.
         if (target.closest("[data-radix-popper-content-wrapper]")) return
+        // Any Radix popper currently OPEN swallows this mousedown as its
+        // own dismiss gesture (e.g. clicking outside the chat-model
+        // dropdown). The detail panel should not also close — Radix
+        // closes the popper, the user can decide whether to dismiss the
+        // panel with a follow-up click.
+        if (document.querySelector('[data-radix-popper-content-wrapper] [data-state="open"]')) return
         // Radix Dialog content + overlay also live in a portal outside both
         // refs. Clicking inside a dialog (or its overlay) is the user
         // interacting with a modal we just opened FROM the panel, not an
@@ -475,6 +493,16 @@ export function AIBoard({
           renderLink={renderLink}
           footer={typeof footer === "function" ? footer({ hasMessages: activeFeed.length > 0 }) : footer}
           composerHeader={typeof composerHeader === "function" ? composerHeader({ hasMessages: activeFeed.length > 0 }) : composerHeader}
+          attachMenu={
+            typeof attachMenu === "function"
+              ? ({ openFilePicker, close }) =>
+                  (attachMenu as Extract<typeof attachMenu, Function>)({
+                    hasMessages: activeFeed.length > 0,
+                    openFilePicker,
+                    close,
+                  })
+              : attachMenu
+          }
           canSendEmpty={canSendEmpty}
           composerOverride={composerOverride}
           composerLabels={composerLabels}
