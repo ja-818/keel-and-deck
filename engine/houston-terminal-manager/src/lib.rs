@@ -3,6 +3,8 @@
 //! Provides session spawning, NDJSON stream parsing, event pumping,
 //! concurrency control, and PATH resolution for AI CLI tools.
 
+pub mod agy_install_path;
+mod agy_runner;
 pub mod auth_error;
 pub mod claude_install_path;
 pub mod claude_path;

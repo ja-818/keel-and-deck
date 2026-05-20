@@ -263,6 +263,13 @@ pub struct CliEntry {
     /// `$HOME/.local/bin/claude`).
     #[serde(default)]
     pub install_target: Option<String>,
+    /// Optional name of the binary inside an archive when the download
+    /// is a `.tar.gz`. The installer extracts only this member and writes
+    /// it to `<install_dir>/<binary_name>`. `None` means the download IS
+    /// the binary (e.g. Windows `.exe` for antigravity, or every claude-
+    /// code platform). Today only `antigravity` macOS uses this.
+    #[serde(default)]
+    pub archive_member: Option<String>,
 }
 
 impl CliEntry {

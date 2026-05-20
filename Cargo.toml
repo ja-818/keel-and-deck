@@ -16,6 +16,7 @@ members = [
     "engine/houston-composio",
     "engine/houston-cli-bundle",
     "engine/houston-claude-installer",
+    "engine/houston-antigravity-installer",
     "engine/houston-engine-core",
     "engine/houston-engine-protocol",
     "engine/houston-engine-server",

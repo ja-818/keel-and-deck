@@ -54,6 +54,7 @@ the workspace root `Cargo.toml`.
 - `houston-composio` — Composio CLI lifecycle (bundle-aware: skips install when shipped inside the .app)
 - `houston-cli-bundle` — resolve bundled CLI binaries (codex universal, composio per-arch) inside the `.app`/MSI; reads pinned `cli-deps.json` manifest
 - `houston-claude-installer` — runtime download of Claude Code CLI (proprietary license, can't bundle); pinned URL + sha256 verification, atomic install, progress events
+- `houston-antigravity-installer` — runtime download of Google's Antigravity CLI `agy` (proprietary license, can't bundle); pinned URL + sha256 verification, tar.gz extraction on macOS, atomic install, progress events
 - `houston-tunnel` — outbound reverse tunnel client; desktop engine dials the relay so mobile can reach it through NAT. Heartbeat + watchdog; tunnel identity stays stable across normal network failures and only re-allocates on relay auth rejection.
 - `houston-skills` — skill discovery + management
 - `houston-agent-portable` — `.houstonagent` package format (zip writer/reader, manifest schema, selection model). See `knowledge-base/portable-agents.md`.

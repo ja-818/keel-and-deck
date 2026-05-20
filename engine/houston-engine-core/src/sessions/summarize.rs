@@ -25,6 +25,12 @@ const CODEX_TITLE_MODEL: &str = "gpt-5.5-mini";
 /// Gemini title-summary model. Flash-Lite is the cheapest/fastest GA tier
 /// and gives us a JSON object in well under the 30s SUMMARY_TIMEOUT.
 const GEMINI_TITLE_MODEL: &str = "gemini-3.1-flash-lite";
+/// Antigravity v1.0.0 has no `--model` flag — every invocation uses the
+/// CLI's default Gemini 3 Pro. We still thread a sentinel through
+/// `default_title_model` so the caller treats antigravity as a valid
+/// title-generating provider; the value itself is ignored by
+/// `provider_oneshot::run_agy`.
+const ANTIGRAVITY_TITLE_MODEL: &str = "default";
 
 pub use super::summary_text::SummarizeResult;
 
@@ -70,6 +76,7 @@ fn default_title_model<'a>(provider: Provider, model_override: Option<&'a str>) 
         "anthropic" => CLAUDE_TITLE_MODEL,
         "openai" => CODEX_TITLE_MODEL,
         "gemini" => GEMINI_TITLE_MODEL,
+        "antigravity" => ANTIGRAVITY_TITLE_MODEL,
         _ => return None,
     };
     Some(model_override.unwrap_or(default))
@@ -98,9 +105,11 @@ mod tests {
         let a: Provider = "anthropic".parse().unwrap();
         let o: Provider = "openai".parse().unwrap();
         let g: Provider = "gemini".parse().unwrap();
+        let ag: Provider = "antigravity".parse().unwrap();
         assert_eq!(default_title_model(a, None), Some(CLAUDE_TITLE_MODEL));
         assert_eq!(default_title_model(o, None), Some(CODEX_TITLE_MODEL));
         assert_eq!(default_title_model(g, None), Some(GEMINI_TITLE_MODEL));
+        assert_eq!(default_title_model(ag, None), Some(ANTIGRAVITY_TITLE_MODEL));
     }
 
     #[test]

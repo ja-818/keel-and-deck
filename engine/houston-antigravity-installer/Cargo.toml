@@ -1,0 +1,43 @@
+[package]
+name = "houston-antigravity-installer"
+version = "0.4.10"
+edition = "2021"
+description = "Runtime installer for Google's Antigravity CLI (`agy`) — pinned URL + sha256-verified download, tar.gz extraction on macOS"
+license = "MIT"
+repository = "https://github.com/gethouston/houston"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+# `stream` feature pulls bytes off the wire incrementally so we can emit
+# download progress events instead of buffering the whole binary in
+# memory (antigravity is ~140 MB per macOS arch).
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream"] }
+sha2 = "0.10"
+hex = "0.4"
+futures-util = "0.3"
+# macOS releases ship `.tar.gz`; Windows ships the `.exe` directly. The
+# installer extracts the `antigravity` member from the tarball and renames
+# it to the configured `binary_name` (`agy`). `flate2` decodes gzip,
+# `tar` walks the archive entries.
+flate2 = "1"
+tar = "0.4"
+houston-cli-bundle = { workspace = true }
+houston-ui-events = { workspace = true }
+houston-db = { workspace = true }
+# Single source of truth for `cli_path` / `install_dir` / `is_installed`.
+# Lives in terminal-manager so the spawn-side code (`claude_path`,
+# `agy_runner`) and the install-side code (this crate) resolve the
+# exact same absolute path without forming a dependency cycle through
+# `houston-ui-events`.
+houston-terminal-manager = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"
+# Lightweight HTTP mocker for integration tests of the streaming
+# download path (checksum verify, partial-write recovery, atomic
+# rename, tar.gz extraction). Only pulled in for tests so the runtime
+# crate stays small.
+wiremock = "0.6"

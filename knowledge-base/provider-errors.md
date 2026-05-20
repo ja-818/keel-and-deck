@@ -108,6 +108,7 @@ Resist if `Unknown` covers it. If you must:
 | Anthropic    | `engine/houston-terminal-manager/src/provider/anthropic_classify.rs`              |
 | OpenAI       | `engine/houston-terminal-manager/src/provider/openai_classify.rs`                 |
 | Gemini       | `engine/houston-terminal-manager/src/provider/gemini/classify.rs`                 |
+| Antigravity  | `engine/houston-terminal-manager/src/provider/antigravity/classify.rs`            |
 | Stderr wire  | `engine/houston-terminal-manager/src/session_io.rs::read_stderr_lines`            |
 | Result wire  | `engine/houston-terminal-manager/src/gemini_parser_state.rs::handle_result`       |
 | Result wire  | `engine/houston-terminal-manager/src/codex_parser.rs::classify_codex_error_message` |

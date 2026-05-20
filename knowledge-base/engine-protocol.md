@@ -229,6 +229,13 @@ not user-facing copy.
 | GET | `/v1/claude/status` | `{installed, install_path, pinned_version, installed_version}` |
 | POST | `/v1/claude/install` | Trigger background download + sha256 verify; progress streams as `ClaudeCliInstalling` events on the WS firehose |
 
+**Antigravity (runtime install — proprietary CLI not bundled)**
+| Method | Path | Description |
+|---|---|---|
+| GET | `/v1/antigravity/cli-installed` | Bool |
+| GET | `/v1/antigravity/status` | `{installed, install_path, pinned_version, installed_version}` |
+| POST | `/v1/antigravity/install` | Trigger background download + sha256 verify (`.tar.gz` extracted on macOS); progress streams as `AntigravityCliInstalling` events on the WS firehose |
+
 **Worktrees + shell**
 | Method | Path | Description |
 |---|---|---|
@@ -313,6 +320,8 @@ forwarder sends — essential for remote clients where bandwidth matters.
 | `agent:{path}` | `ActivityChanged`, `SkillsChanged`, `FilesChanged`, `ConfigChanged`, `ContextChanged`, `LearningsChanged`, `ConversationsChanged` |
 | `routines:{agent}` | `RoutinesChanged`, `RoutineRunsChanged` |
 | `composio` | `ComposioCliReady`, `ComposioCliFailed` |
+| `claude` | `ClaudeCliInstalling`, `ClaudeCliReady`, `ClaudeCliFailed` |
+| `antigravity` | `AntigravityCliInstalling`, `AntigravityCliReady`, `AntigravityCliFailed` |
 | `scheduler` | `HeartbeatFired`, `CronFired` |
 | `toast` | `Toast`, `CompletionToast` |
 | `events` | `EventReceived`, `EventProcessed` |

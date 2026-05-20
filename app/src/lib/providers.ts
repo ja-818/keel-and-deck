@@ -72,6 +72,38 @@ export const PROVIDERS: readonly ProviderInfo[] = [
     ],
     defaultModel: "sonnet",
   },
+  {
+    // Antigravity is Google's successor to gemini-cli; v1.0.0 launched
+    // on 2026-05-19 with the Antigravity 2.0 announcement. The CLI is
+    // proprietary so Houston downloads it on first launch through
+    // `houston-antigravity-installer` rather than bundling it.
+    //
+    // Limitations carried through to the UI:
+    // - `agy` v1.0.0 has no `--model` flag, so the model picker is
+    //   informational. Both entries map to the CLI's default Gemini 3
+    //   Pro until upstream ships model selection.
+    // - `agy` has no `login` / `logout` subcommand; the engine opens
+    //   a host-terminal window for the implicit Google Sign-In flow
+    //   instead of running `agy login` directly. `loginKind` is still
+    //   "cli" so the connect button drives the same `launchLogin`
+    //   plumbing.
+    id: "antigravity",
+    name: "Google",
+    subtitle: "Antigravity (Gemini 3)",
+    cliName: "agy",
+    installUrl: "https://antigravity.google/download",
+    loginCommand: "agy",
+    cost: "Your Google account",
+    models: [
+      {
+        id: "gemini-3-pro",
+        label: "Gemini 3 Pro",
+        description: "Antigravity CLI v1.0.0 uses this by default. Model selection is not configurable yet.",
+      },
+    ],
+    defaultModel: "gemini-3-pro",
+    loginKind: "cli",
+  },
 ] as const;
 
 /** Find a provider by id. */

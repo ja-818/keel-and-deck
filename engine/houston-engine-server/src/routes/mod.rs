@@ -3,6 +3,7 @@
 pub mod agent_configs;
 pub mod agent_files;
 pub mod agents;
+pub mod antigravity;
 pub mod attachments;
 pub mod claude;
 pub mod composio;

@@ -23,6 +23,7 @@
 
 mod anthropic;
 pub(crate) mod anthropic_classify;
+mod antigravity;
 mod gemini;
 mod openai;
 mod openai_classify;
@@ -151,6 +152,7 @@ const REGISTRY: &[&dyn ProviderAdapter] = &[
     &anthropic::ANTHROPIC,
     &openai::OPENAI,
     &gemini::GEMINI,
+    &antigravity::ANTIGRAVITY,
 ];
 
 /// Default provider used when nothing else is configured. Stays Anthropic
@@ -386,11 +388,18 @@ mod tests {
         assert!(ids.contains(&"anthropic"));
         assert!(ids.contains(&"openai"));
         assert!(ids.contains(&"gemini"));
+        assert!(ids.contains(&"antigravity"));
     }
 
     #[test]
     fn parse_gemini_alias() {
         assert_eq!(Provider::from_str("gemini").unwrap().id(), "gemini");
         assert_eq!(Provider::from_str("google").unwrap().id(), "gemini");
+    }
+
+    #[test]
+    fn parse_antigravity_alias() {
+        assert_eq!(Provider::from_str("antigravity").unwrap().id(), "antigravity");
+        assert_eq!(Provider::from_str("agy").unwrap().id(), "antigravity");
     }
 }

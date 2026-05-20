@@ -222,6 +222,7 @@ adapter, see `knowledge-base/architecture.md`).
 | `anthropic` (alias `claude`) | `claude` (runtime download) | `claude-sonnet-4-5` | `claude-opus-4-1` | OAuth via `claude auth login --claudeai` |
 | `openai` (alias `codex`) | `codex` (bundled) | `gpt-5` | `gpt-5-codex` | OAuth via `codex login` |
 | `gemini` (alias `google`) | `gemini` (bundled, macOS only) | `gemini-2.5-flash` | `gemini-2.5-pro` | API key, no CLI login (see `knowledge-base/auth.md`) |
+| `antigravity` (alias `agy`) | `agy` (runtime download, proprietary) | `gemini-3-pro` (CLI default; `--model` flag not yet shipped upstream) | same | OAuth via host-terminal-opened `agy` TUI — no subcommand exists, the engine spawns the CLI in Terminal.app / `cmd start` so Google Sign-In can complete in the browser. Credentials persist in the OS keyring. |
 
 Notes:
 - Gemini has no `gemini login`. The picker short-circuits on
@@ -230,9 +231,15 @@ Notes:
   `/v1/providers/gemini/login` directly returns `BadRequest`.
 - Gemini is macOS-only in v1; Windows users see it as unavailable until
   the phase-2 fork-build lands (see `knowledge-base/cli-bundling.md`).
-- Adding a fourth provider = one new adapter file + one registry entry +
+- Adding a fifth provider = one new adapter file + one registry entry +
   three dispatch arms (runner, parser, summarizer). See "Engine boundary"
   in `CLAUDE.md`.
+- Antigravity v1.0.0 caveats: the CLI has no `--output-format
+  stream-json` flag yet, so the runner emits a single `assistant_text`
+  FeedItem rather than streaming deltas (see [`engine/houston-terminal-manager/src/agy_runner.rs`](../engine/houston-terminal-manager/src/agy_runner.rs)).
+  Model selection and CLI login are also not supported by upstream
+  yet; the engine works around the login gap by opening a host
+  terminal window for the implicit Google Sign-In dance.
 
 ## Workspace
 - Storage: `~/.houston/workspaces/workspaces.json` (index) + one dir per workspace `~/.houston/workspaces/{Name}/`. `HOUSTON_DOCS` env var overrides the root.

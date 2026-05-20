@@ -98,6 +98,10 @@ pub async fn read_stdout_events(
             read_gemini_stdout(stdout, tx).await;
             StdoutReadReport::default()
         }
+        "antigravity" => {
+            read_agy_stdout(stdout, tx).await;
+            StdoutReadReport::default()
+        }
         unknown => {
             tracing::error!(
                 "[houston:stdout] no parser registered for provider {unknown:?} — dropping output"
@@ -105,6 +109,39 @@ pub async fn read_stdout_events(
             StdoutReadReport::default()
         }
     }
+}
+
+/// Antigravity CLI (`agy`) v1.0.0 emits plain text on stdout, not a
+/// structured NDJSON stream. Accumulate every line and emit one
+/// [`FeedItem::AssistantText`] at EOF. When upstream ships
+/// `--output-format stream-json` (Google has confirmed it's on the
+/// roadmap), replace this with a real parser that drives streaming
+/// deltas the way [`read_gemini_stdout`] does for the Gemini CLI.
+async fn read_agy_stdout(
+    stdout: tokio::process::ChildStdout,
+    tx: mpsc::UnboundedSender<SessionUpdate>,
+) {
+    let reader = BufReader::new(stdout);
+    let mut lines = reader.lines();
+    let mut buf = String::new();
+    while let Ok(Some(line)) = lines.next_line().await {
+        if !buf.is_empty() {
+            buf.push('\n');
+        }
+        buf.push_str(&line);
+    }
+    let trimmed = buf.trim();
+    if trimmed.is_empty() {
+        // Silent CLI runs happen when `agy` is launched without auth and
+        // exits non-zero without printing anything. The non-zero exit
+        // path in `cli_process::handle_failed_exit` will surface a
+        // ProviderError card; emitting an empty assistant_text here
+        // would just clutter the feed.
+        return;
+    }
+    let _ = tx.send(SessionUpdate::Feed(FeedItem::AssistantText(
+        trimmed.to_string(),
+    )));
 }
 
 async fn read_claude_stdout(

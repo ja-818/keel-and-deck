@@ -29,6 +29,7 @@ houston-engine-protocol = { version = "0.4.0", path = "../houston-engine-protoco
 houston-engine-core = { version = "0.4.0", path = "../houston-engine-core" }
 houston-composio = { workspace = true }
 houston-claude-installer = { workspace = true }
+houston-antigravity-installer = { workspace = true }
 houston-cli-bundle = { workspace = true }
 houston-tunnel = { workspace = true }
 houston-db = { workspace = true }

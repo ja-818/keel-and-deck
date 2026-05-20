@@ -157,6 +157,26 @@ pub enum HoustonEvent {
     /// Claude Code CLI install or upgrade failed. `message` is intended
     /// to be user-readable (network/region/permissions/disk-space hints).
     ClaudeCliFailed { message: String },
+
+    // ----- Antigravity CLI lifecycle -----
+    //
+    // Antigravity (`agy`) is Google's successor to gemini-cli; v1.0.0
+    // launched on 2026-05-19 with a proprietary license. Same shape as
+    // claude-code: the engine downloads it on first launch via
+    // `houston-antigravity-installer` and the frontend uses these
+    // events to render install progress + re-check provider auth.
+
+    /// Antigravity CLI download in progress. `progress_pct` is 0-100;
+    /// emitted at most every 10 percentage points so the channel isn't
+    /// flooded during a ~140 MB download.
+    AntigravityCliInstalling { progress_pct: u8 },
+    /// Antigravity CLI is installed (either freshly downloaded or
+    /// already at the pinned version). Frontend invalidates the
+    /// `provider_status` query so the Antigravity provider chip updates.
+    AntigravityCliReady,
+    /// Antigravity CLI install or upgrade failed. `message` is intended
+    /// to be user-readable.
+    AntigravityCliFailed { message: String },
 }
 
 // ---------------------------------------------------------------------------

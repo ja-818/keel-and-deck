@@ -189,6 +189,13 @@ fn spawn_cli_lifecycles(state: Arc<ServerState>) {
             houston_claude_installer::ensure_and_upgrade(sink, db).await;
         });
     }
+    {
+        let sink = state.engine.events.clone();
+        let db = state.engine.db.clone();
+        tokio::spawn(async move {
+            houston_antigravity_installer::ensure_and_upgrade(sink, db).await;
+        });
+    }
 }
 
 fn spawn_tunnel_if_allocated(state: Arc<ServerState>, engine_port: u16) {

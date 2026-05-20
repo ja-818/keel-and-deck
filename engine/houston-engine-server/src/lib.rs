@@ -39,6 +39,7 @@ pub fn build_router(state: Arc<ServerState>) -> Router {
         .merge(routes::agent_files::router())
         .merge(routes::composio::router())
         .merge(routes::claude::router())
+        .merge(routes::antigravity::router())
         .merge(routes::tunnel::router())
         .merge(routes::watcher::router())
         .merge(routes::portable::router())

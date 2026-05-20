@@ -10,6 +10,7 @@
 //! next status poll without asking the user to restart Houston. See
 //! [`gemini_credentials`].
 
+mod antigravity_login;
 mod gemini_credentials;
 mod gemini_disconnect;
 mod gemini_login;
@@ -96,6 +97,24 @@ pub async fn launch_login(provider: Provider) -> CoreResult<()> {
             )
         })?;
         return gemini_login::launch_login(path).await;
+    }
+
+    // Antigravity v1.0.0 has no `agy login` subcommand — the TUI
+    // triggers Google Sign-In implicitly on first launch but requires
+    // a real TTY to render. The `antigravity_login` module spawns a
+    // host-terminal window with `agy` so the user can complete the
+    // browser dance; subsequent `agy --print` sessions read the
+    // credentials from the system keyring.
+    if provider.id() == "antigravity" {
+        let (_, agy_path) = provider.resolve();
+        let path = agy_path.ok_or_else(|| {
+            CoreError::BadRequest(
+                "Antigravity CLI binary not found. Run `POST /v1/antigravity/install` \
+                 or reinstall Houston to download it."
+                    .into(),
+            )
+        })?;
+        return antigravity_login::launch_login(&path).await;
     }
 
     let ProviderCliCommand {

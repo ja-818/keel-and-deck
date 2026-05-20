@@ -1,6 +1,26 @@
 {
   "$schema": "./cli-deps.schema.json",
-  "$comment": "Pinned versions for every CLI Houston ships or runtime-installs. Bundled (codex, composio) ride inside the .app / .msi under resources/bin. claude-code cannot be bundled (proprietary license) so the runtime installer downloads it on first launch via houston-claude-installer using the URLs + sha256 below. Bumping a version: run `./scripts/bump-cli.sh <name> <version>`, then `./scripts/fetch-cli-deps.sh both` to refresh the staged copies + print the new checksums; pin the printed sha256 back into this file. For Windows, composio is built from source (see `build` block) because upstream does not yet ship a Windows artifact.",
+  "$comment": "Pinned versions for every CLI Houston ships or runtime-installs. Bundled (codex, composio) ride inside the .app / .msi under resources/bin. claude-code and antigravity cannot be bundled (proprietary license) so the runtime installers download them on first launch via houston-claude-installer / houston-antigravity-installer using the URLs + sha256 below. Bumping a version: run `./scripts/bump-cli.sh <name> <version>`, then `./scripts/fetch-cli-deps.sh both` to refresh the staged copies + print the new checksums; pin the printed sha256 back into this file. For Windows, composio is built from source (see `build` block) because upstream does not yet ship a Windows artifact.",
+  "antigravity": {
+    "version": "1.0.0",
+    "bundled": false,
+    "binary_name": "agy",
+    "license": "PROPRIETARY",
+    "install_target": "$HOME/.local/bin/agy",
+    "$install_target_comment": "On Windows the runtime installer writes to %LOCALAPPDATA%\\Programs\\agy\\agy.exe instead — the install_target field above is the POSIX-only path; see houston-antigravity-installer for the Windows resolution path.",
+    "$archive_comment": "macOS releases ship as `.tar.gz` archives that contain a single binary named `antigravity`; the installer extracts it and renames to `agy` at the install target. Windows releases ship the .exe directly with no archive. The `archive_member` field below tells the installer which file to pull out of the tarball on macOS.",
+    "archive_member": "antigravity",
+    "urls": {
+      "darwin-arm64": "https://storage.googleapis.com/antigravity-public/antigravity-cli/1.0.0-5288553236791296/darwin-arm/cli_mac_arm64.tar.gz",
+      "darwin-x64": "https://storage.googleapis.com/antigravity-public/antigravity-cli/1.0.0-5288553236791296/darwin-x64/cli_mac_x64.tar.gz",
+      "windows-x64": "https://storage.googleapis.com/antigravity-public/antigravity-cli/1.0.0-5288553236791296/windows-x64/cli_windows_x64.exe"
+    },
+    "checksums": {
+      "darwin-arm64": "65c2f7b5e27a21ef983b161ed75866e89139a682adf679000e1a5d9d374e320a",
+      "darwin-x64": "744a1a25dcf0bf6628e3add764d2155c44d7d174edf8b181a7427f7d9fb3fb53",
+      "windows-x64": "dc629debb33ba95091f911cfb367bdce48e6348a682b8f7fd6baecb5b367a798"
+    }
+  },
   "claude-code": {
     "version": "2.1.92",
     "bundled": false,

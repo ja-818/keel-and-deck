@@ -1,10 +1,10 @@
-# Bundled CLIs — codex, composio, claude-code
+# Bundled + runtime-downloaded CLIs
 
 Houston ships two upstream CLIs inside the signed/notarized desktop
-bundle (`.app` on macOS, `.msi` on Windows) and runtime-downloads a
-third. The goal is zero terminal exposure for non-technical users —
-they install Houston, click in, and the chat agent works without ever
-opening a shell.
+bundle (`.app` on macOS, `.msi` on Windows) and runtime-downloads two
+proprietary ones (Claude Code, Antigravity). The goal is zero terminal
+exposure for non-technical users — they install Houston, click in, and
+the chat agent works without ever opening a shell.
 
 ## What ships where
 
@@ -16,6 +16,7 @@ opening a shell.
 | composio    | MIT           | Bundled (per-arch)  | `Resources/bin/composio-aarch64/`, `Resources/bin/composio-x86_64/`   |
 | gemini      | Apache-2.0    | Bundled (per-arch)  | `Resources/bin/gemini-aarch64/gemini`, `Resources/bin/gemini-x86_64/gemini` (Node SEA, single Mach-O each) |
 | claude-code | PROPRIETARY   | Runtime download    | `~/.local/bin/claude`                                                  |
+| antigravity | PROPRIETARY   | Runtime download (`.tar.gz`) | `~/.local/bin/agy` — extracted from `cli_mac_{arm64,x64}.tar.gz` member `antigravity` |
 
 ### Windows (x64 only in v1)
 
@@ -25,6 +26,7 @@ opening a shell.
 | composio    | MIT           | **Built from source (fork)**       | `<install>\resources\bin\composio-x86_64\composio.exe`                                   |
 | gemini      | Apache-2.0    | **NOT BUNDLED in v1**              | No upstream Windows binary published by google-gemini/gemini-cli (verified across last 100 releases). Phase 2 will mirror the composio fork-build pattern using upstream's `scripts/build_binary.js` (already has win32 branches via Node SEA + postject). Until then, Gemini-backed agents are macOS-only. |
 | claude-code | PROPRIETARY   | Runtime download                   | `%LOCALAPPDATA%\Programs\claude\claude.exe`                                              |
+| antigravity | PROPRIETARY   | Runtime download (`.exe`)          | `%LOCALAPPDATA%\Programs\agy\agy.exe` — `cli_windows_x64.exe` saved directly, no archive |
 | git-bash    | GPL-2.0       | Bundled (compressed, decoded in-process) | `%LOCALAPPDATA%\Programs\Houston\runtime\git-bash-<arch>\usr\bin\bash.exe` (extracted on first launch) |
 
 Four notes on Windows:
@@ -83,7 +85,14 @@ Four notes on Windows:
 
 claude-code's license doesn't permit redistribution, so we can't
 bundle it on either OS. Instead the engine downloads + sha256-verifies
-on first launch using a manifest pinned in `cli-deps.json`.
+on first launch using a manifest pinned in `cli-deps.json`. Antigravity
+(`agy`) follows the same pattern — Google's repo at
+`google-antigravity/antigravity-cli` ships without a LICENSE file, so
+we treat it as proprietary and runtime-download via
+`houston-antigravity-installer`. macOS releases ship as `.tar.gz`
+archives containing a single member named `antigravity`; the installer
+extracts that member and renames it to `agy` at the install target.
+Windows ships the `.exe` directly.
 
 codex is a Rust binary so we `lipo -create` the two arch tarballs into
 one universal binary on macOS. composio is a Bun-bundled JS app whose
@@ -242,8 +251,17 @@ boot:
      `ClaudeCliInstalling { progress_pct }` then `ClaudeCliReady`.
    - On failure → `ClaudeCliFailed { message }`.
 
-Both run on independent tasks so a slow claude download never blocks
-composio readiness.
+3. `houston_antigravity_installer::ensure_and_upgrade` — same shape as
+   the claude installer plus a tar.gz extraction step on macOS. Reads
+   `cli-deps.json#antigravity`, downloads to a `.download` temp,
+   verifies sha256, either renames into place (Windows `.exe`) or
+   extracts the `archive_member` to a `.partial` temp before the
+   atomic rename. Emits `AntigravityCliInstalling { progress_pct }` /
+   `AntigravityCliReady` / `AntigravityCliFailed { message }`.
+
+All three run on independent tasks so a slow claude or antigravity
+download never blocks composio readiness, and the two proprietary
+installers never block each other.
 
 ## API surface — `/v1/claude/*`
 
@@ -254,6 +272,19 @@ Mirrors `/v1/composio/*`:
 - `POST /v1/claude/install` → kicks off a fresh install in the
   background. Progress + completion stream over the WS firehose as
   `ClaudeCliInstalling` / `ClaudeCliReady` / `ClaudeCliFailed` events.
+
+## API surface — `/v1/antigravity/*`
+
+Mirrors `/v1/claude/*` exactly. Same three endpoints, same response
+shapes, same WS firehose event pattern — just substitute `agy` /
+`Antigravity` for `claude` / `Claude Code`:
+
+- `GET /v1/antigravity/cli-installed` → `{ installed: bool }`.
+- `GET /v1/antigravity/status` → `{ installed, installPath, pinnedVersion, installedVersion }`.
+- `POST /v1/antigravity/install` → kicks off a fresh install. Progress
+  + completion stream as `AntigravityCliInstalling` /
+  `AntigravityCliReady` / `AntigravityCliFailed` events on the WS
+  firehose.
 
 `ProviderStatus` (returned by `GET /v1/providers/<name>/status`) gains
 three status fields beyond provider + CLI name:
@@ -389,6 +420,10 @@ when the new MSI runs until SignPath integration ships.
 - `engine/houston-cli-bundle/` — resolver crate (Windows-aware).
 - `engine/houston-claude-installer/` — runtime download crate
   (Windows install dir at `%LOCALAPPDATA%\Programs\claude\`).
+- `engine/houston-antigravity-installer/` — runtime download crate for
+  the Antigravity CLI (`agy`). macOS `.tar.gz` extraction via the
+  `archive_member` field in `cli-deps.json`. Windows install dir at
+  `%LOCALAPPDATA%\Programs\agy\`.
 - `engine/houston-composio/src/install.rs` — bundle-aware composio
   resolver (Windows surfaces a clear "bundled-only" error in dev mode).
 - `engine/houston-engine-core/src/provider.rs` — `InstallSource` enum + status.

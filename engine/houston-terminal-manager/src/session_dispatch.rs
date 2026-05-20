@@ -18,6 +18,7 @@
 //! genuinely different lifecycle (e.g. a streaming HTTP transport
 //! instead of a CLI subprocess).
 
+use crate::agy_runner::spawn_agy;
 use crate::claude_runner::spawn_claude;
 use crate::codex_runner::spawn_codex;
 use crate::gemini_runner::spawn_gemini;
@@ -80,6 +81,23 @@ pub(crate) async fn dispatch(
             // equivalent in a future release, plumb it through here
             // rather than silently swallowing.
             spawn_gemini(
+                tx,
+                provider,
+                prompt,
+                resume_session_id,
+                working_dir,
+                model,
+                system_prompt,
+            )
+            .await;
+        }
+        "antigravity" => {
+            // Antigravity v1.0.0 takes no `effort` / `mcp_config` /
+            // tool-toggle flags AND no `--model` flag — caller
+            // overrides are logged inside `spawn_agy` and otherwise
+            // dropped. When upstream catches up, plumb the relevant
+            // flags through here rather than silently swallowing.
+            spawn_agy(
                 tx,
                 provider,
                 prompt,

@@ -18,7 +18,7 @@
 //! CLI has provider-specific spawn quirks (env scrubbing, args, HOME
 //! isolation) that the trait doesn't model.
 
-use houston_terminal_manager::{claude_path, gemini_home, Provider};
+use houston_terminal_manager::{agy_install_path, claude_path, gemini_home, Provider};
 use serde_json::Value;
 use std::time::Duration;
 use tokio::io::AsyncWriteExt;
@@ -37,10 +37,43 @@ pub async fn run_provider_oneshot(
         "anthropic" => run_claude(prompt, model, time_limit).await,
         "openai" => run_codex(prompt, model, time_limit).await,
         "gemini" => run_gemini(prompt, model, time_limit).await,
+        "antigravity" => run_agy(prompt, time_limit).await,
         unknown => Err(format!(
             "no one-shot invocation wired up for provider {unknown:?}"
         )),
     }
+}
+
+/// One-shot invocation for Antigravity. Unlike claude/codex/gemini we do
+/// NOT pass a model: `agy` v1.0.0 has no `--model` flag and ignores the
+/// argument. When upstream catches up, thread `model` through here.
+async fn run_agy(prompt: &str, time_limit: Duration) -> Result<String, String> {
+    let bin = if agy_install_path::is_installed() {
+        agy_install_path::cli_path()
+    } else {
+        match houston_terminal_manager::provider::which_on_path("agy") {
+            Some(p) => p,
+            None => {
+                return Err(
+                    "Antigravity CLI is not installed. Run \
+                     `POST /v1/antigravity/install` or reinstall Houston \
+                     to download it."
+                        .into(),
+                );
+            }
+        }
+    };
+    let mut cmd = tokio::process::Command::new(&bin);
+    cmd.env("PATH", claude_path::shell_path());
+    // Cap the agy-side wait below our overall timeout so the CLI bails
+    // before we kill it from the outside. agy uses Go's `time.ParseDuration`
+    // format ("30s", "2m") so a plain seconds suffix works.
+    let cli_timeout = format!("{}s", time_limit.as_secs().saturating_sub(2).max(5));
+    cmd.arg("--print")
+        .arg("--dangerously-skip-permissions")
+        .arg("--print-timeout")
+        .arg(&cli_timeout);
+    run_command(cmd, prompt, time_limit).await
 }
 
 async fn run_claude(prompt: &str, model: &str, time_limit: Duration) -> Result<String, String> {

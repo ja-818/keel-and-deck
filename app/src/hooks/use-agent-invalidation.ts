@@ -65,6 +65,13 @@ export function useAgentInvalidation() {
         case "ComposioConnectionAdded":
           qc.invalidateQueries({ queryKey: queryKeys.connectedToolkits() });
           break;
+        // Antigravity CLI install completed — refresh provider status
+        // so the chip flips from "Installing…" to "Connect" (auth
+        // probe will then drive the rest).
+        case "AntigravityCliReady":
+        case "ClaudeCliReady":
+          qc.invalidateQueries({ queryKey: ["provider-status"] });
+          break;
       }
     });
 
