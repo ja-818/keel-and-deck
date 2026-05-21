@@ -91,6 +91,29 @@ pub async fn run_routine(
         .clone();
 
     ensure_houston_dir(&working_dir)?;
+
+    // Reject early if a run is already in flight for this agent. Without
+    // this, repeated `run-now` clicks (a) pollute the on-disk history
+    // with `status="error", summary="conflict: another mission..."` rows
+    // from the workdir-lock failure inside the dispatcher, and (b) leave
+    // the UI unable to pick out the "real" running run vs. the noise
+    // since `lastRuns` keys by latest `started_at`. Fail fast at the
+    // route level instead — frontend gets a 409 and surfaces a toast.
+    //
+    // We treat "in flight" as "status=running on disk". The workdir lock
+    // would be a more precise signal, but it lives on `SessionRuntime`
+    // and isn't reachable from this transport-neutral runner. Disk state
+    // is reliable for the common case (one run completes, status flips
+    // terminal); orphan `running` rows from a crashed engine are swept
+    // by `sweep_orphan_running` at agent-scheduler start.
+    let existing = routine_runs::list(&working_dir)?;
+    if let Some(busy) = existing.iter().find(|r| r.status == "running") {
+        return Err(CoreError::Conflict(format!(
+            "another routine run is already in progress (run {})",
+            busy.id
+        )));
+    }
+
     let run = routine_runs::create(&working_dir, routine_id)?;
     events.emit(HoustonEvent::RoutineRunsChanged {
         agent_path: agent_path.to_string(),
@@ -422,6 +445,41 @@ mod tests {
         let runs = routine_runs::list(d.path()).unwrap();
         assert_eq!(runs[0].status, "surfaced");
         assert_eq!(runs[0].activity_id.as_deref(), Some("act-1"));
+    }
+
+    #[tokio::test]
+    async fn run_routine_rejects_when_another_run_is_in_flight() {
+        // Reproduces the original repro: user spam-clicks Run Now while a
+        // previous run is still active. The second call must 409 (Conflict)
+        // and must NOT create a new routine_run row — otherwise the history
+        // fills with confusing "another mission is already running" error
+        // rows and the UI loses track of which run is the real one.
+        let d = TempDir::new().unwrap();
+        let agent_path = d.path().to_string_lossy().to_string();
+        let r = create(d.path(), sample_routine()).unwrap();
+
+        // Seed an in-flight run on disk — what the previous click left.
+        let in_flight = routine_runs::create(d.path(), &r.id).unwrap();
+        assert_eq!(in_flight.status, "running");
+
+        let dispatcher = Arc::new(FakeDispatcher(DispatchOutcome::default()));
+        let surface = Arc::new(RecordingSurface::default());
+
+        let err = run_routine(
+            Arc::new(NoopEventSink),
+            dispatcher,
+            surface,
+            &agent_path,
+            &r.id,
+        )
+        .await
+        .unwrap_err();
+        assert!(matches!(err, CoreError::Conflict(_)));
+
+        // Disk must still hold exactly one run — the original in-flight one.
+        let runs = routine_runs::list(d.path()).unwrap();
+        assert_eq!(runs.len(), 1);
+        assert_eq!(runs[0].id, in_flight.id);
     }
 
     #[tokio::test]

@@ -54,6 +54,13 @@ export interface RoutineEditorProps {
   routine?: Routine
   runs?: RoutineRun[]
   onRunNow?: () => void
+  /** Disable the "Run now" button while a manual-run request is in flight.
+   *  Guards against spam-click races where the disk-state `running` row
+   *  hasn't propagated through TanStack invalidation yet — without this,
+   *  each extra click queues a redundant request that the engine then
+   *  rejects with 409 (or, on older builds, recorded as a conflict-error
+   *  row in run history). */
+  runNowPending?: boolean
   /** Stop an in-flight run. When present + a run is `running`, the header
    *  "Run now" button swaps to "Stop" and the matching run row shows a stop
    *  control. */
@@ -147,6 +154,7 @@ export function RoutineEditor({
   routine,
   runs = [],
   onRunNow,
+  runNowPending,
   onCancelRun,
   onToggle,
   onDelete,
@@ -211,9 +219,14 @@ export function RoutineEditor({
             ) : (
               isEdit &&
               onRunNow && (
-                <Button variant="ghost" size="sm" onClick={onRunNow}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onRunNow}
+                  disabled={runNowPending}
+                >
                   <Play className="size-3.5" />
-                  Run now
+                  {runNowPending ? "Starting…" : "Run now"}
                 </Button>
               )
             )}

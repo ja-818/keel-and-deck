@@ -194,6 +194,25 @@ async fn delete_routine(
     Query(q): Query<AgentQuery>,
 ) -> Result<(), ApiError> {
     let root = resolve_root(&q.agent_path)?;
+
+    // Cascade: kill any in-flight runs of this routine before removing it,
+    // otherwise the spawned provider subprocess keeps burning tokens with
+    // no UI handle to stop it. Mirrors the same logic on the sibling
+    // `/routines/:id` route. The frontend currently hits THIS path (per
+    // `engine-client::deleteRoutine`), so the cascade has to live here too.
+    for run in routine_runs::list_for_routine(&root, &id)? {
+        if run.status == "running" {
+            houston_engine_core::routines::runner::cancel_run(
+                &st.engine.sessions,
+                &st.engine.events,
+                &root,
+                &q.agent_path,
+                &run.id,
+            )
+            .await?;
+        }
+    }
+
     routines::delete(&root, &id)?;
     st.routine_scheduler.sync_agent(&q.agent_path).await;
     emit(

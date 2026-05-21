@@ -184,6 +184,7 @@ export default function RoutinesTab({ agent }: TabProps) {
         routine={editing}
         runs={editingRuns}
         onRunNow={editing ? () => handleRunNow(editing.id) : undefined}
+        runNowPending={runNow.isPending}
         onCancelRun={
           editing
             ? (runId: string) => handleCancelRun(editing.id, runId)

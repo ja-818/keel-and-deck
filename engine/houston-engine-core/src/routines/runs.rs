@@ -30,6 +30,40 @@ pub fn find_by_id(root: &Path, id: &str) -> CoreResult<RoutineRun> {
         .ok_or_else(|| CoreError::NotFound(format!("routine run {id}")))
 }
 
+/// Mark every `status="running"` row as `error` with a clear summary.
+///
+/// Engine call sites invoke this once per agent at scheduler-start time
+/// because there's no way to distinguish a row from a still-alive
+/// subprocess vs. one that's been orphaned by a previous engine crash
+/// (the row is written before the dispatch awaits, and the dispatch
+/// process is gone after a hard restart). Without this sweep, an
+/// orphan would permanently block every future `run-now` for that
+/// agent via the precondition in [`crate::routines::runner::run_routine`].
+///
+/// Returns the number of rows reaped. Safe to call when there are no
+/// orphan rows — it's a no-op.
+pub fn sweep_orphan_running(root: &Path) -> CoreResult<usize> {
+    let mut runs = list(root)?;
+    if runs.is_empty() {
+        return Ok(0);
+    }
+    let now = Utc::now().to_rfc3339();
+    let mut reaped = 0;
+    for run in runs.iter_mut() {
+        if run.status == "running" {
+            run.status = "error".into();
+            run.summary = Some("Engine restarted before this run finished".into());
+            run.completed_at = Some(now.clone());
+            run.paused_until = None;
+            reaped += 1;
+        }
+    }
+    if reaped > 0 {
+        write_json(root, FILE, &runs)?;
+    }
+    Ok(reaped)
+}
+
 pub fn create(root: &Path, routine_id: &str) -> CoreResult<RoutineRun> {
     ensure_houston_dir(root)?;
     let mut runs = list(root)?;
@@ -210,6 +244,53 @@ mod tests {
         )
         .unwrap();
         assert!(after_clear.paused_until.is_none());
+    }
+
+    #[test]
+    fn sweep_orphan_running_marks_only_running_rows() {
+        let d = TempDir::new().unwrap();
+        let orphan = create(d.path(), "rid").unwrap();
+        let done = create(d.path(), "rid").unwrap();
+        update(
+            d.path(),
+            &done.id,
+            RoutineRunUpdate {
+                status: Some("silent".into()),
+                completed_at: Some(chrono::Utc::now().to_rfc3339()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        let reaped = sweep_orphan_running(d.path()).unwrap();
+        assert_eq!(reaped, 1);
+
+        let runs = list(d.path()).unwrap();
+        let orphan_after = runs.iter().find(|r| r.id == orphan.id).unwrap();
+        let done_after = runs.iter().find(|r| r.id == done.id).unwrap();
+        assert_eq!(orphan_after.status, "error");
+        assert_eq!(
+            orphan_after.summary.as_deref(),
+            Some("Engine restarted before this run finished")
+        );
+        assert!(orphan_after.completed_at.is_some());
+        assert_eq!(done_after.status, "silent");
+    }
+
+    #[test]
+    fn sweep_orphan_running_is_noop_when_clean() {
+        let d = TempDir::new().unwrap();
+        let done = create(d.path(), "rid").unwrap();
+        update(
+            d.path(),
+            &done.id,
+            RoutineRunUpdate {
+                status: Some("silent".into()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(sweep_orphan_running(d.path()).unwrap(), 0);
     }
 
     #[test]

@@ -400,6 +400,76 @@ async fn delete_routine_cancels_in_flight_runs() {
 }
 
 #[tokio::test]
+async fn run_now_returns_409_when_another_run_is_in_flight() {
+    // Repros the spam-click scenario: a previous "Run now" is still active
+    // (status=running on disk). The next click must 409 BEFORE spawning a
+    // CLI, BEFORE creating a new routine_run row — keeping history free of
+    // "conflict: another mission..." noise.
+    let (addr, tok, docs) = spawn().await;
+    let agent = docs.path().join("ws").join("alpha");
+    std::fs::create_dir_all(&agent).unwrap();
+    let agent_path = agent.to_string_lossy().to_string();
+    let c = reqwest::Client::new();
+
+    let r: serde_json::Value = c
+        .post(format!("http://{addr}/v1/routines"))
+        .query(&[("agentPath", &agent_path)])
+        .bearer_auth(&tok)
+        .json(&serde_json::json!({
+            "name": "Spam",
+            "description": "",
+            "prompt": "p",
+            "schedule": "* * * * *",
+            "enabled": true,
+            "suppress_when_silent": true,
+        }))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let rid = r["id"].as_str().unwrap().to_string();
+
+    // Seed an in-flight run via the runs POST so disk shows status=running.
+    let _: serde_json::Value = c
+        .post(format!("http://{addr}/v1/routines/{rid}/runs"))
+        .query(&[("agentPath", &agent_path)])
+        .bearer_auth(&tok)
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+
+    // Now POST run-now — should reject with 409.
+    let res = c
+        .post(format!("http://{addr}/v1/routines/{rid}/run-now"))
+        .query(&[("agentPath", &agent_path)])
+        .bearer_auth(&tok)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.status(), 409);
+
+    // Disk must still hold exactly one run — the rejected run-now didn't
+    // create a new row.
+    let runs: serde_json::Value = c
+        .get(format!("http://{addr}/v1/routine-runs"))
+        .query(&[("agentPath", &agent_path)])
+        .bearer_auth(&tok)
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(runs.as_array().unwrap().len(), 1);
+    assert_eq!(runs[0]["status"], "running");
+}
+
+#[tokio::test]
 async fn requires_auth() {
     let (addr, _tok, _docs) = spawn().await;
     let c = reqwest::Client::new();

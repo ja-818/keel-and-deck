@@ -13,7 +13,7 @@ use crate::routines::{
 use chrono::Utc;
 use chrono_tz::Tz;
 use cron::Schedule;
-use houston_ui_events::DynEventSink;
+use houston_ui_events::{DynEventSink, HoustonEvent};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -220,6 +220,29 @@ impl RoutineSchedulerState {
                 existing.sync();
             }
             None => {
+                // First-time start for this agent in this engine process —
+                // sweep any `status="running"` rows left behind by a
+                // previous run that didn't reach a terminal state (engine
+                // crash, OS kill). Without this, the in-flight precondition
+                // in `run_routine` would block every future `run-now`.
+                let dir = crate::routines::runner::expand_tilde(
+                    &std::path::PathBuf::from(agent_path),
+                );
+                match crate::routines::runs::sweep_orphan_running(&dir) {
+                    Ok(0) => {}
+                    Ok(n) => {
+                        tracing::warn!(
+                            "[routines] swept {n} orphan running run(s) for agent {agent_path}"
+                        );
+                        events.emit(HoustonEvent::RoutineRunsChanged {
+                            agent_path: agent_path.to_string(),
+                        });
+                    }
+                    Err(e) => tracing::error!(
+                        "[routines] orphan sweep failed for {agent_path}: {e}"
+                    ),
+                }
+
                 let mut sched =
                     AgentScheduler::new(agent_path, default_tz, events, dispatcher, surface);
                 sched.sync();
